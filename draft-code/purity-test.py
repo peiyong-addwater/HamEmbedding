@@ -10,10 +10,6 @@ from qiskit.providers.fake_provider import FakeMontrealV2
 from qiskit_experiments.library import StateTomography
 import numpy as np
 
-
-backend = FakeMontrealV2()
-
-
 def single_qubit_purity_test(num_u_gates):
     qc = QuantumCircuit(1)
     for i in range(num_u_gates):
@@ -21,9 +17,10 @@ def single_qubit_purity_test(num_u_gates):
         qc.append(rand_gate, [0])
 
     qst = StateTomography(qc)
+    backend = FakeMontrealV2()
     qstdata = qst.run(backend).block_for_results()
     return qstdata.analysis_results("state_fidelity").value
 
 if __name__ == '__main__':
-    for _ in range(10):
+    for _ in range(1000):
         print(single_qubit_purity_test(20))
