@@ -26,7 +26,6 @@ dependencies:
   - cadabra2-jupyter-kernel=2.3.0=py39h5892985_8
   - cairo=1.16.0=ha61ee94_1014
   - cairomm-1.0=1.14.4=h09cb3b9_0
-  - certifi=2022.9.24=pyhd8ed1ab_0
   - cffi=1.15.1=py39h74dc2b5_0
   - contourpy=1.0.6=py39hf939315_0
   - cuda=11.6.2=0
@@ -192,7 +191,6 @@ dependencies:
   - nsight-compute=2022.3.0.22=0
   - nspr=4.32=h9c3ff4c_1
   - nss=3.78=h2350873_0
-  - numpy=1.23.3=py39h14f4228_1
   - numpy-base=1.23.3=py39h31eccc5_1
   - openh264=2.1.1=h4ff587b_0
   - openjpeg=2.5.0=h7d73246_1
@@ -205,7 +203,6 @@ dependencies:
   - pillow=9.2.0=py39hf3a2cdf_3
   - pip=22.3.1=pyhd8ed1ab_0
   - pixman=0.40.0=h36c2ea0_0
-  - ply=3.11=py_1
   - pthread-stubs=0.4=h36c2ea0_1001
   - pulseaudio=14.0=h0d2025b_11
   - pycparser=2.21=pyhd3eb1b0_0
@@ -225,7 +222,6 @@ dependencies:
   - readline=8.1.2=h0f457ee_0
   - requests=2.28.1=py39h06a4308_0
   - scikit-learn=1.1.3=py39h6a678d5_0
-  - scipy=1.9.3=py39h14f4228_0
   - setuptools=65.5.1=pyhd8ed1ab_0
   - sigcpp-2.0=2.10.8=h27087fc_0
   - sip=6.7.4=py39h5a03fae_0
@@ -276,6 +272,7 @@ dependencies:
     - appdirs==1.4.4
     - argon2-cffi==21.3.0
     - argon2-cffi-bindings==21.2.0
+    - asteval==0.9.28
     - asttokens==2.1.0
     - attrs==20.3.0
     - autograd==1.5
@@ -285,6 +282,7 @@ dependencies:
     - beautifulsoup4==4.11.1
     - bleach==5.0.1
     - cachetools==5.2.0
+    - certifi==2022.9.24
     - charset-normalizer==2.1.1
     - cirq==1.0.0
     - cirq-aqt==1.0.0
@@ -351,6 +349,7 @@ dependencies:
     - jupyterlab-widgets==3.0.3
     - lark==0.11.3
     - llvmlite==0.39.1
+    - lmfit==1.0.3
     - lxml==4.9.1
     - markupsafe==2.1.1
     - matplotlib-inline==0.1.6
@@ -372,6 +371,7 @@ dependencies:
     - notebook-shim==0.2.2
     - ntlm-auth==1.5.0
     - numba==0.56.4
+    - numpy==1.23.4
     - numpydoc==1.5.0
     - nvidia-cublas-cu11==11.10.3.66
     - nvidia-cuda-nvrtc-cu11==11.7.99
@@ -396,6 +396,7 @@ dependencies:
     - pickleshare==0.7.5
     - pipreqs==0.4.11
     - pluggy==1.0.0
+    - ply==3.11
     - prometheus-client==0.15.0
     - prompt-toolkit==3.0.32
     - proto-plus==1.22.1
@@ -424,7 +425,9 @@ dependencies:
     - qiskit==0.39.2
     - qiskit-aer==0.11.1
     - qiskit-aer-gpu==0.11.1
+    - qiskit-experiments==0.4.0
     - qiskit-finance==0.3.4
+    - qiskit-ibm-experiment==0.2.7
     - qiskit-ibmq-provider==0.19.2
     - qiskit-machine-learning==0.4.0
     - qiskit-nature==0.5.0
@@ -446,6 +449,7 @@ dependencies:
     - ruamel-yaml-clib==0.2.7
     - rustworkx==0.12.0
     - scienceplots==1.0.9
+    - scipy==1.9.3
     - seaborn==0.12.1
     - semantic-version==2.10.0
     - send2trash==1.8.0
@@ -476,6 +480,7 @@ dependencies:
     - types-retry==0.9.9
     - typing==3.7.4.3
     - typing-extensions==4.4.0
+    - uncertainties==3.1.7
     - wcwidth==0.2.5
     - webencodings==0.5.1
     - websocket-client==1.4.2
