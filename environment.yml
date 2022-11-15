@@ -354,6 +354,7 @@ dependencies:
     - markupsafe==2.1.1
     - matplotlib-inline==0.1.6
     - mistune==2.0.4
+    - mitiq==0.20.0
     - more-itertools==9.0.0
     - msgpack==0.6.2
     - mthree==1.1.0

@@ -22,5 +22,5 @@ def single_qubit_purity_test(num_u_gates):
     return qstdata.analysis_results("state_fidelity").value
 
 if __name__ == '__main__':
-    for _ in range(1000):
-        print(single_qubit_purity_test(20))
+    for _ in range(100):
+        print(single_qubit_purity_test(100))
