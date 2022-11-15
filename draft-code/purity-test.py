@@ -23,4 +23,4 @@ def single_qubit_purity_test(num_u_gates):
 
 if __name__ == '__main__':
     for _ in range(100):
-        print(single_qubit_purity_test(100))
+        print(single_qubit_purity_test(150))
