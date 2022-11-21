@@ -85,7 +85,6 @@ def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[flo
         output.append(row)
     return output
 
-
 def load_mnist(path, kind='train'):
     # from https://github.com/zalandoresearch/fashion-mnist/blob/master/utils/mnist_reader.py
     import os
@@ -110,6 +109,27 @@ def load_mnist(path, kind='train'):
 
     return images, labels
 
+def SU4(params, wires):
+    """
+    KAK decomposition of the SU4 gate
+    :param params:
+    :param wires:
+    :return:
+    """
+    qml.U3(params[0], params[1], params[2], wires=wires[0])
+    qml.U3(params[3], params[4], params[5], wires=wires[1])
+    qml.CNOT(wires=wires)
+    qml.U3(params[6], params[7], params[8], wires=wires[0])
+    qml.U3(params[9], params[10], params[11], wires=wires[1])
+    qml.CNOT(wires=[wires[1], wires[0]])
+    qml.U3(params[12], params[13], params[14], wires=wires[0])
+    qml.CNOT(wires=wires)
+    qml.U3(params[15], params[16], params[17], wires=wires[0])
+    qml.U3(params[18], params[19], params[20], wires=wires[1])
+
+def convolution_reupload_encoding(kernel_params, data_param_list):
+    num_qubits = len(data_param_list)
+    num_u3_gates_each_qubit = len(data_param_list[0])//3+1
 
 
 if __name__ == '__main__':
@@ -119,6 +139,7 @@ if __name__ == '__main__':
     test_index = 123
     im_test_mat = im[test_index].reshape(28,28)
     im_test = Image.fromarray(im_test_mat)
+    im_test_mat = im_test_mat/255
     print(len(im))
     #print(im_test)
     im_test_label = labels[test_index]
@@ -126,3 +147,4 @@ if __name__ == '__main__':
     conv_extract = extract_convolution_data(im_test_mat, stride=(2,2))
     print(len(conv_extract))
     print(len(conv_extract[0]))
+    print(conv_extract[0])
