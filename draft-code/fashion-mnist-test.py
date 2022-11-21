@@ -62,6 +62,28 @@ def _check_params(matrix, kernel, stride, dilation, padding):
 
     return matrix, kernel, k, h_out, w_out
 
+def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[float]]], np.ndarray],
+                             kernel_size:Tuple[int, int]=(3, 3),
+                             stride:Tuple[int, int] = (1, 1),
+                             dilation:Tuple[int, int]=(1, 1),
+                             padding: Tuple[int, int]=(0,0)) -> List[List[float]]:
+    kernel_placeholder = np.ones(kernel_size)
+    matrix, kernel, k, h_out, w_out = _check_params(matrix, kernel_placeholder, stride, dilation, padding)
+    b = k[0] // 2, k[1] // 2
+    center_x_0 = b[0] * dilation[0]
+    center_y_0 = b[1] * dilation[1]
+    output = []
+    for i in range(h_out):
+        center_x = center_x_0 + i * stride[0]
+        indices_x = [center_x + l * dilation[0] for l in range(-b[0], b[0] + 1)]
+        row = []
+        for j in range(w_out):
+            center_y = center_y_0 + j * stride[1]
+            indices_y = [center_y + l * dilation[1] for l in range(-b[1], b[1] + 1)]
+            submatrix = matrix[indices_x, :][:, indices_y]
+            row.append(submatrix.flatten().tolist())
+        output.append(row)
+    return output
 
 
 def load_mnist(path, kind='train'):
@@ -95,8 +117,12 @@ if __name__ == '__main__':
     data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
     im, labels = load_mnist(data_folder)
     test_index = 123
-    im_test = Image.fromarray(im[test_index].reshape(28,28))
+    im_test_mat = im[test_index].reshape(28,28)
+    im_test = Image.fromarray(im_test_mat)
     print(len(im))
-    print(im_test)
+    #print(im_test)
     im_test_label = labels[test_index]
     im_test.save(f"test-image-label-{im_test_label}.pdf")
+    conv_extract = extract_convolution_data(im_test_mat, stride=(2,2))
+    print(len(conv_extract))
+    print(len(conv_extract[0]))
