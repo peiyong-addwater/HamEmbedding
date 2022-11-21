@@ -136,13 +136,13 @@ def single_kernel_encoding(kernel_params, single_kernel_data_params, wire):
     """
     num_combo_gates = len(kernel_params) // 3 + 1
     kernel_pad_size = (len(kernel_params) // 3 + 1) * 3 - len(kernel_params)
-    padded_kernel_params = pnp.array(kernel_params, requires_grad=True)
+    padded_kernel_params = jnp.array(kernel_params)
     for _ in range(kernel_pad_size):
-        padded_kernel_params = pnp.append(padded_kernel_params, 0)
-    padded_data_params = pnp.array(single_kernel_data_params, requires_grad=False)
+        padded_kernel_params = jnp.append(padded_kernel_params, 0)
+    padded_data_params = jnp.array(single_kernel_data_params)
     #print(single_kernel_data_params)
     for _ in range(kernel_pad_size):
-        padded_data_params = pnp.append(padded_data_params, 0)
+        padded_data_params = jnp.append(padded_data_params, 0)
     #print(padded_data_params)
     padded_kernel_params = padded_kernel_params.reshape(-1,3)
     padded_data_params = padded_data_params.reshape(-1,3)
@@ -239,6 +239,7 @@ if __name__ == '__main__':
     from PIL import Image
     import matplotlib as mpl
     import matplotlib.pyplot as plt
+    import pandas as pd
     import seaborn as sns
 
     sns.set()
@@ -276,10 +277,9 @@ if __name__ == '__main__':
         )
 
         x_train, y_train = features[train_indices], labels[train_indices]
-        x_train = [extract_convolution_data(x_train[i],stride=(2,2)) for i in range(num_train)]
+        x_train = np.array([extract_convolution_data(x_train[i],stride=(2,2)) for i in range(num_train)])
         x_test, y_test = features[test_indices], labels[test_indices]
-        x_test = [extract_convolution_data(x_test[i],stride=(2,2)) for i in range(num_test)]
-        print(x_train[0].shape)
+        x_test = np.array([extract_convolution_data(x_test[i],stride=(2,2)) for i in range(num_test)])
         return (
             jnp.asarray(x_train),
             jnp.asarray(y_train),
@@ -294,7 +294,7 @@ if __name__ == '__main__':
         cost = lambda encoding_kernel_params, conv_weights, weights_last, feature, label: conv_net(encoding_kernel_params, conv_weights, weights_last, feature)[
             label
         ]
-        return jax.vmap(cost, in_axes=(None, None, 0, 0), out_axes=0)(
+        return jax.vmap(cost, in_axes=(None, None, None, 0, 0), out_axes=0)(
             encoding_kernel_params, conv_weights, weights_last, features, labels
         )
 
@@ -314,10 +314,162 @@ if __name__ == '__main__':
     def init_weights():
         """Initializes random weights for the QCNN model."""
         encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=3*3, requires_grad=True)
-        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, 2), requires_grad=True)
+        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, 3), requires_grad=True)
         weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** 2 - 1, requires_grad=True)
         return jnp.array(encoding_kernel_params), jnp.array(conv_weights), jnp.array(weights_last)
 
 
     value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2]))
+
+
+    def train_qcnn(n_train, n_test, n_epochs):
+        """
+        Args:
+            n_train  (int): number of training examples
+            n_test   (int): number of test examples
+            n_epochs (int): number of training epochs
+            desc  (string): displayed string during optimization
+
+        Returns:
+            dict: n_train,
+            steps,
+            train_cost_epochs,
+            train_acc_epochs,
+            test_cost_epochs,
+            test_acc_epochs
+
+        """
+        # load data
+        x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
+
+        # init weights and optimizer
+        encoding_kernel_params, conv_weights, weights_last = init_weights()
+
+        # learning rate decay
+        cosine_decay_scheduler = optax.cosine_decay_schedule(0.1, decay_steps=n_epochs, alpha=0.95)
+        optimizer = optax.adam(learning_rate=cosine_decay_scheduler)
+        opt_state = optimizer.init((encoding_kernel_params, conv_weights, weights_last))
+
+        # data containers
+        train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
+
+        for step in range(n_epochs):
+            # Training step with (adam) optimizer
+            train_cost, grad_circuit = value_and_grad(encoding_kernel_params, conv_weights, weights_last, x_train, y_train)
+            updates, opt_state = optimizer.update(grad_circuit, opt_state)
+            encoding_kernel_params, conv_weights, weights_last = optax.apply_updates((encoding_kernel_params, conv_weights, weights_last), updates)
+
+            train_cost_epochs.append(train_cost)
+
+            # compute accuracy on training data
+            train_acc = compute_accuracy(encoding_kernel_params, conv_weights, weights_last, x_train, y_train)
+            train_acc_epochs.append(train_acc)
+
+            # compute accuracy and cost on testing data
+            test_out = compute_out(encoding_kernel_params, conv_weights, weights_last, x_test, y_test)
+            test_acc = jnp.sum(test_out > 0.5) / len(test_out)
+            test_acc_epochs.append(test_acc)
+            test_cost = 1.0 - jnp.sum(test_out) / len(test_out)
+            test_cost_epochs.append(test_cost)
+
+            if (step+1)//5 == 0:
+                print(
+                    f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, test acc {test_acc}")
+
+        return dict(
+            n_train=[n_train] * n_epochs,
+            step=np.arange(1, n_epochs + 1, dtype=int),
+            train_cost=train_cost_epochs,
+            train_acc=train_acc_epochs,
+            test_cost=test_cost_epochs,
+            test_acc=test_acc_epochs,
+        )
+
+
+    n_test = 100
+    n_epochs = 100
+    n_reps = 100
+
+
+    def run_iterations(n_train):
+        results_df = pd.DataFrame(
+            columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
+        )
+
+        for _ in range(n_reps):
+            results = train_qcnn(n_train=n_train, n_test=n_test, n_epochs=n_epochs)
+            results_df = pd.concat(
+                [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
+            )
+
+        return results_df
+
+
+    # run training for multiple sizes
+    train_sizes = [2, 5, 10, 20, 40, 80]
+    results_df = run_iterations(n_train=2)
+    for n_train in train_sizes[1:]:
+        results_df = pd.concat([results_df, run_iterations(n_train=n_train)])
+
+    # aggregate dataframe
+    df_agg = results_df.groupby(["n_train", "step"]).agg(["mean", "std"])
+    df_agg = df_agg.reset_index()
+
+    sns.set_style('whitegrid')
+    colors = sns.color_palette()
+    fig, axes = plt.subplots(ncols=3, figsize=(16.5, 5))
+
+    generalization_errors = []
+
+    # plot losses and accuracies
+    for i, n_train in enumerate(train_sizes):
+        df = df_agg[df_agg.n_train == n_train]
+
+        dfs = [df.train_cost["mean"], df.test_cost["mean"], df.train_acc["mean"], df.test_acc["mean"]]
+        lines = ["o-", "x--", "o-", "x--"]
+        labels = [fr"$N={n_train}$", None, fr"$N={n_train}$", None]
+        axs = [0, 0, 2, 2]
+
+        for k in range(4):
+            ax = axes[axs[k]]
+            ax.plot(df.step, dfs[k], lines[k], label=labels[k], markevery=10, color=colors[i], alpha=0.8)
+
+        # plot final loss difference
+        dif = df[df.step == 100].test_cost["mean"] - df[df.step == 100].train_cost["mean"]
+        generalization_errors.append(dif)
+
+    # format loss plot
+    ax = axes[0]
+    ax.set_title('Train and Test Losses', fontsize=14)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+
+    # format generalization error plot
+    ax = axes[1]
+    ax.plot(train_sizes, generalization_errors, "o-", label=r"$gen(\alpha)$")
+    ax.set_xscale('log')
+    ax.set_xticks(train_sizes)
+    ax.set_xticklabels(train_sizes)
+    ax.set_title(r'Generalization Error $gen(\alpha) = R(\alpha) - \hat{R}_N(\alpha)$', fontsize=14)
+    ax.set_xlabel('Training Set Size')
+
+    # format loss plot
+    ax = axes[2]
+    ax.set_title('Train and Test Accuracies', fontsize=14)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Accuracy')
+    ax.set_ylim(0.5, 1.05)
+
+    legend_elements = [
+                          mpl.lines.Line2D([0], [0], label=f'N={n}', color=colors[i]) for i, n in enumerate(train_sizes)
+                      ] + [
+                          mpl.lines.Line2D([0], [0], marker='o', ls='-', label='Train', color='Black'),
+                          mpl.lines.Line2D([0], [0], marker='x', ls='--', label='Test', color='Black')
+                      ]
+
+    axes[0].legend(handles=legend_elements, ncol=3)
+    axes[2].legend(handles=legend_elements, ncol=3)
+
+    axes[1].set_yscale('log', base=2)
+    plt.savefig("test-results.pdf")
 
