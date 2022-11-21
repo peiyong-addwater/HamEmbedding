@@ -214,27 +214,6 @@ def dense_layer(weights, wires):
     Apply an arbitrary unitary gate to a specified set of wires."""
     qml.ArbitraryUnitary(weights, wires)
 
-num_wires = 6
-device = qml.device("default.qubit", wires=num_wires)
-
-@qml.qnode(device,interface="jax")
-def conv_net(encoding_kernel_params, conv_weights, last_layer_params, image_conv_extract):
-    layers = conv_weights.shape[1]
-    wires = list(range(num_wires))
-    convolution_reupload_encoding(encoding_kernel_params, image_conv_extract)
-    qml.Barrier(wires=wires, only_visual=True)
-    entangling_layer(wires)
-    qml.Barrier(wires=wires, only_visual=True)
-    for j in range(layers):
-        conv_and_pooling(conv_weights[:, j], wires, skip_first_layer=(not j == 0))
-        wires = wires[::2]
-        qml.Barrier(wires=wires, only_visual=True)
-
-    dense_layer(last_layer_params, wires)
-    return qml.probs(wires=(0))
-
-
-
 
 if __name__ == '__main__':
     from PIL import Image
@@ -256,7 +235,29 @@ if __name__ == '__main__':
     import optax  # optimization using jax
 
     KERNEL_SIZE = (3,3)
-    STRIDE = (5,5)
+    STRIDE = (3,3)
+    NUM_CONV_POOL_LAYERS = 3
+
+    _, _, _, num_wires,_ = _check_params(np.random.rand(28*28).reshape(28,28), kernel=np.random.random(KERNEL_SIZE), stride=STRIDE, dilation=(1,1), padding=(0,0))
+    print(num_wires)
+    device = qml.device("default.qubit", wires=num_wires)
+
+
+    @qml.qnode(device, interface="jax")
+    def conv_net(encoding_kernel_params, conv_weights, last_layer_params, image_conv_extract):
+        layers = conv_weights.shape[1]
+        wires = list(range(num_wires))
+        convolution_reupload_encoding(encoding_kernel_params, image_conv_extract)
+        qml.Barrier(wires=wires, only_visual=True)
+        entangling_layer(wires)
+        qml.Barrier(wires=wires, only_visual=True)
+        for j in range(layers):
+            conv_and_pooling(conv_weights[:, j], wires, skip_first_layer=(not j == 0))
+            wires = wires[::2]
+            qml.Barrier(wires=wires, only_visual=True)
+
+        dense_layer(last_layer_params, wires)
+        return qml.probs(wires=(0))
 
 
 
@@ -319,7 +320,7 @@ if __name__ == '__main__':
     def init_weights():
         """Initializes random weights for the QCNN model."""
         encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=KERNEL_SIZE[0]*KERNEL_SIZE[1], requires_grad=True)
-        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, 2), requires_grad=True)
+        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, NUM_CONV_POOL_LAYERS), requires_grad=True)
         weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** 2 - 1, requires_grad=True)
         return jnp.array(encoding_kernel_params), jnp.array(conv_weights), jnp.array(weights_last)
 
