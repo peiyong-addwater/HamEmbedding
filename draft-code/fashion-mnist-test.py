@@ -408,7 +408,7 @@ if __name__ == '__main__':
 
 
     # run training for multiple sizes
-    train_sizes = [2, 5, 10]
+    train_sizes = [2, 5, 10, 20, 40, 80]
     results_df = run_iterations(n_train=2)
     for n_train in train_sizes[1:]:
         results_df = pd.concat([results_df, run_iterations(n_train=n_train)])
