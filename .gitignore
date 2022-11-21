@@ -1,2 +1,5 @@
 /data/
 .idea
+.idea/deployment.xml
+*.iml
+.idea/QML-ImageClassification.iml
