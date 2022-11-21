@@ -213,7 +213,7 @@ def dense_layer(weights, wires):
     Apply an arbitrary unitary gate to a specified set of wires."""
     qml.ArbitraryUnitary(weights, wires)
 
-num_wires = 13
+num_wires = 6
 device = qml.device("default.qubit", wires=num_wires)
 
 @qml.qnode(device,interface="jax")
@@ -255,7 +255,8 @@ if __name__ == '__main__':
     import optax  # optimization using jax
 
 
-    def load_data(num_train, num_test, rng):
+
+    def load_data(num_train, num_test, rng, stride = (5,5)):
         """Return training and testing data of digits dataset."""
         data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
         features, labels = load_fashion_mnist(data_folder)
@@ -277,9 +278,9 @@ if __name__ == '__main__':
         )
 
         x_train, y_train = features[train_indices], labels[train_indices]
-        x_train = np.array([extract_convolution_data(x_train[i],stride=(2,2)) for i in range(num_train)])
+        x_train = np.array([extract_convolution_data(x_train[i],stride=stride) for i in range(num_train)])
         x_test, y_test = features[test_indices], labels[test_indices]
-        x_test = np.array([extract_convolution_data(x_test[i],stride=(2,2)) for i in range(num_test)])
+        x_test = np.array([extract_convolution_data(x_test[i],stride=stride) for i in range(num_test)])
         return (
             jnp.asarray(x_train),
             jnp.asarray(y_train),
@@ -314,7 +315,7 @@ if __name__ == '__main__':
     def init_weights():
         """Initializes random weights for the QCNN model."""
         encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=3*3, requires_grad=True)
-        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, 3), requires_grad=True)
+        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, 2), requires_grad=True)
         weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** 2 - 1, requires_grad=True)
         return jnp.array(encoding_kernel_params), jnp.array(conv_weights), jnp.array(weights_last)
 
@@ -353,6 +354,8 @@ if __name__ == '__main__':
         # data containers
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
 
+        print("Data loading complete, starting training...")
+
         for step in range(n_epochs):
             # Training step with (adam) optimizer
             train_cost, grad_circuit = value_and_grad(encoding_kernel_params, conv_weights, weights_last, x_train, y_train)
@@ -372,8 +375,7 @@ if __name__ == '__main__':
             test_cost = 1.0 - jnp.sum(test_out) / len(test_out)
             test_cost_epochs.append(test_cost)
 
-            if (step+1)//5 == 0:
-                print(
+            print(
                     f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, test acc {test_acc}")
 
         return dict(
