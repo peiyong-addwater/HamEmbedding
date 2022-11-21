@@ -66,7 +66,7 @@ def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[flo
                              kernel_size:Tuple[int, int]=(3, 3),
                              stride:Tuple[int, int] = (1, 1),
                              dilation:Tuple[int, int]=(1, 1),
-                             padding: Tuple[int, int]=(0,0)) -> List[List[float]]:
+                             padding: Tuple[int, int]=(0,0)) -> np.ndarray:
     kernel_placeholder = np.ones(kernel_size)
     matrix, kernel, k, h_out, w_out = _check_params(matrix, kernel_placeholder, stride, dilation, padding)
     b = k[0] // 2, k[1] // 2
@@ -83,7 +83,7 @@ def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[flo
             submatrix = matrix[indices_x, :][:, indices_y]
             row.append(submatrix.flatten().tolist())
         output.append(row)
-    return output
+    return np.array(output)
 
 def load_mnist(path, kind='train'):
     # from https://github.com/zalandoresearch/fashion-mnist/blob/master/utils/mnist_reader.py
@@ -127,35 +127,46 @@ def SU4(params, wires):
     qml.U3(params[15], params[16], params[17], wires=wires[0])
     qml.U3(params[18], params[19], params[20], wires=wires[1])
 
-def single_kernel_encoding(kernel_params, data_params):
+def single_kernel_encoding(kernel_params, single_kernel_data_params, wire):
     """
     Size of the data_params should be the same as the size of the kernel_params
     :param kernel_params:
     :param data_params:
     :return:
     """
+    num_combo_gates = len(kernel_params) // 3 + 1
     kernel_pad_size = (len(kernel_params) // 3 + 1) * 3 - len(kernel_params)
     padded_kernel_params = pnp.array(kernel_params, requires_grad=True)
     for _ in range(kernel_pad_size):
-        padded_kernel_params.append(0)
-    padded_data_params = pnp.array(data_params, requires_grad=False)
+        padded_kernel_params = pnp.append(padded_kernel_params, 0)
+    padded_data_params = pnp.array(single_kernel_data_params, requires_grad=False)
     for _ in range(kernel_pad_size):
-        padded_data_params.append(0)
+        padded_data_params = pnp.append(padded_data_params, 0)
+    padded_kernel_params = padded_kernel_params.reshape(-1,3)
+    padded_data_params = padded_data_params.reshape(-1,3)
+    for i in range(num_combo_gates):
+        qml.U3(*padded_data_params[i], wires=wire)
+        qml.U3(*padded_kernel_params[i], wires=wire)
 
 
-def convolution_reupload_encoding(kernel_params, data_param_list):
-    num_qubits = len(data_param_list)
-    num_data_u3_gates_each_qubit = len(data_param_list[0])//3+1
-    # pad the kernel parameters
-    kernel_pad_size = (len(kernel_params)//3+1)*3-len(kernel_params)
-    padded_kernel_params = pnp.array(pnp.copy(kernel_params),  requires_grad=True)
-    for _ in range(kernel_pad_size):
-        padded_kernel_params.append(0)
+
+def convolution_reupload_encoding(kernel_params, data_param):
+    num_qubits, num_conv_per_qubit = data_param.shape[0], data_param.shape[1]
+    for i in range(num_qubits):
+        single_qubit_data = data_param[i]
+        for j in range(num_conv_per_qubit):
+            single_kernel_encoding(kernel_params, single_qubit_data[j], wire=i)
+
+
+
 
 
 
 if __name__ == '__main__':
     from PIL import Image
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
     data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
     im, labels = load_mnist(data_folder)
     test_index = 123
@@ -169,4 +180,6 @@ if __name__ == '__main__':
     conv_extract = extract_convolution_data(im_test_mat, stride=(2,2))
     print(len(conv_extract))
     print(len(conv_extract[0]))
-    print(conv_extract[0])
+    print(conv_extract.shape)
+    fig, ax = qml.draw_mpl(convolution_reupload_encoding)(np.ones(9), conv_extract)
+    plt.savefig("circuit.pdf")

@@ -3,6 +3,13 @@
   <component name="PublishConfigData" autoUpload="Always" serverName="peiyongw@10.100.238.77:22 password" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
     <option name="confirmBeforeUploading" value="false" />
     <serverData>
+      <paths name="peiyongw@10.100.238.77:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/Desktop/Research/QML-ImageClassification" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="peiyongw@10.100.238.77:22 password">
         <serverdata>
           <mappings>
