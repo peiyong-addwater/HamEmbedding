@@ -272,7 +272,7 @@ if __name__ == '__main__':
         labels = labels[np.where((labels == 0) | (labels == 1))]
 
         # normalize data
-        features = features / 255
+        features = features / 255 *(2*np.pi)
 
 
         # subsample train and test split
