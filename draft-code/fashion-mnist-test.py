@@ -127,9 +127,31 @@ def SU4(params, wires):
     qml.U3(params[15], params[16], params[17], wires=wires[0])
     qml.U3(params[18], params[19], params[20], wires=wires[1])
 
+def single_kernel_encoding(kernel_params, data_params):
+    """
+    Size of the data_params should be the same as the size of the kernel_params
+    :param kernel_params:
+    :param data_params:
+    :return:
+    """
+    kernel_pad_size = (len(kernel_params) // 3 + 1) * 3 - len(kernel_params)
+    padded_kernel_params = pnp.array(kernel_params, requires_grad=True)
+    for _ in range(kernel_pad_size):
+        padded_kernel_params.append(0)
+    padded_data_params = pnp.array(data_params, requires_grad=False)
+    for _ in range(kernel_pad_size):
+        padded_data_params.append(0)
+
+
 def convolution_reupload_encoding(kernel_params, data_param_list):
     num_qubits = len(data_param_list)
-    num_u3_gates_each_qubit = len(data_param_list[0])//3+1
+    num_data_u3_gates_each_qubit = len(data_param_list[0])//3+1
+    # pad the kernel parameters
+    kernel_pad_size = (len(kernel_params)//3+1)*3-len(kernel_params)
+    padded_kernel_params = pnp.array(pnp.copy(kernel_params),  requires_grad=True)
+    for _ in range(kernel_pad_size):
+        padded_kernel_params.append(0)
+
 
 
 if __name__ == '__main__':
