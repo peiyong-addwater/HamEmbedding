@@ -248,7 +248,7 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
     import jax
 
-    jax.config.update('jax_platform_name', 'cpu')
+    #jax.config.update('jax_platform_name', 'cpu')
     jax.config.update("jax_enable_x64", True)
     import jax.numpy as jnp
 
@@ -406,7 +406,7 @@ if __name__ == '__main__':
 
 
     # run training for multiple sizes
-    train_sizes = [2, 5, 10, 20, 40, 80]
+    train_sizes = [2, 5, 10]
     results_df = run_iterations(n_train=2)
     for n_train in train_sizes[1:]:
         results_df = pd.concat([results_df, run_iterations(n_train=n_train)])
@@ -471,5 +471,5 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig("test-results.pdf")
+    plt.savefig("fashion-mnist-results.pdf")
 
