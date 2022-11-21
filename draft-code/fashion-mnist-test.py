@@ -255,7 +255,7 @@ if __name__ == '__main__':
 
     import optax  # optimization using jax
 
-    KERNEL_SIZE = (6,6)
+    KERNEL_SIZE = (5,5)
     STRIDE = (4,4)
 
 
