@@ -85,7 +85,7 @@ def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[flo
         output.append(row)
     return np.array(output)
 
-def load_mnist(path, kind='train'):
+def load_fashion_mnist(path, kind='train'):
     # from https://github.com/zalandoresearch/fashion-mnist/blob/master/utils/mnist_reader.py
     import os
     import gzip
@@ -140,8 +140,10 @@ def single_kernel_encoding(kernel_params, single_kernel_data_params, wire):
     for _ in range(kernel_pad_size):
         padded_kernel_params = pnp.append(padded_kernel_params, 0)
     padded_data_params = pnp.array(single_kernel_data_params, requires_grad=False)
+    #print(single_kernel_data_params)
     for _ in range(kernel_pad_size):
         padded_data_params = pnp.append(padded_data_params, 0)
+    #print(padded_data_params)
     padded_kernel_params = padded_kernel_params.reshape(-1,3)
     padded_data_params = padded_data_params.reshape(-1,3)
     for i in range(num_combo_gates):
@@ -149,15 +151,86 @@ def single_kernel_encoding(kernel_params, single_kernel_data_params, wire):
         qml.U3(*padded_kernel_params[i], wires=wire)
 
 
-
 def convolution_reupload_encoding(kernel_params, data_param):
+    #print(data_param.shape)
     num_qubits, num_conv_per_qubit = data_param.shape[0], data_param.shape[1]
     for i in range(num_qubits):
         single_qubit_data = data_param[i]
+        #print(single_qubit_data)
         for j in range(num_conv_per_qubit):
             single_kernel_encoding(kernel_params, single_qubit_data[j], wire=i)
 
+def entangling_layer(wires):
+    for i in range(len(wires)-1):
+        qml.CZ(wires=[wires[i], wires[i+1]])
 
+def pooling_layer(weights, wires):
+    """ from https://pennylane.ai/qml/demos/tutorial_learning_few_data.html
+    Adds a pooling layer to a circuit.
+    Args:
+        weights (np.array): Array with the weights of the conditional U3 gate.
+        wires (list[int]): List of wires to apply the pooling layer on.
+    """
+    n_wires = len(wires)
+    assert len(wires) >= 2, "this circuit is too small!"
+
+    for indx, w in enumerate(wires):
+        if indx % 2 == 1 and indx < n_wires:
+            m_outcome = qml.measure(w)
+            qml.cond(m_outcome, qml.U3)(*weights, wires=wires[indx - 1])
+
+def convolutional_layer(weights, wires, skip_first_layer=True):
+    """from https://pennylane.ai/qml/demos/tutorial_learning_few_data.html
+    Adds a convolutional layer to a circuit.
+    Args:
+        weights (np.array): 1D array with 15 weights of the parametrized gates.
+        wires (list[int]): Wires where the convolutional layer acts on.
+        skip_first_layer (bool): Skips the first two U3 gates of a layer.
+    """
+    n_wires = len(wires)
+    assert n_wires >= 3, "this circuit is too small!"
+
+    for p in [0, 1]:
+        for indx, w in enumerate(wires):
+            if indx % 2 == p and indx < n_wires - 1:
+                if indx % 2 == 0 and not skip_first_layer:
+                    qml.U3(*weights[:3], wires=[w])
+                    qml.U3(*weights[3:6], wires=[wires[indx + 1]])
+                qml.IsingXX(weights[6], wires=[w, wires[indx + 1]])
+                qml.IsingYY(weights[7], wires=[w, wires[indx + 1]])
+                qml.IsingZZ(weights[8], wires=[w, wires[indx + 1]])
+                qml.U3(*weights[9:12], wires=[w])
+                qml.U3(*weights[12:], wires=[wires[indx + 1]])
+
+def conv_and_pooling(kernel_weights, n_wires, skip_first_layer=True):
+    """from https://pennylane.ai/qml/demos/tutorial_learning_few_data.html
+    Apply both the convolutional and pooling layer.
+    requires 15+3 = 18 parameters"""
+    convolutional_layer(kernel_weights[:15], n_wires, skip_first_layer=skip_first_layer)
+    pooling_layer(kernel_weights[15:], n_wires)
+def dense_layer(weights, wires):
+    """from https://pennylane.ai/qml/demos/tutorial_learning_few_data.html
+    Apply an arbitrary unitary gate to a specified set of wires."""
+    qml.ArbitraryUnitary(weights, wires)
+
+num_wires = 13
+device = qml.device("default.qubit", wires=num_wires)
+
+@qml.qnode(device,interface="jax")
+def conv_net(encoding_kernel_params, conv_weights, last_layer_params, image_conv_extract):
+    layers = conv_weights.shape[1]
+    wires = list(range(num_wires))
+    convolution_reupload_encoding(encoding_kernel_params, image_conv_extract)
+    qml.Barrier(wires=wires, only_visual=True)
+    entangling_layer(wires)
+    qml.Barrier(wires=wires, only_visual=True)
+    for j in range(layers):
+        conv_and_pooling(conv_weights[:, j], wires, skip_first_layer=(not j == 0))
+        wires = wires[::2]
+        qml.Barrier(wires=wires, only_visual=True)
+
+    dense_layer(last_layer_params, wires)
+    return qml.probs(wires=(0))
 
 
 
@@ -166,20 +239,85 @@ if __name__ == '__main__':
     from PIL import Image
     import matplotlib as mpl
     import matplotlib.pyplot as plt
+    import seaborn as sns
 
-    data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
-    im, labels = load_mnist(data_folder)
-    test_index = 123
-    im_test_mat = im[test_index].reshape(28,28)
-    im_test = Image.fromarray(im_test_mat)
-    im_test_mat = im_test_mat/255
-    print(len(im))
-    #print(im_test)
-    im_test_label = labels[test_index]
-    im_test.save(f"test-image-label-{im_test_label}.pdf")
-    conv_extract = extract_convolution_data(im_test_mat, stride=(2,2))
-    print(len(conv_extract))
-    print(len(conv_extract[0]))
-    print(conv_extract.shape)
-    fig, ax = qml.draw_mpl(convolution_reupload_encoding)(np.ones(9), conv_extract)
-    plt.savefig("circuit.pdf")
+    sns.set()
+
+    seed = 42
+    rng = np.random.default_rng(seed=seed)
+    import jax
+
+    jax.config.update('jax_platform_name', 'cpu')
+    jax.config.update("jax_enable_x64", True)
+    import jax.numpy as jnp
+
+    import optax  # optimization using jax
+
+
+    def load_data(num_train, num_test, rng):
+        """Return training and testing data of digits dataset."""
+        data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
+        features, labels = load_fashion_mnist(data_folder)
+        features = [features[i].reshape(28,28) for i in range(len(features))]
+        features = np.array(features)
+
+        # only use first two classes
+        features = features[np.where((labels == 0) | (labels == 1))]
+        labels = labels[np.where((labels == 0) | (labels == 1))]
+
+        # normalize data
+        features = features / 255
+
+
+        # subsample train and test split
+        train_indices = rng.choice(len(labels), num_train, replace=False)
+        test_indices = rng.choice(
+            np.setdiff1d(range(len(labels)), train_indices), num_test, replace=False
+        )
+
+        x_train, y_train = features[train_indices], labels[train_indices]
+        x_train = [extract_convolution_data(x_train[i],stride=(2,2)) for i in range(num_train)]
+        x_test, y_test = features[test_indices], labels[test_indices]
+        x_test = [extract_convolution_data(x_test[i],stride=(2,2)) for i in range(num_test)]
+        print(x_train[0].shape)
+        return (
+            jnp.asarray(x_train),
+            jnp.asarray(y_train),
+            jnp.asarray(x_test),
+            jnp.asarray(y_test),
+        )
+
+
+    @jax.jit
+    def compute_out(encoding_kernel_params, conv_weights, weights_last, features, labels):
+        """Computes the output of the corresponding label in the qcnn"""
+        cost = lambda encoding_kernel_params, conv_weights, weights_last, feature, label: conv_net(encoding_kernel_params, conv_weights, weights_last, feature)[
+            label
+        ]
+        return jax.vmap(cost, in_axes=(None, None, 0, 0), out_axes=0)(
+            encoding_kernel_params, conv_weights, weights_last, features, labels
+        )
+
+
+    def compute_accuracy(encoding_kernel_params, conv_weights, weights_last, features, labels):
+        """Computes the accuracy over the provided features and labels"""
+        out = compute_out(encoding_kernel_params, conv_weights, weights_last, features, labels)
+        return jnp.sum(out > 0.5) / len(out)
+
+
+    def compute_cost(encoding_kernel_params, conv_weights, weights_last, features, labels):
+        """Computes the cost over the provided features and labels"""
+        out = compute_out(encoding_kernel_params, conv_weights, weights_last, features, labels)
+        return 1.0 - jnp.sum(out) / len(labels)
+
+
+    def init_weights():
+        """Initializes random weights for the QCNN model."""
+        encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=3*3, requires_grad=True)
+        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, 2), requires_grad=True)
+        weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** 2 - 1, requires_grad=True)
+        return jnp.array(encoding_kernel_params), jnp.array(conv_weights), jnp.array(weights_last)
+
+
+    value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2]))
+
