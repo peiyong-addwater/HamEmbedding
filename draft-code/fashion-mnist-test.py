@@ -140,10 +140,11 @@ def single_kernel_encoding(kernel_params, single_kernel_data_params, wire):
     for _ in range(kernel_pad_size):
         padded_kernel_params = jnp.append(padded_kernel_params, 0)
     padded_data_params = jnp.array(single_kernel_data_params)
+    #print(padded_kernel_params.shape)
     #print(single_kernel_data_params)
     for _ in range(kernel_pad_size):
         padded_data_params = jnp.append(padded_data_params, 0)
-    #print(padded_data_params)
+    #print(padded_data_params.shape)
     padded_kernel_params = padded_kernel_params.reshape(-1,3)
     padded_data_params = padded_data_params.reshape(-1,3)
     for i in range(num_combo_gates):
@@ -254,9 +255,12 @@ if __name__ == '__main__':
 
     import optax  # optimization using jax
 
+    KERNEL_SIZE = (5,5)
+    STRIDE = (5,5)
 
 
-    def load_data(num_train, num_test, rng, stride = (5,5)):
+
+    def load_data(num_train, num_test, rng, stride = STRIDE, kernel_size = KERNEL_SIZE):
         """Return training and testing data of digits dataset."""
         data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
         features, labels = load_fashion_mnist(data_folder)
@@ -278,9 +282,9 @@ if __name__ == '__main__':
         )
 
         x_train, y_train = features[train_indices], labels[train_indices]
-        x_train = np.array([extract_convolution_data(x_train[i],stride=stride) for i in range(num_train)])
+        x_train = np.array([extract_convolution_data(x_train[i],stride=stride, kernel_size=kernel_size) for i in range(num_train)])
         x_test, y_test = features[test_indices], labels[test_indices]
-        x_test = np.array([extract_convolution_data(x_test[i],stride=stride) for i in range(num_test)])
+        x_test = np.array([extract_convolution_data(x_test[i],stride=stride, kernel_size=kernel_size) for i in range(num_test)])
         return (
             jnp.asarray(x_train),
             jnp.asarray(y_train),
@@ -314,7 +318,7 @@ if __name__ == '__main__':
 
     def init_weights():
         """Initializes random weights for the QCNN model."""
-        encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=3*3, requires_grad=True)
+        encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=KERNEL_SIZE[0]*KERNEL_SIZE[1], requires_grad=True)
         conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, 2), requires_grad=True)
         weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** 2 - 1, requires_grad=True)
         return jnp.array(encoding_kernel_params), jnp.array(conv_weights), jnp.array(weights_last)
