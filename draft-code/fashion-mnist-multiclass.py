@@ -237,8 +237,8 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
 
     KERNEL_SIZE = (3,3)
-    STRIDE = (5,5)
-    NUM_CONV_POOL_LAYERS = 2
+    STRIDE = (2,2)
+    NUM_CONV_POOL_LAYERS = 3
 
     _, _, _, num_wires,_ = _check_params(np.random.rand(28*28).reshape(28,28), kernel=np.random.random(KERNEL_SIZE), stride=STRIDE, dilation=(1,1), padding=(0,0))
     print(num_wires)
