@@ -242,7 +242,7 @@ if __name__ == '__main__':
     FINAL_LAYER_QUBITS = 3
 
     n_test = 100
-    n_epochs = 20
+    n_epochs = 200
     n_reps = 50
 
     _, _, _, num_wires,_ = _check_params(np.random.rand(28*28).reshape(28,28), kernel=np.random.random(KERNEL_SIZE), stride=STRIDE, dilation=(1,1), padding=(0,0))
