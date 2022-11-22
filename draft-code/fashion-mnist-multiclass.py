@@ -423,7 +423,7 @@ if __name__ == '__main__':
 
 
     # run training for multiple sizes
-    train_sizes = [50, 100, 200, 1000]
+    train_sizes = [4, 50, 100, 200, 1000]
     # train_sizes = [2, 10, 100, 1000]
     results_df = run_iterations(n_train=train_sizes[0])
     for n_train in train_sizes[1:]:
