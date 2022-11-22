@@ -237,8 +237,9 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
 
     KERNEL_SIZE = (3,3)
-    STRIDE = (2,2)
-    NUM_CONV_POOL_LAYERS = 3
+    STRIDE = (3,3)
+    NUM_CONV_POOL_LAYERS = 2
+    FINAL_LAYER_QUBITS = 3
 
     _, _, _, num_wires,_ = _check_params(np.random.rand(28*28).reshape(28,28), kernel=np.random.random(KERNEL_SIZE), stride=STRIDE, dilation=(1,1), padding=(0,0))
     print(num_wires)
@@ -263,7 +264,7 @@ if __name__ == '__main__':
 
 
     fig, ax = qml.draw_mpl(conv_net, style='black_white')(
-        np.random.rand(KERNEL_SIZE[0]*KERNEL_SIZE[1]),np.random.rand(18, NUM_CONV_POOL_LAYERS), np.random.rand(4 ** 2 - 1),
+        np.random.rand(KERNEL_SIZE[0]*KERNEL_SIZE[1]),np.random.rand(18, NUM_CONV_POOL_LAYERS), np.random.rand(4 ** FINAL_LAYER_QUBITS - 1),
         extract_convolution_data(np.random.rand(28*28).reshape((28,28)),stride=STRIDE, kernel_size=KERNEL_SIZE))
     plt.savefig("circuit-multiclass.pdf")
 
@@ -328,7 +329,7 @@ if __name__ == '__main__':
         """Initializes random weights for the QCNN model."""
         encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=KERNEL_SIZE[0]*KERNEL_SIZE[1], requires_grad=True)
         conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, NUM_CONV_POOL_LAYERS), requires_grad=True)
-        weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** 2 - 1, requires_grad=True)
+        weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** FINAL_LAYER_QUBITS - 1, requires_grad=True)
         return jnp.array(encoding_kernel_params), jnp.array(conv_weights), jnp.array(weights_last)
 
 
