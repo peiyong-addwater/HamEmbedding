@@ -134,7 +134,7 @@ import numpy as np
 import pandas as pd
 from sklearn import datasets
 import seaborn as sns
-import jax;
+import jax
 
 jax.config.update('jax_platform_name', 'cpu')
 jax.config.update("jax_enable_x64", True)
@@ -150,6 +150,8 @@ sns.set()
 seed = 0
 rng = np.random.default_rng(seed=seed)
 
+import time
+start_time = time.time()
 
 ##############################################################################
 # To construct a convolutional and pooling layer in a quantum circuit, we will
@@ -520,7 +522,9 @@ axes[2].legend(handles=legend_elements, ncol=3)
 axes[1].set_yscale('log', base=2)
 #plt.show()
 plt.savefig("pennylane-tutorial-results.pdf")
+end_time = time.time()
 
+print(f"Total time: {end_time-start_time}")
 ##############################################################################
 # ------------
 #
