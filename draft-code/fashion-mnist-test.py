@@ -220,19 +220,21 @@ if __name__ == '__main__':
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     import pandas as pd
+
+    import jax
+
+    # jax.config.update('jax_platform_name', 'cpu')
+    jax.config.update("jax_enable_x64", True)
+    import jax.numpy as jnp
+
+    import optax  # optimization using jax
+
     import seaborn as sns
 
     sns.set()
 
     seed = 42
     rng = np.random.default_rng(seed=seed)
-    import jax
-
-    #jax.config.update('jax_platform_name', 'cpu')
-    jax.config.update("jax_enable_x64", True)
-    import jax.numpy as jnp
-
-    import optax  # optimization using jax
 
     KERNEL_SIZE = (3,3)
     STRIDE = (5,5)
@@ -259,6 +261,11 @@ if __name__ == '__main__':
         dense_layer(last_layer_params, wires)
         return qml.probs(wires=(0))
 
+
+    fig, ax = qml.draw_mpl(conv_net, style='black_white')(
+        np.random.rand(KERNEL_SIZE[0]*KERNEL_SIZE[1]),np.random.rand(18, NUM_CONV_POOL_LAYERS), np.random.rand(4 ** 2 - 1),
+        extract_convolution_data(np.random.rand(28*28).reshape((28,28)),stride=STRIDE, kernel_size=KERNEL_SIZE))
+    plt.savefig("circuit.pdf")
 
 
     def load_data(num_train, num_test, rng, stride = STRIDE, kernel_size = KERNEL_SIZE):
