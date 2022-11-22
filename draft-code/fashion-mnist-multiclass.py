@@ -241,6 +241,10 @@ if __name__ == '__main__':
     NUM_CONV_POOL_LAYERS = 2
     FINAL_LAYER_QUBITS = 3
 
+    n_test = 100
+    n_epochs = 500
+    n_reps = 20
+
     _, _, _, num_wires,_ = _check_params(np.random.rand(28*28).reshape(28,28), kernel=np.random.random(KERNEL_SIZE), stride=STRIDE, dilation=(1,1), padding=(0,0))
     print(num_wires)
     device = qml.device("default.qubit", wires=num_wires)
@@ -401,9 +405,7 @@ if __name__ == '__main__':
         )
 
 
-    n_test = 100
-    n_epochs = 100
-    n_reps = 100
+
 
 
     def run_iterations(n_train):
@@ -421,7 +423,7 @@ if __name__ == '__main__':
 
 
     # run training for multiple sizes
-    train_sizes = [10, 50, 100, 200, 1000]
+    train_sizes = [50, 100, 200, 1000]
     # train_sizes = [2, 10, 100, 1000]
     results_df = run_iterations(n_train=train_sizes[0])
     for n_train in train_sizes[1:]:
@@ -487,5 +489,5 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig("fashion-mnist-multiclass-results-100-test.pdf")
+    plt.savefig(f"fashion-mnist-multiclass-results-100-test-{n_reps}-reps.pdf")
 
