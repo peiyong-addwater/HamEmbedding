@@ -254,6 +254,9 @@ if __name__ == '__main__':
     def conv_net(encoding_kernel_params,entangling_params, conv_weights, last_layer_params, image_conv_extract):
         layers = conv_weights.shape[1]
         wires = list(range(num_wires))
+        for wire in wires:
+            qml.Hadamard(wires=wire)
+        qml.Barrier(wires=wires, only_visual=True)
         convolution_reupload_encoding(encoding_kernel_params, image_conv_extract)
         qml.Barrier(wires=wires, only_visual=True)
         entangling_layer(entangling_params,wires)
