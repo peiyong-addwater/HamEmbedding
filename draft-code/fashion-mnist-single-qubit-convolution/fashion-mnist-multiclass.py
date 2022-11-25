@@ -241,9 +241,9 @@ if __name__ == '__main__':
     NUM_CONV_POOL_LAYERS = 2
     FINAL_LAYER_QUBITS = 3
 
-    n_test = 100
-    n_epochs = 500
-    n_reps = 8
+    n_test = 1000
+    n_epochs = 100
+    n_reps = 10
 
     _, _, _, num_wires,_ = _check_params(np.random.rand(28*28).reshape(28,28), kernel=np.random.random(KERNEL_SIZE), stride=STRIDE, dilation=(1,1), padding=(0,0))
     print(num_wires)
@@ -493,5 +493,5 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig(f"fashion-mnist-multiclass-results-100-test-{n_reps}-reps.pdf")
+    plt.savefig(f"fashion-mnist-multiclass-results-{n_test}-test-{n_reps}-reps.pdf")
 
