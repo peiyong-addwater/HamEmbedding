@@ -221,6 +221,7 @@ def dense_layer(weights, wires):
     qml.ArbitraryUnitary(weights, wires)
 
 if __name__ == '__main__':
+    import time
 
     #jax.config.update('jax_platform_name', 'cpu')
     jax.config.update("jax_enable_x64", True)
@@ -366,6 +367,7 @@ if __name__ == '__main__':
 
         print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
         for step in range(n_epochs):
+            epoch_start = time.time()
             # Training step with (adam) optimizer
             train_cost, grad_circuit = value_and_grad(theta, w, conv_weights, weights_last, x_train, y_train)
             updates, opt_state = optimizer.update(grad_circuit, opt_state)
@@ -383,8 +385,9 @@ if __name__ == '__main__':
             test_cost = 1.0 - jnp.sum(test_out) / len(test_out)
             test_cost_epochs.append(test_cost)
 
+            epoch_end = time.time()
             print(
-                f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, test acc {test_acc}")
+                f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, test acc {test_acc}, time {epoch_end-epoch_start} seconds")
 
         return dict(
             n_train=[n_train] * n_epochs,
