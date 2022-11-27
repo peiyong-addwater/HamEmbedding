@@ -238,12 +238,12 @@ if __name__ == '__main__':
     NUM_CONV_POOL_LAYERS = 2
     FINAL_LAYER_QUBITS = 2
 
-    n_test = 100
-    n_epochs = 100
+    n_test = 1000
+    n_epochs = 200
     n_reps = 10
 
     # train_sizes = [2, 10, 100, 1000]
-    train_sizes = [20, 40, 100, 200, 1000]
+    train_sizes = [200, 1000, 10000, 20000]
 
     _, _, _, num_conv_rows, _ = _check_params(np.random.rand(28 * 28).reshape(28, 28), kernel=np.random.random(KERNEL_SIZE),
                                           stride=STRIDE, dilation=(1, 1), padding=(0, 0))
@@ -334,7 +334,7 @@ if __name__ == '__main__':
 
     def compute_accuracy(theta, w, conv_weights, weights_last, features, labels):
         out = compute_out(theta, w, conv_weights,weights_last, features, labels)
-        return jnp.sum(out>0.5)/len(out)
+        return jnp.sum(out>0.25)/len(out) # prob for classification = 1/number of labels
 
     def compute_cost(theta, w, conv_weights, weights_last, features, labels):
         out = compute_out(theta, w, conv_weights,weights_last, features, labels)
