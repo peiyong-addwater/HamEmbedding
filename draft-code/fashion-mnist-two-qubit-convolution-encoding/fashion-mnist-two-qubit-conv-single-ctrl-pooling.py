@@ -150,9 +150,11 @@ def su4_single_conv_encoding(theta,w, data, wires):
     num_layers = len(data)//15+1
     data_pad_size = 15*num_layers-len(data)
     padded_data = jnp.array(data)
+    theta = jnp.array(theta)
+    w = jnp.array(w)
     for _ in range(data_pad_size):
         padded_data = jnp.append(padded_data, 0)
-    gate_params = jnp.array(theta) + jnp.multiply(jnp.array(w), padded_data)
+    gate_params = jnp.add(theta, jnp.multiply(w, padded_data))#jnp.array(theta) + jnp.multiply(jnp.array(w), padded_data)
     for i in range(num_layers):
         SU4(gate_params[15*i:15*(i+1)], wires=wires)
 
@@ -160,12 +162,12 @@ def conv_repuload_encoding(theta, w, data, wires):
     num_row, num_columns = data.shape[0], data.shape[1]
     for j in range(num_columns):
         for i in range(0, num_row+1, 2):
-            encode_data = data[i]
-            su4_single_conv_encoding(theta, w, encode_data[j], wires=[wires[i], wires[i + 1]])
+            row_data = data[i]
+            su4_single_conv_encoding(theta, w, row_data[j], wires=[wires[i], wires[i + 1]])
         qml.Barrier(wires=wires, only_visual=True)
         for i in range(1, num_row+1 - 2, 2):
-            encode_data = data[i]
-            su4_single_conv_encoding(theta, w, encode_data[j], wires=[wires[i], wires[i + 1]])
+            row_data = data[i]
+            su4_single_conv_encoding(theta, w, row_data[j], wires=[wires[i], wires[i + 1]])
         qml.Barrier(wires=wires, only_visual=True)
 
 
@@ -220,7 +222,7 @@ def dense_layer(weights, wires):
 
 if __name__ == '__main__':
 
-    jax.config.update('jax_platform_name', 'cpu')
+    #jax.config.update('jax_platform_name', 'cpu')
     jax.config.update("jax_enable_x64", True)
 
     import seaborn as sns
@@ -357,7 +359,7 @@ if __name__ == '__main__':
         # load data
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
         theta, w, conv_weights, weights_last = init_weights()
-        cosine_decay_scheduler = optax.cosine_decay_schedule(0.1, decay_steps=n_epochs, alpha=0.95)
+        cosine_decay_scheduler = optax.cosine_decay_schedule(0.5, decay_steps=n_epochs, alpha=0.95)
         optimizer = optax.adam(learning_rate=cosine_decay_scheduler)
         opt_state = optimizer.init((theta, w, conv_weights, weights_last))
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
