@@ -237,6 +237,8 @@ if __name__ == '__main__':
     n_epochs = 100
     n_reps = 10
 
+    train_sizes = [4, 40, 100, 500, 1000]
+
     _, _, _, num_conv_rows, _ = _check_params(np.random.rand(28 * 28).reshape(28, 28), kernel=np.random.random(KERNEL_SIZE),
                                           stride=STRIDE, dilation=(1, 1), padding=(0, 0))
     num_wires = num_conv_rows + 1
@@ -323,3 +325,150 @@ if __name__ == '__main__':
             theta, w, conv_weights, weights_last, features, labels
         )
 
+    def compute_accuracy(theta, w, conv_weights, weights_last, features, labels):
+        out = compute_out(theta, w, conv_weights,weights_last, features, labels)
+        return jnp.sum(out>0.5)/len(out)
+
+    def compute_cost(theta, w, conv_weights, weights_last, features, labels):
+        out = compute_out(theta, w, conv_weights,weights_last, features, labels)
+        return 1.0 - jnp.sum(out) / len(labels)
+
+    print("Pre-Compiling the cost function...")
+    value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2, 3]))
+
+    def train_qcnn(n_train, n_test, n_epochs):
+        """
+        Args:
+            n_train  (int): number of training examples
+            n_test   (int): number of test examples
+            n_epochs (int): number of training epochs
+            desc  (string): displayed string during optimization
+
+        Returns:
+            dict: n_train,
+            steps,
+            train_cost_epochs,
+            train_acc_epochs,
+            test_cost_epochs,
+            test_acc_epochs
+
+        """
+        # load data
+        x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
+        theta, w, conv_weights, weights_last = init_weights()
+        cosine_decay_scheduler = optax.cosine_decay_schedule(0.1, decay_steps=n_epochs, alpha=0.95)
+        optimizer = optax.adam(learning_rate=cosine_decay_scheduler)
+        opt_state = optimizer.init((theta, w, conv_weights, weights_last))
+        train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
+
+        print("Data loading complete, starting training...")
+        for step in range(n_epochs):
+            # Training step with (adam) optimizer
+            train_cost, grad_circuit = value_and_grad(theta, w, conv_weights, weights_last, x_train, y_train)
+            updates, opt_state = optimizer.update(grad_circuit, opt_state)
+            theta, w, conv_weights, weights_last = optax.apply_updates((theta, w, conv_weights, weights_last), updates)
+            train_cost_epochs.append(train_cost)
+            # compute accuracy on training data
+            train_acc = compute_accuracy(theta, w, conv_weights, weights_last, x_train,
+                                         y_train)
+            train_acc_epochs.append(train_acc)
+            # compute accuracy and cost on testing data
+            test_out = compute_out(theta, w, conv_weights, weights_last, x_test,
+                                   y_test)
+            test_acc = jnp.sum(test_out > 0.5) / len(test_out)
+            test_acc_epochs.append(test_acc)
+            test_cost = 1.0 - jnp.sum(test_out) / len(test_out)
+            test_cost_epochs.append(test_cost)
+
+            print(
+                f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, test acc {test_acc}")
+
+        return dict(
+            n_train=[n_train] * n_epochs,
+            step=np.arange(1, n_epochs + 1, dtype=int),
+            train_cost=train_cost_epochs,
+            train_acc=train_acc_epochs,
+            test_cost=test_cost_epochs,
+            test_acc=test_acc_epochs,
+        )
+
+    def run_iterations(n_train):
+        results_df = pd.DataFrame(
+            columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
+        )
+
+        for _ in range(n_reps):
+            results = train_qcnn(n_train=n_train, n_test=n_test, n_epochs=n_epochs)
+            results_df = pd.concat(
+                [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
+            )
+
+        return results_df
+
+
+    # run training for multiple sizes
+    results_df = run_iterations(n_train=train_sizes[0])
+    for n_train in train_sizes[1:]:
+        results_df = pd.concat([results_df, run_iterations(n_train=n_train)])
+
+    # aggregate dataframe
+    df_agg = results_df.groupby(["n_train", "step"]).agg(["mean", "std"])
+    df_agg = df_agg.reset_index()
+
+    sns.set_style('whitegrid')
+    colors = sns.color_palette()
+    fig, axes = plt.subplots(ncols=3, figsize=(16.5, 5))
+
+    generalization_errors = []
+
+    # plot losses and accuracies
+    for i, n_train in enumerate(train_sizes):
+        df = df_agg[df_agg.n_train == n_train]
+
+        dfs = [df.train_cost["mean"], df.test_cost["mean"], df.train_acc["mean"], df.test_acc["mean"]]
+        lines = ["o-", "x--", "o-", "x--"]
+        labels = [fr"$N={n_train}$", None, fr"$N={n_train}$", None]
+        axs = [0, 0, 2, 2]
+
+        for k in range(4):
+            ax = axes[axs[k]]
+            ax.plot(df.step, dfs[k], lines[k], label=labels[k], markevery=10, color=colors[i], alpha=0.8)
+
+        # plot final loss difference
+        dif = df[df.step == 100].test_cost["mean"] - df[df.step == 100].train_cost["mean"]
+        generalization_errors.append(dif)
+
+    # format loss plot
+    ax = axes[0]
+    ax.set_title('Train and Test Losses', fontsize=14)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+
+    # format generalization error plot
+    ax = axes[1]
+    ax.plot(train_sizes, generalization_errors, "o-", label=r"$gen(\alpha)$")
+    ax.set_xscale('log')
+    ax.set_xticks(train_sizes)
+    ax.set_xticklabels(train_sizes)
+    ax.set_title(r'Generalization Error $gen(\alpha) = R(\alpha) - \hat{R}_N(\alpha)$', fontsize=14)
+    ax.set_xlabel('Training Set Size')
+
+    # format loss plot
+    ax = axes[2]
+    ax.set_title('Train and Test Accuracies', fontsize=14)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Accuracy')
+    ax.set_ylim(0., 1.05)
+
+    legend_elements = [
+                          mpl.lines.Line2D([0], [0], label=f'N={n}', color=colors[i]) for i, n in enumerate(train_sizes)
+                      ] + [
+                          mpl.lines.Line2D([0], [0], marker='o', ls='-', label='Train', color='Black'),
+                          mpl.lines.Line2D([0], [0], marker='x', ls='--', label='Test', color='Black')
+                      ]
+
+    axes[0].legend(handles=legend_elements, ncol=3)
+    axes[2].legend(handles=legend_elements, ncol=3)
+
+    axes[1].set_yscale('log', base=2)
+    plt.savefig(f"fashion-mnist-multiclass-results-{n_test}-test-{n_reps}-reps.pdf")
