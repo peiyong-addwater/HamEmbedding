@@ -333,7 +333,6 @@ if __name__ == '__main__':
         out = compute_out(theta, w, conv_weights,weights_last, features, labels)
         return 1.0 - jnp.sum(out) / len(labels)
 
-    print("Pre-Compiling the cost function...")
     value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2, 3]))
 
     def train_qcnn(n_train, n_test, n_epochs):
@@ -361,7 +360,7 @@ if __name__ == '__main__':
         opt_state = optimizer.init((theta, w, conv_weights, weights_last))
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
 
-        print("Data loading complete, starting training...")
+        print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
         for step in range(n_epochs):
             # Training step with (adam) optimizer
             train_cost, grad_circuit = value_and_grad(theta, w, conv_weights, weights_last, x_train, y_train)
@@ -471,4 +470,4 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig(f"fashion-mnist-multiclass-results-{n_test}-test-{n_reps}-reps.pdf")
+    plt.savefig(f"fashion-mnist-multiclass-su4-encoding-results-{n_test}-test-{n_reps}-reps.pdf")
