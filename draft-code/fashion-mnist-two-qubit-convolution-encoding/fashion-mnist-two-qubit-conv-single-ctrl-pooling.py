@@ -223,7 +223,7 @@ def dense_layer(weights, wires):
 if __name__ == '__main__':
     import time
 
-    #jax.config.update('jax_platform_name', 'cpu')
+    jax.config.update('jax_platform_name', 'cpu')
     jax.config.update("jax_enable_x64", True)
 
     import seaborn as sns
@@ -233,10 +233,10 @@ if __name__ == '__main__':
     seed = 42
     rng = np.random.default_rng(seed=seed)
 
-    KERNEL_SIZE = (3, 3)
-    STRIDE = (3, 3)
+    KERNEL_SIZE = (5, 5)
+    STRIDE = (5, 5)
     NUM_CONV_POOL_LAYERS = 2
-    FINAL_LAYER_QUBITS = 3
+    FINAL_LAYER_QUBITS = 2
 
     n_test = 100
     n_epochs = 100
@@ -271,7 +271,7 @@ if __name__ == '__main__':
             qml.Barrier(wires=wires, only_visual=True)
 
         dense_layer(last_layer_params, wires)
-        return qml.probs(wires=(wires[0], wires[1]))
+        return qml.probs(wires=(0))
 
     def init_weights():
         """Initializes random weights for the QCNN model."""
@@ -297,8 +297,10 @@ if __name__ == '__main__':
         features = np.array(features)
 
         # only use first four classes
-        features = features[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
-        labels = labels[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
+        # features = features[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
+        # labels = labels[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
+        features = features[np.where((labels == 0) | (labels == 1))]
+        labels = labels[np.where((labels == 0) | (labels == 1))]
 
         # normalize data
         features = features / 255
@@ -321,7 +323,7 @@ if __name__ == '__main__':
             jnp.asarray(y_test),
         )
 
-    @jax.jit
+    #@jax.jit
     def compute_out(theta, w, conv_weights, weights_last, features, labels):
         cost = lambda theta, w, conv_weights, weights_last, feature, label:conv_net(theta, w, conv_weights, weights_last, feature)[
             label
@@ -371,6 +373,7 @@ if __name__ == '__main__':
             # Training step with (adam) optimizer
             train_cost, grad_circuit = value_and_grad(theta, w, conv_weights, weights_last, x_train, y_train)
             updates, opt_state = optimizer.update(grad_circuit, opt_state)
+            print(updates)
             theta, w, conv_weights, weights_last = optax.apply_updates((theta, w, conv_weights, weights_last), updates)
             train_cost_epochs.append(train_cost)
             # compute accuracy on training data
