@@ -160,14 +160,14 @@ def su4_single_conv_encoding(theta,w, data, wires):
 
 def conv_repuload_encoding(theta, w, data):
     num_row, num_columns = data.shape[0], data.shape[1]
-    for i in range(0, num_row, 2):
-        encode_data = data[i]
-        for j in range(num_columns):
-            su4_single_conv_encoding(theta, w, encode_data[j], wires=[i, i+1])
-    for i in range(1, num_row-2, 2):
-        encode_data = data[i]
-        for j in range(num_columns):
-            su4_single_conv_encoding(theta, w, encode_data[j], wires=[i, i+1])
+    for j in range(num_columns):
+        for i in range(0, num_row, 2):
+            encode_data = data[i]
+            su4_single_conv_encoding(theta, w, encode_data[j], wires=[i, i + 1])
+        for i in range(1, num_row - 2, 2):
+            encode_data = data[i]
+            su4_single_conv_encoding(theta, w, encode_data[j], wires=[i, i + 1])
+
 
 def pooling_layer(weights, wires):
     """ from https://pennylane.ai/qml/demos/tutorial_learning_few_data.html
@@ -240,3 +240,19 @@ if __name__ == '__main__':
     num_wires = num_conv_rows + 1
     print(num_wires)
     device = qml.device("default.qubit", wires=num_wires)
+
+    num_su4_each_conv = KERNEL_SIZE[0]*KERNEL_SIZE[1]//15 + 1
+    theta_size = num_su4_each_conv*15
+    w_size = num_su4_each_conv*15
+
+    device = qml.device("default.qubit", wires=num_wires)
+
+    @qml.qnode(device, interface="jax")
+    def conv_net(theta, w, conv_weights, last_layer_params, image_conv_extract):
+        num_conv_layers = conv_weights.shape[1]
+        wires = list(range(num_wires))
+        for wire in wires:
+            qml.Hadamard(wires=wire)
+        qml.Barrier(wires=wires, only_visual=True)
+
+
