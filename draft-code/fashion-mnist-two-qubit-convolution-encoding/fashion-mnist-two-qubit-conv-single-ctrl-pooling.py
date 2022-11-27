@@ -150,7 +150,7 @@ def su4_single_conv_encoding(theta,w, data, wires):
     :return:
     """
     num_layers = len(data)//15+1
-    data_pad_size = len(data)-15*num_layers
+    data_pad_size = 15*num_layers-len(data)
     padded_data = jnp.array(data)
     for _ in range(data_pad_size):
         padded_data = jnp.append(padded_data, 0)
@@ -158,15 +158,17 @@ def su4_single_conv_encoding(theta,w, data, wires):
     for i in range(num_layers):
         SU4(gate_params[15*i:15*(i+1)], wires=wires)
 
-def conv_repuload_encoding(theta, w, data):
+def conv_repuload_encoding(theta, w, data, wires):
     num_row, num_columns = data.shape[0], data.shape[1]
     for j in range(num_columns):
-        for i in range(0, num_row, 2):
+        for i in range(0, num_row+1, 2):
             encode_data = data[i]
-            su4_single_conv_encoding(theta, w, encode_data[j], wires=[i, i + 1])
-        for i in range(1, num_row - 2, 2):
+            su4_single_conv_encoding(theta, w, encode_data[j], wires=[wires[i], wires[i + 1]])
+        qml.Barrier(wires=wires, only_visual=True)
+        for i in range(1, num_row+1 - 2, 2):
             encode_data = data[i]
-            su4_single_conv_encoding(theta, w, encode_data[j], wires=[i, i + 1])
+            su4_single_conv_encoding(theta, w, encode_data[j], wires=[wires[i], wires[i + 1]])
+        qml.Barrier(wires=wires, only_visual=True)
 
 
 def pooling_layer(weights, wires):
@@ -254,5 +256,70 @@ if __name__ == '__main__':
         for wire in wires:
             qml.Hadamard(wires=wire)
         qml.Barrier(wires=wires, only_visual=True)
+        conv_repuload_encoding(theta, w, image_conv_extract, wires)
+        qml.Barrier(wires=wires, only_visual=True)
+        for j in range(num_conv_layers):
+            conv_and_pooling(conv_weights[:, j], wires, skip_first_layer=(not j == 0))
+            wires = wires[::2]
+            qml.Barrier(wires=wires, only_visual=True)
 
+        dense_layer(last_layer_params, wires)
+        return qml.probs(wires=(wires[0], wires[1]))
+
+    def init_weights():
+        """Initializes random weights for the QCNN model."""
+        theta = pnp.random.normal(loc=0, scale=1, size=theta_size, requires_grad=True)
+        w = pnp.random.normal(loc=0, scale=1, size=w_size, requires_grad=True)
+        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, NUM_CONV_POOL_LAYERS), requires_grad=True)
+        weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** FINAL_LAYER_QUBITS - 1, requires_grad=True)
+        return jnp.array(theta),jnp.array(w), jnp.array(conv_weights), jnp.array(weights_last)
+
+
+    fig, ax = qml.draw_mpl(conv_net, style='black_white')(pnp.random.normal(loc=0, scale=1, size=theta_size, requires_grad=True),
+                                                          pnp.random.normal(loc=0, scale=1, size=w_size, requires_grad=True),
+                                                          pnp.random.normal(loc=0, scale=1, size=(18, NUM_CONV_POOL_LAYERS), requires_grad=True),
+                                                          pnp.random.normal(loc=0, scale=1, size=4 ** FINAL_LAYER_QUBITS - 1, requires_grad=True),
+                                                          extract_convolution_data(np.random.rand(28*28).reshape((28,28)),stride=STRIDE, kernel_size=KERNEL_SIZE))
+    plt.savefig("circuit-su4-encoding-multiclass.pdf")
+
+    def load_data(num_train, num_test, rng, stride = STRIDE, kernel_size = KERNEL_SIZE):
+        """Return training and testing data of digits dataset."""
+        data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
+        features, labels = load_fashion_mnist(data_folder)
+        features = [features[i].reshape(28,28) for i in range(len(features))]
+        features = np.array(features)
+
+        # only use first four classes
+        features = features[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
+        labels = labels[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
+
+        # normalize data
+        features = features / 255
+
+
+        # subsample train and test split
+        train_indices = rng.choice(len(labels), num_train, replace=False)
+        test_indices = rng.choice(
+            np.setdiff1d(range(len(labels)), train_indices), num_test, replace=False
+        )
+
+        x_train, y_train = features[train_indices], labels[train_indices]
+        x_train = np.array([extract_convolution_data(x_train[i],stride=stride, kernel_size=kernel_size) for i in range(num_train)])
+        x_test, y_test = features[test_indices], labels[test_indices]
+        x_test = np.array([extract_convolution_data(x_test[i],stride=stride, kernel_size=kernel_size) for i in range(num_test)])
+        return (
+            jnp.asarray(x_train),
+            jnp.asarray(y_train),
+            jnp.asarray(x_test),
+            jnp.asarray(y_test),
+        )
+
+    @jax.jit
+    def compute_out(theta, w, conv_weights, weights_last, features, labels):
+        cost = lambda theta, w, conv_weights, weights_last, feature, label:conv_net(theta, w, conv_weights, weights_last, feature)[
+            label
+        ]
+        return jax.vmap(cost, in_axes=(None, None, None, None, 0, 0), out_axes=0)(
+            theta, w, conv_weights, weights_last, features, labels
+        )
 
