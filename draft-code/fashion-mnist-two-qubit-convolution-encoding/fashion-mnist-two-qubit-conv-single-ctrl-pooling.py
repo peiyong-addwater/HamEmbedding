@@ -255,7 +255,6 @@ if __name__ == '__main__':
     theta_size = num_su4_each_conv*15
     w_size = num_su4_each_conv*15
 
-    device = qml.device("default.qubit", wires=num_wires)
 
     @qml.qnode(device, interface="jax")
     def conv_net(theta, w, conv_weights, last_layer_params, image_conv_extract):
