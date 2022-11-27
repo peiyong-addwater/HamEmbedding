@@ -323,7 +323,7 @@ if __name__ == '__main__':
     def compute_accuracy(encoding_kernel_params,entangling_params, conv_weights, weights_last, features, labels):
         """Computes the accuracy over the provided features and labels"""
         out = compute_out(encoding_kernel_params, entangling_params, conv_weights, weights_last, features, labels)
-        return jnp.sum(out > 0.5) / len(out)
+        return jnp.sum(out > 0.25) / len(out)
 
 
     def compute_cost(encoding_kernel_params, entangling_params, conv_weights, weights_last, features, labels):
@@ -391,7 +391,7 @@ if __name__ == '__main__':
 
             # compute accuracy and cost on testing data
             test_out = compute_out(encoding_kernel_params,entangling_params, conv_weights, weights_last, x_test, y_test)
-            test_acc = jnp.sum(test_out > 0.5) / len(test_out)
+            test_acc = jnp.sum(test_out > 0.25) / len(test_out)
             test_acc_epochs.append(test_acc)
             test_cost = 1.0 - jnp.sum(test_out) / len(test_out)
             test_cost_epochs.append(test_cost)
