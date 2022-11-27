@@ -383,7 +383,7 @@ if __name__ == '__main__':
             # compute accuracy and cost on testing data
             test_out = compute_out(theta, w, conv_weights, weights_last, x_test,
                                    y_test)
-            test_acc = jnp.sum(test_out > 0.5) / len(test_out)
+            test_acc = jnp.sum(test_out > 0.25) / len(test_out) # prob for classification = 1/number of labels
             test_acc_epochs.append(test_acc)
             test_cost = 1.0 - jnp.sum(test_out) / len(test_out)
             test_cost_epochs.append(test_cost)
