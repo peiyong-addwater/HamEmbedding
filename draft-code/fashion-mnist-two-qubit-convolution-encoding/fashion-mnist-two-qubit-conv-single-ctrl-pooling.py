@@ -242,7 +242,8 @@ if __name__ == '__main__':
     n_epochs = 100
     n_reps = 10
 
-    train_sizes = [2, 10, 100, 1000]
+    # train_sizes = [2, 10, 100, 1000]
+    train_sizes = [20, 40, 100, 200, 1000]
 
     _, _, _, num_conv_rows, _ = _check_params(np.random.rand(28 * 28).reshape(28, 28), kernel=np.random.random(KERNEL_SIZE),
                                           stride=STRIDE, dilation=(1, 1), padding=(0, 0))
@@ -297,10 +298,10 @@ if __name__ == '__main__':
         features = np.array(features)
 
         # only use first four classes
-        # features = features[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
-        # labels = labels[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
-        features = features[np.where((labels == 0) | (labels == 1))]
-        labels = labels[np.where((labels == 0) | (labels == 1))]
+        features = features[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
+        labels = labels[np.where((labels == 0) | (labels == 1)|(labels == 2) | (labels == 3))]
+        # features = features[np.where((labels == 0) | (labels == 1))]
+        # labels = labels[np.where((labels == 0) | (labels == 1))]
 
         # normalize data
         features = features / 255
@@ -480,4 +481,4 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig(f"fashion-mnist-twoclass-su4-encoding-results-{n_test}-test-{n_reps}-reps.pdf")
+    plt.savefig(f"fashion-mnist-4class-su4-encoding-results-{n_test}-test-{n_reps}-reps.pdf")
