@@ -390,7 +390,7 @@ if __name__ == '__main__':
 
             epoch_end = time.time()
             print(
-                f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, test acc {test_acc}, time {epoch_end-epoch_start} seconds")
+                f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, test acc {test_acc}, time {round(epoch_end-epoch_start,4)} seconds")
 
         return dict(
             n_train=[n_train] * n_epochs,
