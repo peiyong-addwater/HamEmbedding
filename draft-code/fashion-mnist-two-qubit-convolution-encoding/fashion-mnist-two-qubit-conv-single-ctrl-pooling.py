@@ -360,7 +360,7 @@ if __name__ == '__main__':
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
         theta, w, conv_weights, weights_last = init_weights()
         cosine_decay_scheduler = optax.cosine_decay_schedule(0.5, decay_steps=n_epochs, alpha=0.95)
-        optimizer = optax.adam(learning_rate=cosine_decay_scheduler)
+        optimizer = optax.sgd(learning_rate=cosine_decay_scheduler, nesterov=True, momentum=0.5)
         opt_state = optimizer.init((theta, w, conv_weights, weights_last))
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
 
