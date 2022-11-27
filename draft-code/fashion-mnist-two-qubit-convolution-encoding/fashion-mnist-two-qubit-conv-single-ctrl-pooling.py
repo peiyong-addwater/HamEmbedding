@@ -271,7 +271,7 @@ if __name__ == '__main__':
             qml.Barrier(wires=wires, only_visual=True)
 
         dense_layer(last_layer_params, wires)
-        return qml.probs(wires=(0))
+        return qml.probs(wires=(wires[0], wires[1]))
 
     def init_weights():
         """Initializes random weights for the QCNN model."""
