@@ -8,8 +8,6 @@ import pandas as pd
 
 import jax
 
-jax.config.update('jax_platform_name', 'cpu')
-jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 
 import optax  # optimization using jax
@@ -221,6 +219,10 @@ def dense_layer(weights, wires):
     qml.ArbitraryUnitary(weights, wires)
 
 if __name__ == '__main__':
+
+    jax.config.update('jax_platform_name', 'cpu')
+    jax.config.update("jax_enable_x64", True)
+
     import seaborn as sns
 
     sns.set()
@@ -233,7 +235,7 @@ if __name__ == '__main__':
     NUM_CONV_POOL_LAYERS = 2
     FINAL_LAYER_QUBITS = 3
 
-    n_test = 1000
+    n_test = 100
     n_epochs = 100
     n_reps = 10
 
