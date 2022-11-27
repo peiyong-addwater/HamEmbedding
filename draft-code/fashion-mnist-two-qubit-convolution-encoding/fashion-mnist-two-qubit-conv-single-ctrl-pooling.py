@@ -323,7 +323,7 @@ if __name__ == '__main__':
             jnp.asarray(y_test),
         )
 
-    #@jax.jit
+    @jax.jit
     def compute_out(theta, w, conv_weights, weights_last, features, labels):
         cost = lambda theta, w, conv_weights, weights_last, feature, label:conv_net(theta, w, conv_weights, weights_last, feature)[
             label
