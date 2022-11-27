@@ -373,7 +373,7 @@ if __name__ == '__main__':
             # Training step with (adam) optimizer
             train_cost, grad_circuit = value_and_grad(theta, w, conv_weights, weights_last, x_train, y_train)
             updates, opt_state = optimizer.update(grad_circuit, opt_state)
-            print(updates)
+            #print(updates)
             theta, w, conv_weights, weights_last = optax.apply_updates((theta, w, conv_weights, weights_last), updates)
             train_cost_epochs.append(train_cost)
             # compute accuracy on training data
@@ -480,4 +480,4 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig(f"fashion-mnist-multiclass-su4-encoding-results-{n_test}-test-{n_reps}-reps.pdf")
+    plt.savefig(f"fashion-mnist-twoclass-su4-encoding-results-{n_test}-test-{n_reps}-reps.pdf")
