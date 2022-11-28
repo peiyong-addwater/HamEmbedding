@@ -111,7 +111,7 @@ def load_fashion_mnist(path, kind='train'):
 
 def SU4(params, wires):
     """
-    A 15-parameter SU4 gate, from FIG. 6 of PHYSICAL REVIEW RESEARCH 4, 013117 (2022)
+    KAK decomposition of the SU4 gate
     :param params:
     :param wires:
     :return:
@@ -119,26 +119,24 @@ def SU4(params, wires):
     qml.U3(params[0], params[1], params[2], wires=wires[0])
     qml.U3(params[3], params[4], params[5], wires=wires[1])
     qml.CNOT(wires=wires)
-    qml.RY(params[6], wires=wires[0])
-    qml.RZ(params[7], wires=wires[1])
+    qml.U3(params[6], params[7], params[8], wires=wires[0])
+    qml.U3(params[9], params[10], params[11], wires=wires[1])
     qml.CNOT(wires=[wires[1], wires[0]])
-    qml.RY(params[8], wires=wires[0])
+    qml.U3(params[12], params[13], params[14], wires=wires[0])
     qml.CNOT(wires=wires)
-    qml.U3(params[9], params[10], params[11], wires=wires[0])
-    qml.U3(params[12], params[13], params[14], wires=wires[1])
+    qml.U3(params[15], params[16], params[17], wires=wires[0])
+    qml.U3(params[18], params[19], params[20], wires=wires[1])
 
-def single_kernel_encoding(kernel_params,theta, single_kernel_data_params, wire):
+def single_kernel_encoding(kernel_params, single_kernel_data_params, wire):
     """
-
+    Size of the data_params should be the same as the size of the kernel_params
     :param kernel_params:
-    :param theta:
     :param data_params:
     :return:
     """
     num_combo_gates = len(kernel_params) // 3 + 1
     kernel_pad_size = (len(kernel_params) // 3 + 1) * 3 - len(kernel_params)
     padded_kernel_params = jnp.array(kernel_params)
-    theta = jnp.array(theta)
     for _ in range(kernel_pad_size):
         padded_kernel_params = jnp.append(padded_kernel_params, 0)
     padded_data_params = jnp.array(single_kernel_data_params)
@@ -147,19 +145,21 @@ def single_kernel_encoding(kernel_params,theta, single_kernel_data_params, wire)
     for _ in range(kernel_pad_size):
         padded_data_params = jnp.append(padded_data_params, 0)
     #print(padded_data_params.shape)
-    gate_params = jnp.add(theta, jnp.multiply(padded_data_params, padded_kernel_params)).reshape(-1,3)
+    padded_kernel_params = padded_kernel_params.reshape(-1,3)
+    padded_data_params = padded_data_params.reshape(-1,3)
     for i in range(num_combo_gates):
-        qml.U3(*gate_params[i], wires=wire)
+        qml.U3(*padded_data_params[i], wires=wire)
+        qml.U3(*padded_kernel_params[i], wires=wire)
 
 
-def convolution_reupload_encoding(kernel_params,theta, data_param):
+def convolution_reupload_encoding(kernel_params, data_param):
     #print(data_param.shape)
     num_qubits, num_conv_per_qubit = data_param.shape[0], data_param.shape[1]
     for i in range(num_qubits):
         single_qubit_data = data_param[i]
         #print(single_qubit_data)
         for j in range(num_conv_per_qubit):
-            single_kernel_encoding(kernel_params,theta, single_qubit_data[j], wire=i)
+            single_kernel_encoding(kernel_params, single_qubit_data[j], wire=i)
 
 def entangling_layer(params, wires):
     for i in range(len(wires)-1):
@@ -233,21 +233,18 @@ if __name__ == '__main__':
 
     sns.set()
 
-    import time
-
     seed = 42
     rng = np.random.default_rng(seed=seed)
 
-    KERNEL_SIZE = (5,5)
-    STRIDE = (4,4)
-    NUM_CONV_POOL_LAYERS = 2
+    KERNEL_SIZE = (3,3)
+    STRIDE = (3,3)
+    NUM_CONV_POOL_LAYERS = 3
     FINAL_LAYER_QUBITS = 2
     NUM_CLASSES = 4
 
     n_test = 1000
     n_epochs = 100
     n_reps = 20
-    theta_size = (KERNEL_SIZE[0]*KERNEL_SIZE[1]//3+1)*3
     train_sizes = [40, 200, 500, 1000, 4000, 10000]
     # train_sizes = [2, 10, 100, 1000]
 
@@ -257,13 +254,13 @@ if __name__ == '__main__':
 
 
     @qml.qnode(device, interface="jax")
-    def conv_net(encoding_kernel_params, theta, entangling_params, conv_weights, last_layer_params, image_conv_extract):
+    def conv_net(encoding_kernel_params,entangling_params, conv_weights, last_layer_params, image_conv_extract):
         layers = conv_weights.shape[1]
         wires = list(range(num_wires))
         for wire in wires:
             qml.Hadamard(wires=wire)
         qml.Barrier(wires=wires, only_visual=True)
-        convolution_reupload_encoding(encoding_kernel_params,theta, image_conv_extract)
+        convolution_reupload_encoding(encoding_kernel_params, image_conv_extract)
         qml.Barrier(wires=wires, only_visual=True)
         entangling_layer(entangling_params,wires)
         qml.Barrier(wires=wires, only_visual=True)
@@ -275,23 +272,9 @@ if __name__ == '__main__':
         dense_layer(last_layer_params, wires)
         return qml.probs(wires=(wires[0], wires[1]))
 
-    def init_weights():
-        """Initializes random weights for the QCNN model."""
-        encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=KERNEL_SIZE[0]*KERNEL_SIZE[1], requires_grad=True)
-        theta = pnp.random.normal(loc=0, scale=1, size=theta_size, requires_grad=True)
-        entangling_params = pnp.random.normal(loc=0, scale=1, size=21)
-        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, NUM_CONV_POOL_LAYERS), requires_grad=True)
-        weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** FINAL_LAYER_QUBITS - 1, requires_grad=True)
-        return jnp.array(encoding_kernel_params), jnp.array(theta), jnp.array(entangling_params), jnp.array(conv_weights), jnp.array(weights_last)
-
-
 
     fig, ax = qml.draw_mpl(conv_net, style='black_white')(
-        np.random.rand(KERNEL_SIZE[0]*KERNEL_SIZE[1]),
-        np.random.rand(theta_size),
-        np.random.rand(15),
-        np.random.rand(18, NUM_CONV_POOL_LAYERS),
-        np.random.rand(4 ** FINAL_LAYER_QUBITS - 1),
+        np.random.rand(KERNEL_SIZE[0]*KERNEL_SIZE[1]),np.random.rand(21), np.random.rand(18, NUM_CONV_POOL_LAYERS), np.random.rand(4 ** FINAL_LAYER_QUBITS - 1),
         extract_convolution_data(np.random.rand(28*28).reshape((28,28)),stride=STRIDE, kernel_size=KERNEL_SIZE))
     plt.savefig("circuit-multiclass.pdf")
 
@@ -329,18 +312,18 @@ if __name__ == '__main__':
         )
 
 
-    #@jax.jit
-    def compute_out(encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, features, labels):
+    @jax.jit
+    def compute_out(encoding_kernel_params,entangling_params, conv_weights, weights_last, features, labels):
         """Computes the output of the corresponding label in the qcnn"""
-        out = lambda encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, feature, label: conv_net(encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, feature)
-        return jax.vmap(out, in_axes=(None, None, None, None,None, 0, 0), out_axes=0)(
-            encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, features, labels
+        out = lambda encoding_kernel_params,entangling_params, conv_weights, weights_last, feature, label: conv_net(encoding_kernel_params,entangling_params, conv_weights, weights_last, feature)
+        return jax.vmap(out, in_axes=(None, None, None, None, 0, 0), out_axes=0)(
+            encoding_kernel_params,entangling_params, conv_weights, weights_last, features, labels
         )
 
 
-    def compute_accuracy(encoding_kernel_params,theta,entangling_params, conv_weights, weights_last, features, labels):
+    def compute_accuracy(encoding_kernel_params,entangling_params, conv_weights, weights_last, features, labels):
         """Computes the accuracy over the provided features and labels"""
-        out = compute_out(encoding_kernel_params, theta,entangling_params, conv_weights, weights_last, features, labels)
+        out = compute_out(encoding_kernel_params, entangling_params, conv_weights, weights_last, features, labels)
         #print(out, out.shape)
         pred = jnp.argmax(out, axis = 1)
         #print(pred, pred.shape)
@@ -350,9 +333,9 @@ if __name__ == '__main__':
         return jnp.sum(jnp.array(pred == labels).astype(int)) / len(out)
 
 
-    def compute_cost(encoding_kernel_params, theta, entangling_params, conv_weights, weights_last, features, labels):
+    def compute_cost(encoding_kernel_params, entangling_params, conv_weights, weights_last, features, labels):
         """Computes the cost over the provided features and labels"""
-        logits = compute_out(encoding_kernel_params, theta, entangling_params, conv_weights, weights_last, features, labels)
+        logits = compute_out(encoding_kernel_params, entangling_params, conv_weights, weights_last, features, labels)
         #print(out)
         #print(labels)
         #print("cost")
@@ -361,8 +344,16 @@ if __name__ == '__main__':
         return jnp.mean(optax.softmax_cross_entropy_with_integer_labels(logits, labels))
 
 
+    def init_weights():
+        """Initializes random weights for the QCNN model."""
+        encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=KERNEL_SIZE[0]*KERNEL_SIZE[1], requires_grad=True)
+        entangling_params = pnp.random.normal(loc=0, scale=1, size=21)
+        conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, NUM_CONV_POOL_LAYERS), requires_grad=True)
+        weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** FINAL_LAYER_QUBITS - 1, requires_grad=True)
+        return jnp.array(encoding_kernel_params),jnp.array(entangling_params), jnp.array(conv_weights), jnp.array(weights_last)
 
-    value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2, 3, 4]))
+
+    value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2, 3]))
 
 
     def train_qcnn(n_train, n_test, n_epochs):
@@ -386,12 +377,12 @@ if __name__ == '__main__':
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
 
         # init weights and optimizer
-        encoding_kernel_params,theta, entangling_params, conv_weights, weights_last = init_weights()
+        encoding_kernel_params,entangling_params, conv_weights, weights_last = init_weights()
 
         # learning rate decay
-        cosine_decay_scheduler = optax.cosine_decay_schedule(0.5, decay_steps=n_epochs, alpha=0.95)
+        cosine_decay_scheduler = optax.cosine_decay_schedule(0.1, decay_steps=n_epochs, alpha=0.95)
         optimizer = optax.adam(learning_rate=cosine_decay_scheduler)
-        opt_state = optimizer.init((encoding_kernel_params,theta, entangling_params, conv_weights, weights_last))
+        opt_state = optimizer.init((encoding_kernel_params,entangling_params, conv_weights, weights_last))
 
         # data containers
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
@@ -399,28 +390,27 @@ if __name__ == '__main__':
         print("Data loading complete, starting training...")
 
         for step in range(n_epochs):
-            epoch_start = time.time()
             # Training step with (adam) optimizer
-            train_cost, grad_circuit = value_and_grad(encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, x_train, y_train)
+            train_cost, grad_circuit = value_and_grad(encoding_kernel_params,entangling_params, conv_weights, weights_last, x_train, y_train)
             updates, opt_state = optimizer.update(grad_circuit, opt_state)
-            encoding_kernel_params,theta, entangling_params, conv_weights, weights_last = optax.apply_updates((encoding_kernel_params,theta, entangling_params, conv_weights, weights_last), updates)
+            encoding_kernel_params,entangling_params, conv_weights, weights_last = optax.apply_updates((encoding_kernel_params,entangling_params, conv_weights, weights_last), updates)
             train_cost_epochs.append(train_cost)
 
             # compute accuracy on training data
-            train_acc = compute_accuracy(encoding_kernel_params, theta, entangling_params, conv_weights, weights_last, x_train, y_train)
+            train_acc = compute_accuracy(encoding_kernel_params, entangling_params, conv_weights, weights_last, x_train, y_train)
             train_acc_epochs.append(train_acc)
 
             # compute accuracy and cost on testing data
-            test_out = compute_out(encoding_kernel_params, theta, entangling_params, conv_weights, weights_last, x_test, y_test)
+            test_out = compute_out(encoding_kernel_params,entangling_params, conv_weights, weights_last, x_test, y_test)
             test_pred = jnp.argmax(test_out, axis=1)
             test_acc = jnp.sum(jnp.array(test_pred == y_test).astype(int)) / len(test_out)
             test_acc_epochs.append(test_acc)
             # print(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test).shape)
             test_cost = jnp.mean(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test))
             test_cost_epochs.append(test_cost)
-            epoch_end = time.time()
+
             print(
-                    f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}. time {round(epoch_end-epoch_start,4)} seconds...")
+                    f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}...")
 
         return dict(
             n_train=[n_train] * n_epochs,
