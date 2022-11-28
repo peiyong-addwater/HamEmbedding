@@ -111,7 +111,7 @@ def load_fashion_mnist(path, kind='train'):
 
 def SU4(params, wires):
     """
-    KAK decomposition of the SU4 gate
+    A 15-parameter SU4 gate, from FIG. 6 of PHYSICAL REVIEW RESEARCH 4, 013117 (2022)
     :param params:
     :param wires:
     :return:
@@ -119,13 +119,13 @@ def SU4(params, wires):
     qml.U3(params[0], params[1], params[2], wires=wires[0])
     qml.U3(params[3], params[4], params[5], wires=wires[1])
     qml.CNOT(wires=wires)
-    qml.U3(params[6], params[7], params[8], wires=wires[0])
-    qml.U3(params[9], params[10], params[11], wires=wires[1])
+    qml.RY(params[6], wires=wires[0])
+    qml.RZ(params[7], wires=wires[1])
     qml.CNOT(wires=[wires[1], wires[0]])
-    qml.U3(params[12], params[13], params[14], wires=wires[0])
+    qml.RY(params[8], wires=wires[0])
     qml.CNOT(wires=wires)
-    qml.U3(params[15], params[16], params[17], wires=wires[0])
-    qml.U3(params[18], params[19], params[20], wires=wires[1])
+    qml.U3(params[9], params[10], params[11], wires=wires[0])
+    qml.U3(params[12], params[13], params[14], wires=wires[1])
 
 def single_kernel_encoding(kernel_params, single_kernel_data_params, wire):
     """
@@ -276,7 +276,10 @@ if __name__ == '__main__':
 
 
     fig, ax = qml.draw_mpl(conv_net, style='black_white')(
-        np.random.rand(KERNEL_SIZE[0]*KERNEL_SIZE[1]),np.random.rand(21), np.random.rand(18, NUM_CONV_POOL_LAYERS), np.random.rand(4 ** FINAL_LAYER_QUBITS - 1),
+        np.random.rand(KERNEL_SIZE[0]*KERNEL_SIZE[1]),
+        np.random.rand(15),
+        np.random.rand(18, NUM_CONV_POOL_LAYERS),
+        np.random.rand(4 ** FINAL_LAYER_QUBITS - 1),
         extract_convolution_data(np.random.rand(28*28).reshape((28,28)),stride=STRIDE, kernel_size=KERNEL_SIZE))
     plt.savefig("circuit-multiclass.pdf")
 
@@ -349,7 +352,7 @@ if __name__ == '__main__':
     def init_weights():
         """Initializes random weights for the QCNN model."""
         encoding_kernel_params = pnp.random.normal(loc=0, scale=1, size=KERNEL_SIZE[0]*KERNEL_SIZE[1], requires_grad=True)
-        entangling_params = pnp.random.normal(loc=0, scale=1, size=21)
+        entangling_params = pnp.random.normal(loc=0, scale=1, size=15)
         conv_weights = pnp.random.normal(loc=0, scale=1, size=(18, NUM_CONV_POOL_LAYERS), requires_grad=True)
         weights_last = pnp.random.normal(loc=0, scale=1, size=4 ** FINAL_LAYER_QUBITS - 1, requires_grad=True)
         return jnp.array(encoding_kernel_params),jnp.array(entangling_params), jnp.array(conv_weights), jnp.array(weights_last)
