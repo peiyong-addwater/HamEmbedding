@@ -327,7 +327,7 @@ if __name__ == '__main__':
         )
 
 
-    @jax.jit
+    #@jax.jit
     def compute_out(encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, features, labels):
         """Computes the output of the corresponding label in the qcnn"""
         out = lambda encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, feature, label: conv_net(encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, feature)
