@@ -237,13 +237,16 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
 
     KERNEL_SIZE = (3,3)
-    STRIDE = (3,3)
+    STRIDE = (5,5)
     NUM_CONV_POOL_LAYERS = 2
-    FINAL_LAYER_QUBITS = 3
+    FINAL_LAYER_QUBITS = 2
+    NUM_CLASSES = 4
 
     n_test = 1000
     n_epochs = 100
     n_reps = 10
+    train_sizes = [10, 40, 100, 500, 1000]
+    # train_sizes = [2, 10, 100, 1000]
 
     _, _, _, num_wires,_ = _check_params(np.random.rand(28*28).reshape(28,28), kernel=np.random.random(KERNEL_SIZE), stride=STRIDE, dilation=(1,1), padding=(0,0))
     print(num_wires)
@@ -312,9 +315,7 @@ if __name__ == '__main__':
     @jax.jit
     def compute_out(encoding_kernel_params,entangling_params, conv_weights, weights_last, features, labels):
         """Computes the output of the corresponding label in the qcnn"""
-        cost = lambda encoding_kernel_params,entangling_params, conv_weights, weights_last, feature, label: conv_net(encoding_kernel_params,entangling_params, conv_weights, weights_last, feature)[
-            label
-        ]
+        cost = lambda encoding_kernel_params,entangling_params, conv_weights, weights_last, feature, label: conv_net(encoding_kernel_params,entangling_params, conv_weights, weights_last, feature)
         return jax.vmap(cost, in_axes=(None, None, None, None, 0, 0), out_axes=0)(
             encoding_kernel_params,entangling_params, conv_weights, weights_last, features, labels
         )
@@ -323,13 +324,24 @@ if __name__ == '__main__':
     def compute_accuracy(encoding_kernel_params,entangling_params, conv_weights, weights_last, features, labels):
         """Computes the accuracy over the provided features and labels"""
         out = compute_out(encoding_kernel_params, entangling_params, conv_weights, weights_last, features, labels)
-        return jnp.sum(out > 0.25) / len(out)
+        #print(out, out.shape)
+        pred = jnp.argmax(out, axis = 1)
+        #print(pred, pred.shape)
+        #print(labels, labels.shape)
+        #print(jnp.array(pred == labels).astype(int))
+        #exit(0)
+        return jnp.sum(jnp.array(pred == labels).astype(int)) / len(out)
 
 
     def compute_cost(encoding_kernel_params, entangling_params, conv_weights, weights_last, features, labels):
         """Computes the cost over the provided features and labels"""
-        out = compute_out(encoding_kernel_params, entangling_params, conv_weights, weights_last, features, labels)
-        return 1.0 - jnp.sum(out) / len(labels)
+        logits = compute_out(encoding_kernel_params, entangling_params, conv_weights, weights_last, features, labels)
+        #print(out)
+        #print(labels)
+        #print("cost")
+        #print(log_normalizers-label_logits)
+        #exit(0)
+        return jnp.mean(optax.softmax_cross_entropy_with_integer_labels(logits, labels))
 
 
     def init_weights():
@@ -382,7 +394,6 @@ if __name__ == '__main__':
             train_cost, grad_circuit = value_and_grad(encoding_kernel_params,entangling_params, conv_weights, weights_last, x_train, y_train)
             updates, opt_state = optimizer.update(grad_circuit, opt_state)
             encoding_kernel_params,entangling_params, conv_weights, weights_last = optax.apply_updates((encoding_kernel_params,entangling_params, conv_weights, weights_last), updates)
-
             train_cost_epochs.append(train_cost)
 
             # compute accuracy on training data
@@ -391,9 +402,10 @@ if __name__ == '__main__':
 
             # compute accuracy and cost on testing data
             test_out = compute_out(encoding_kernel_params,entangling_params, conv_weights, weights_last, x_test, y_test)
-            test_acc = jnp.sum(test_out > 0.25) / len(test_out)
+            test_pred = jnp.argmax(test_out, axis=1)
+            test_acc = jnp.sum(jnp.array(test_pred == y_test).astype(int)) / len(test_out)
             test_acc_epochs.append(test_acc)
-            test_cost = 1.0 - jnp.sum(test_out) / len(test_out)
+            test_cost = jnp.mean(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test))
             test_cost_epochs.append(test_cost)
 
             print(
@@ -427,8 +439,6 @@ if __name__ == '__main__':
 
 
     # run training for multiple sizes
-    train_sizes = [4, 40, 100, 500, 1000]
-    # train_sizes = [2, 10, 100, 1000]
     results_df = run_iterations(n_train=train_sizes[0])
     for n_train in train_sizes[1:]:
         results_df = pd.concat([results_df, run_iterations(n_train=n_train)])
