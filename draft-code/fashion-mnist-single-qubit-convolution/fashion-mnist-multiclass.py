@@ -242,7 +242,7 @@ if __name__ == '__main__':
     FINAL_LAYER_QUBITS = 2
     NUM_CLASSES = 4
 
-    n_test = 1000
+    n_test = 100
     n_epochs = 100
     n_reps = 10
     train_sizes = [10, 40, 100, 500, 1000]
@@ -405,6 +405,7 @@ if __name__ == '__main__':
             test_pred = jnp.argmax(test_out, axis=1)
             test_acc = jnp.sum(jnp.array(test_pred == y_test).astype(int)) / len(test_out)
             test_acc_epochs.append(test_acc)
+            # print(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test).shape)
             test_cost = jnp.mean(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test))
             test_cost_epochs.append(test_cost)
 
