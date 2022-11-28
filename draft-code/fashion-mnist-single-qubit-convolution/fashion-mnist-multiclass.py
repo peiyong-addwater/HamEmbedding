@@ -238,7 +238,7 @@ if __name__ == '__main__':
 
     KERNEL_SIZE = (3,3)
     STRIDE = (3,3)
-    NUM_CONV_POOL_LAYERS = 2
+    NUM_CONV_POOL_LAYERS = 3
     FINAL_LAYER_QUBITS = 2
     NUM_CLASSES = 4
 
