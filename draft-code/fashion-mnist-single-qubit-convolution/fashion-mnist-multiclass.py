@@ -239,14 +239,14 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
 
     KERNEL_SIZE = (3,3)
-    STRIDE = (3,3)
+    STRIDE = (2,2)
     NUM_CONV_POOL_LAYERS = 3
     FINAL_LAYER_QUBITS = 2
     NUM_CLASSES = 4
 
     n_test = 1000
-    n_epochs = 100
-    n_reps = 20
+    n_epochs = 200
+    n_reps = 10
     train_sizes = [40, 200, 500, 1000, 4000, 10000]
     # train_sizes = [2, 10, 100, 1000]
 
