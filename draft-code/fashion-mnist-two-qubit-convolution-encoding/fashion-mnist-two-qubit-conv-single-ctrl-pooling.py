@@ -233,9 +233,9 @@ if __name__ == '__main__':
     seed = 42
     rng = np.random.default_rng(seed=seed)
 
-    KERNEL_SIZE = (3, 3)
-    STRIDE = (3, 3)
-    NUM_CONV_POOL_LAYERS = 3
+    KERNEL_SIZE = (5, 5)
+    STRIDE = (5, 5)
+    NUM_CONV_POOL_LAYERS = 2
     FINAL_LAYER_QUBITS = 2
 
     n_test = 100
