@@ -111,7 +111,7 @@ def load_fashion_mnist(path, kind='train'):
 
 def SU4(params, wires):
     """
-    KAK decomposition of the SU4 gate
+    A 15-parameter SU4 gate, from FIG. 6 of PHYSICAL REVIEW RESEARCH 4, 013117 (2022)
     :param params:
     :param wires:
     :return:
@@ -119,24 +119,26 @@ def SU4(params, wires):
     qml.U3(params[0], params[1], params[2], wires=wires[0])
     qml.U3(params[3], params[4], params[5], wires=wires[1])
     qml.CNOT(wires=wires)
-    qml.U3(params[6], params[7], params[8], wires=wires[0])
-    qml.U3(params[9], params[10], params[11], wires=wires[1])
+    qml.RY(params[6], wires=wires[0])
+    qml.RZ(params[7], wires=wires[1])
     qml.CNOT(wires=[wires[1], wires[0]])
-    qml.U3(params[12], params[13], params[14], wires=wires[0])
+    qml.RY(params[8], wires=wires[0])
     qml.CNOT(wires=wires)
-    qml.U3(params[15], params[16], params[17], wires=wires[0])
-    qml.U3(params[18], params[19], params[20], wires=wires[1])
+    qml.U3(params[9], params[10], params[11], wires=wires[0])
+    qml.U3(params[12], params[13], params[14], wires=wires[1])
 
-def single_kernel_encoding(kernel_params, single_kernel_data_params, wire):
+def single_kernel_encoding(kernel_params,theta, single_kernel_data_params, wire):
     """
-    Size of the data_params should be the same as the size of the kernel_params
+
     :param kernel_params:
+    :param theta:
     :param data_params:
     :return:
     """
     num_combo_gates = len(kernel_params) // 3 + 1
     kernel_pad_size = (len(kernel_params) // 3 + 1) * 3 - len(kernel_params)
     padded_kernel_params = jnp.array(kernel_params)
+    theta = jnp.array(theta)
     for _ in range(kernel_pad_size):
         padded_kernel_params = jnp.append(padded_kernel_params, 0)
     padded_data_params = jnp.array(single_kernel_data_params)
@@ -145,11 +147,9 @@ def single_kernel_encoding(kernel_params, single_kernel_data_params, wire):
     for _ in range(kernel_pad_size):
         padded_data_params = jnp.append(padded_data_params, 0)
     #print(padded_data_params.shape)
-    padded_kernel_params = padded_kernel_params.reshape(-1,3)
-    padded_data_params = padded_data_params.reshape(-1,3)
+    gate_params = jnp.add(theta, jnp.multiply(padded_data_params, padded_kernel_params)).reshape(-1,3)
     for i in range(num_combo_gates):
-        qml.U3(*padded_data_params[i], wires=wire)
-        qml.U3(*padded_kernel_params[i], wires=wire)
+        qml.U3(*gate_params[i], wires=wire)
 
 
 def convolution_reupload_encoding(kernel_params, data_param):
@@ -245,6 +245,7 @@ if __name__ == '__main__':
     n_test = 1000
     n_epochs = 100
     n_reps = 20
+    theta_size = (KERNEL_SIZE[0]*KERNEL_SIZE[1]//3+1)*3
     train_sizes = [40, 200, 500, 1000, 4000, 10000]
     # train_sizes = [2, 10, 100, 1000]
 
