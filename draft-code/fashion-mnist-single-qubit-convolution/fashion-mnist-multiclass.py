@@ -231,6 +231,8 @@ if __name__ == '__main__':
 
     import seaborn as sns
 
+    import time
+
     sns.set()
 
     seed = 42
@@ -390,6 +392,7 @@ if __name__ == '__main__':
         print("Data loading complete, starting training...")
 
         for step in range(n_epochs):
+            epoch_start = time.time()
             # Training step with (adam) optimizer
             train_cost, grad_circuit = value_and_grad(encoding_kernel_params,entangling_params, conv_weights, weights_last, x_train, y_train)
             updates, opt_state = optimizer.update(grad_circuit, opt_state)
@@ -408,9 +411,9 @@ if __name__ == '__main__':
             # print(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test).shape)
             test_cost = jnp.mean(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test))
             test_cost_epochs.append(test_cost)
-
+            epoch_end = time.time()
             print(
-                    f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}...")
+                    f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}, time {round(epoch_start-epoch_end,4)}...")
 
         return dict(
             n_train=[n_train] * n_epochs,
