@@ -325,20 +325,20 @@ if __name__ == '__main__':
 
     @jax.jit
     def compute_out(theta, w, conv_weights, weights_last, features, labels):
-        cost = lambda theta, w, conv_weights, weights_last, feature, label:conv_net(theta, w, conv_weights, weights_last, feature)[
-            label
-        ]
-        return jax.vmap(cost, in_axes=(None, None, None, None, 0, 0), out_axes=0)(
+        out = lambda theta, w, conv_weights, weights_last, feature, label:conv_net(theta, w, conv_weights, weights_last, feature)
+        return jax.vmap(out, in_axes=(None, None, None, None, 0, 0), out_axes=0)(
             theta, w, conv_weights, weights_last, features, labels
         )
 
     def compute_accuracy(theta, w, conv_weights, weights_last, features, labels):
         out = compute_out(theta, w, conv_weights,weights_last, features, labels)
-        return jnp.sum(out>0.25)/len(out) # prob for classification = 1/number of labels
+        pred = jnp.argmax(out, axis=1)
+        return jnp.sum(jnp.array(pred == labels).astype(int)) / len(out)
 
     def compute_cost(theta, w, conv_weights, weights_last, features, labels):
-        out = compute_out(theta, w, conv_weights,weights_last, features, labels)
-        return 1.0 - jnp.sum(out) / len(labels)
+        logits = compute_out(theta, w, conv_weights, weights_last, features, labels)
+
+        return jnp.mean(optax.softmax_cross_entropy_with_integer_labels(logits, labels))
 
     value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2, 3]))
 
@@ -383,14 +383,15 @@ if __name__ == '__main__':
             # compute accuracy and cost on testing data
             test_out = compute_out(theta, w, conv_weights, weights_last, x_test,
                                    y_test)
-            test_acc = jnp.sum(test_out > 0.25) / len(test_out) # prob for classification = 1/number of labels
+            test_pred = jnp.argmax(test_out, axis=1)
+            test_acc = jnp.sum(jnp.array(test_pred == y_test).astype(int)) / len(test_out)
             test_acc_epochs.append(test_acc)
-            test_cost = 1.0 - jnp.sum(test_out) / len(test_out)
+            test_cost = jnp.mean(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test))
             test_cost_epochs.append(test_cost)
 
             epoch_end = time.time()
             print(
-                f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, test acc {test_acc}, time {round(epoch_end-epoch_start,4)} seconds")
+                f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}, time {round(epoch_end-epoch_start,4)} seconds")
 
         return dict(
             n_train=[n_train] * n_epochs,

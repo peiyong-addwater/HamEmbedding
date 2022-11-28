@@ -315,8 +315,8 @@ if __name__ == '__main__':
     @jax.jit
     def compute_out(encoding_kernel_params,entangling_params, conv_weights, weights_last, features, labels):
         """Computes the output of the corresponding label in the qcnn"""
-        cost = lambda encoding_kernel_params,entangling_params, conv_weights, weights_last, feature, label: conv_net(encoding_kernel_params,entangling_params, conv_weights, weights_last, feature)
-        return jax.vmap(cost, in_axes=(None, None, None, None, 0, 0), out_axes=0)(
+        out = lambda encoding_kernel_params,entangling_params, conv_weights, weights_last, feature, label: conv_net(encoding_kernel_params,entangling_params, conv_weights, weights_last, feature)
+        return jax.vmap(out, in_axes=(None, None, None, None, 0, 0), out_axes=0)(
             encoding_kernel_params,entangling_params, conv_weights, weights_last, features, labels
         )
 
