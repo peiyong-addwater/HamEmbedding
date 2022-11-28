@@ -360,7 +360,7 @@ if __name__ == '__main__':
 
 
 
-    value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2, 3]))
+    value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2, 3, 4]))
 
 
     def train_qcnn(n_train, n_test, n_epochs):
@@ -398,7 +398,7 @@ if __name__ == '__main__':
 
         for step in range(n_epochs):
             # Training step with (adam) optimizer
-            train_cost, grad_circuit = value_and_grad(encoding_kernel_params,entangling_params, conv_weights, weights_last, x_train, y_train)
+            train_cost, grad_circuit = value_and_grad(encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, x_train, y_train)
             updates, opt_state = optimizer.update(grad_circuit, opt_state)
             encoding_kernel_params,theta, entangling_params, conv_weights, weights_last = optax.apply_updates((encoding_kernel_params,theta, entangling_params, conv_weights, weights_last), updates)
             train_cost_epochs.append(train_cost)
