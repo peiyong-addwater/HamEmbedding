@@ -233,6 +233,8 @@ if __name__ == '__main__':
 
     sns.set()
 
+    import time
+
     seed = 42
     rng = np.random.default_rng(seed=seed)
 
@@ -387,7 +389,7 @@ if __name__ == '__main__':
         encoding_kernel_params,theta, entangling_params, conv_weights, weights_last = init_weights()
 
         # learning rate decay
-        cosine_decay_scheduler = optax.cosine_decay_schedule(0.1, decay_steps=n_epochs, alpha=0.95)
+        cosine_decay_scheduler = optax.cosine_decay_schedule(0.5, decay_steps=n_epochs, alpha=0.95)
         optimizer = optax.adam(learning_rate=cosine_decay_scheduler)
         opt_state = optimizer.init((encoding_kernel_params,theta, entangling_params, conv_weights, weights_last))
 
@@ -397,6 +399,7 @@ if __name__ == '__main__':
         print("Data loading complete, starting training...")
 
         for step in range(n_epochs):
+            epoch_start = time.time()
             # Training step with (adam) optimizer
             train_cost, grad_circuit = value_and_grad(encoding_kernel_params,theta, entangling_params, conv_weights, weights_last, x_train, y_train)
             updates, opt_state = optimizer.update(grad_circuit, opt_state)
@@ -415,9 +418,9 @@ if __name__ == '__main__':
             # print(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test).shape)
             test_cost = jnp.mean(optax.softmax_cross_entropy_with_integer_labels(test_out, y_test))
             test_cost_epochs.append(test_cost)
-
+            epoch_end = time.time()
             print(
-                    f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}...")
+                    f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}. time {round(epoch_end-epoch_start,4)} seconds...")
 
         return dict(
             n_train=[n_train] * n_epochs,
