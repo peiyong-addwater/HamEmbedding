@@ -409,7 +409,7 @@ if __name__ == '__main__':
             test_cost_epochs.append(test_cost)
 
             print(
-                    f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, test acc {test_acc}")
+                    f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}...")
 
         return dict(
             n_train=[n_train] * n_epochs,
