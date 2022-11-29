@@ -342,7 +342,7 @@ if __name__ == '__main__':
 
     value_and_grad = jax.jit(jax.value_and_grad(compute_cost, argnums=[0, 1, 2, 3]))
 
-    def train_qcnn(n_train, n_test, n_epochs):
+    def train_qcnn(n_train, n_test, n_epochs, rep):
         """
         Args:
             n_train  (int): number of training examples
@@ -391,7 +391,7 @@ if __name__ == '__main__':
 
             epoch_end = time.time()
             print(
-                f"Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}, time {round(epoch_end-epoch_start,4)} seconds")
+                f"Rep {rep}, Training with {n_train} data, Training at Epoch {step}, train acc {train_acc}, train cost {train_cost}, test acc {test_acc}, test cost {test_cost}, time {round(epoch_end-epoch_start,4)} seconds")
 
         return dict(
             n_train=[n_train] * n_epochs,
@@ -407,8 +407,8 @@ if __name__ == '__main__':
             columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
         )
 
-        for _ in range(n_reps):
-            results = train_qcnn(n_train=n_train, n_test=n_test, n_epochs=n_epochs)
+        for rep in range(n_reps):
+            results = train_qcnn(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep)
             results_df = pd.concat(
                 [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
             )
