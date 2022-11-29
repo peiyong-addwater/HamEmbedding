@@ -408,7 +408,7 @@ if __name__ == '__main__':
         )
 
         for rep in range(n_reps):
-            results = train_qcnn(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep)
+            results = train_qcnn(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep)
             results_df = pd.concat(
                 [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
             )
