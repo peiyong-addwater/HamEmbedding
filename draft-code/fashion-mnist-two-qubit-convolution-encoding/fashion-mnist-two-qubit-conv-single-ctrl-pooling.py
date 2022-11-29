@@ -239,11 +239,11 @@ if __name__ == '__main__':
     FINAL_LAYER_QUBITS = 2
 
     n_test = 100
-    n_epochs = 100
+    n_epochs = 200
     n_reps = 10
 
     # train_sizes = [2, 10, 100, 1000]
-    train_sizes = [20, 40, 100, 200, 1000]
+    train_sizes = [40, 200, 500, 1000]
 
     _, _, _, num_conv_rows, _ = _check_params(np.random.rand(28 * 28).reshape(28, 28), kernel=np.random.random(KERNEL_SIZE),
                                           stride=STRIDE, dilation=(1, 1), padding=(0, 0))
