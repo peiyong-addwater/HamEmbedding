@@ -42,8 +42,6 @@ dependencies:
      - pylatexenc
      - shutup
      - SciencePlots
-     - cirq
-     - pennylane-cirq
      - pyscf
      - openfermion
      - openfermionpyscf
@@ -54,7 +52,5 @@ dependencies:
      - projectq
      - pennylane_pq
      - pipreqs
-     - qulacs-gpu
-     - pennylane-qulacs
      - lambeq[extras]
      - gym[mujoco]
