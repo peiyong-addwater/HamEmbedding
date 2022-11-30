@@ -1,0 +1,60 @@
+name: research_gpu
+
+channels:
+  - conda-forge
+  - nvidia
+  - defaults
+
+dependencies:
+  - nccl
+  - pip
+  - pandas
+  - matplotlib
+  - python
+  - scikit-learn
+  - cuquantum-python
+  - scipy
+  - cadabra2
+  - cadabra2-gtk
+  - cadabra2-jupyter-kernel
+  - pip:
+     - sympy
+     - quantum-decomp
+     - quimb
+     - networkx
+     - tqdm
+     - matplotlib
+     - pydot
+     - graphviz
+     - IBMQuantumExperience
+     - numpydoc
+     - qiskit[visualization, machine-learning, optimization, finance, nature]
+     - qiskit-machine-learning[torch]
+     - qiskit-aer-gpu
+     - cplex
+     - networkx
+     - Typing
+     - pennylane
+     - pennylane-qchem
+     - pennylane-qiskit
+     - pennylane-lightning[gpu]
+     - pylatex
+     - pylatexenc
+     - shutup
+     - SciencePlots
+     - cirq
+     - pennylane-cirq
+     - pyscf
+     - openfermion
+     - openfermionpyscf
+     - fqe
+     - jupyterlab
+     - ipykernel
+     - noisyopt
+     - projectq
+     - pennylane_pq
+     - pipreqs
+     - qulacs-gpu
+     - pennylane-qulacs
+     - lambeq[extras]
+     - gym[mujoco]
