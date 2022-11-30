@@ -233,9 +233,9 @@ if __name__ == '__main__':
     seed = 42
     rng = np.random.default_rng(seed=seed)
 
-    KERNEL_SIZE = (5, 5)
-    STRIDE = (5, 5)
-    NUM_CONV_POOL_LAYERS = 2
+    KERNEL_SIZE = (3, 3)
+    STRIDE = (3, 3)
+    NUM_CONV_POOL_LAYERS = 3
     FINAL_LAYER_QUBITS = 2
 
     n_test = 100
@@ -481,4 +481,4 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig(f"fashion-mnist-4class-su4-encoding-results-{n_test}-test-{n_reps}-reps.pdf")
+    plt.savefig(f"fashion-mnist-4class-su4-encoding-kernel-{KERNEL_SIZE[0]}-stride{STRIDE[0]}-results-{n_test}-test-{n_reps}-reps.pdf")
