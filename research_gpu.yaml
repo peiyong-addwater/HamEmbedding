@@ -52,5 +52,3 @@ dependencies:
      - projectq
      - pennylane_pq
      - pipreqs
-     - lambeq[extras]
-     - gym[mujoco]
