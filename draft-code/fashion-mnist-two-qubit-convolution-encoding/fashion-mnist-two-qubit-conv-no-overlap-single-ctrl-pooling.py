@@ -155,19 +155,15 @@ def su4_single_conv_encoding(theta,w, data, wires):
     for _ in range(data_pad_size):
         padded_data = jnp.append(padded_data, 0)
     gate_params = jnp.add(theta, jnp.multiply(w, padded_data))#jnp.array(theta) + jnp.multiply(jnp.array(w), padded_data)
-    for i in range(0, num_layers, step=2):
+    for i in range(0, num_layers):
         SU4(gate_params[15*i:15*(i+1)], wires=wires)
 
 def conv_repuload_encoding(theta, w, data, wires):
     num_row, num_columns = data.shape[0], data.shape[1]
-    for j in range(num_columns):
-        for i in range(0, num_row+1, 2):
-            row_data = data[i]
-            su4_single_conv_encoding(theta, w, row_data[j], wires=[wires[i], wires[i + 1]])
-        qml.Barrier(wires=wires, only_visual=True)
-        for i in range(1, num_row+1 - 2, 2):
-            row_data = data[i]
-            su4_single_conv_encoding(theta, w, row_data[j], wires=[wires[i], wires[i + 1]])
+    for i in range(num_row):
+        row_data = data[i]
+        for j in range(num_columns):
+            su4_single_conv_encoding(theta, w, row_data[j], wires=[wires[2*i], wires[2*i+1]])
         qml.Barrier(wires=wires, only_visual=True)
 
 
@@ -235,12 +231,12 @@ if __name__ == '__main__':
 
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
-    NUM_CONV_POOL_LAYERS = 3
+    NUM_CONV_POOL_LAYERS = 4
     FINAL_LAYER_QUBITS = 2
 
     n_test = 100
-    n_epochs = 200
-    n_reps = 10
+    n_epochs = 100
+    n_reps = 5
 
     # train_sizes = [2, 10, 100, 1000]
     train_sizes = [40, 200, 500, 1000]
