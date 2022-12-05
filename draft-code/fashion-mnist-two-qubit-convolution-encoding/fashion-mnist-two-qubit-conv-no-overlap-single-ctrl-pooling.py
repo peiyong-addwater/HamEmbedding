@@ -164,7 +164,7 @@ def conv_repuload_encoding(theta, w, data, wires):
         row_data = data[i]
         for j in range(num_columns):
             su4_single_conv_encoding(theta, w, row_data[j], wires=[wires[2*i], wires[2*i+1]])
-        qml.Barrier(wires=wires, only_visual=True)
+    qml.Barrier(wires=wires, only_visual=True)
 
 
 def pooling_layer(weights, wires):
