@@ -231,6 +231,7 @@ if __name__ == '__main__':
 
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
+    # Need over 270 GiB of memory for a 9 by 9 output featuremap
     NUM_CONV_POOL_LAYERS = 4
     FINAL_LAYER_QUBITS = 2
 
