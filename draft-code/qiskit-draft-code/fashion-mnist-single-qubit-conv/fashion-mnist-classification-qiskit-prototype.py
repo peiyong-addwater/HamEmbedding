@@ -157,4 +157,9 @@ data_draw = ParameterVector("x", length=9)
 ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw)
 ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.pdf', style='bw')
 
+def convolution_reupload_encoding(kernel_params, data):
+    num_qubits, num_conv_per_qubit = len(data), len(data[0])
+    encoding_circ = QuantumCircuit(num_qubits)
+
+
 
