@@ -262,15 +262,15 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
 
     entangling has 15*8 = 120 parameters;
 
-    first pooling layer measures bottom 5 qubits, there are 2^5 = 32 different measurement results
-    which leads to 32 different conv operations on the remaining 4 qubits based on the measurement results
-    then the first pooling layer has 32*(3*15) = 1440 parameters;
+    first pooling layer measures bottom 4 qubits, there are 2^4 = 16 different measurement results
+    which leads to 32 different conv operations on the remaining 5 qubits based on the measurement results
+    then the first pooling layer has 16*(4*15) = 960 parameters;
 
-    second pooling layer measures 2 of the remaining 4 qubits, there are 2^2 = 4 different measurement results
+    second pooling layer measures 3 of the remaining 5 qubits, there are 2^3 = 8 different measurement results
     which leads to 4 different conv operations on the remaining 2 qubits based on the measurement results
-    then the second pooling layer has 4*(15) = 60 parameters;
+    then the second pooling layer has 8*(15) = 120 parameters;
 
-    total number of parameters is 9+120+1440+60 = 1629 > 2^9 = 512, over-parameterization achieved.
+    total number of parameters is 9+120+960+120 = 1209 > 2^9 = 512, over-parameterization achieved.
 
     This structure has some flavor of decision trees.
     :param params:
@@ -278,8 +278,8 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
     :return:
     """
     qreg = QuantumRegister(9)
-    pooling_layer_1_meas = ClassicalRegister(5, name='pooling1meas')
-    pooling_layer_2_meas = ClassicalRegister(2, name='pooling2meas')
+    pooling_layer_1_meas = ClassicalRegister(4, name='pooling1meas')
+    pooling_layer_2_meas = ClassicalRegister(3, name='pooling2meas')
     prob_meas = ClassicalRegister(2, name='classification')
 
     circ = QuantumCircuit(qreg, pooling_layer_1_meas, pooling_layer_2_meas, prob_meas)
@@ -289,15 +289,15 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
     # entangling after encoding layer
     circ.compose(entangling_after_encoding(params[9:9+15*8]), qubits=qreg, inplace=True)
     # first pooling layer
-    circ.measure(qreg[4:], pooling_layer_1_meas)
-    first_pooling_params = params[9+15*8:9+15*8+32*(3*15)]
-    for i in range(32):
+    circ.measure(qreg[5:], pooling_layer_1_meas)
+    first_pooling_params = params[9+15*8:9+15*8+16*(4*15)]
+    for i in range(16):
         with circ.if_test((pooling_layer_1_meas, i)):
-            circ.append(convolution_layer(first_pooling_params[15*3*i:15*3*(i+1)]).to_instruction(), qreg[:4])
+            circ.append(convolution_layer(first_pooling_params[15*4*i:15*4*(i+1)]).to_instruction(), qreg[:5])
     # second pooling layer
-    circ.measure(qreg[2:4], pooling_layer_2_meas)
-    second_pooling_params = params[9+15*8+32*(3*15):9+15*8+32*(3*15)+4*15]
-    for i in range(4):
+    circ.measure(qreg[2:5], pooling_layer_2_meas)
+    second_pooling_params = params[9+15*8+16*(4*15):9+15*8+16*(4*15)+8*15]
+    for i in range(8):
         with circ.if_test((pooling_layer_2_meas, i)):
             circ.append(convolution_layer(second_pooling_params[15*i:15*(i+1)]).to_instruction(), qreg[:2])
     # output classification probabilities
