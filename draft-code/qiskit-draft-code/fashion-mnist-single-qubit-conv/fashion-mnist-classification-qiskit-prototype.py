@@ -121,3 +121,7 @@ def su4_circuit(params):
     su4.cx(0, 1)
     su4.u(params[9], params[10], params[11], 0)
     su4.u(params[12], params[13], params[14], 1)
+    return su4
+
+
+
