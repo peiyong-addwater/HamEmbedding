@@ -151,7 +151,7 @@ def single_kernel_encoding(kernel_params, data_in_kernel_view):
         encoding_circ.u(kernel_params[3*i], kernel_params[3*i+1], kernel_params[3*i+2], 0)
     return encoding_circ
 
-# draw the encoding circuit.
+# draw the single kernel encoding circuit.
 kernel_params_draw = ParameterVector("θ", length=9)
 data_draw = ParameterVector("x", length=9)
 ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw)
@@ -160,6 +160,24 @@ ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.pdf', st
 def convolution_reupload_encoding(kernel_params, data):
     num_qubits, num_conv_per_qubit = len(data), len(data[0])
     encoding_circ = QuantumCircuit(num_qubits)
+    for j in range(num_conv_per_qubit):
+        for i in range(num_qubits):
+            single_qubit_data = data[i]
+            encoding_circ = encoding_circ.compose(single_kernel_encoding(kernel_params, single_qubit_data[j]), qubits=[i])
+
+    return encoding_circ
+
+# draw the full encoding circuit corresponding to a 9 by 9 feature map
+kernel_params_draw = ParameterVector("θ", length=9)
+# data
+data = []
+for i in range(9):
+    single_qubit_data = []
+    for j in range(9):
+        single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
+    data.append(single_qubit_data)
+conv_encode_circ = convolution_reupload_encoding(kernel_params_draw, data)
+conv_encode_circ.draw(output='mpl', style='bw', filename="conv_encoding_9x9_feature_map.png", fold=-1)
 
 
 
