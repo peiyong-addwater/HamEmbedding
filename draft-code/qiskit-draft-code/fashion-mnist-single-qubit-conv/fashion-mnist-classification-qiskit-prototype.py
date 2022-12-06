@@ -1,8 +1,40 @@
 import numpy as np
 from typing import List, Tuple, Union
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit.circuit import ParameterVector
+from qiskit import Aer
 
+
+def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3):
+    """Return training and testing data of digits dataset."""
+    data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
+    features, labels = load_fashion_mnist(data_folder)
+    features = [features[i].reshape(28, 28) for i in range(len(features))]
+    features = np.array(features)
+
+    # only use first four classes
+    features = features[np.where((labels == 0) | (labels == 1) | (labels == 2) | (labels == 3))]
+    labels = labels[np.where((labels == 0) | (labels == 1) | (labels == 2) | (labels == 3))]
+
+    # normalize data
+    features = features / 255
+
+    # subsample train and test split
+    train_indices = rng.choice(len(labels), num_train, replace=False)
+    test_indices = rng.choice(
+        np.setdiff1d(range(len(labels)), train_indices), num_test, replace=False
+    )
+
+    x_train, y_train = features[train_indices], labels[train_indices]
+    x_train = [extract_convolution_data(x_train[i], stride=stride, kernel_size=kernel_size) for i in range(num_train)]
+    x_test, y_test = features[test_indices], labels[test_indices]
+    x_test = [extract_convolution_data(x_test[i], stride=stride, kernel_size=kernel_size) for i in range(num_test)]
+    return (
+        x_train,
+        y_train,
+        x_test,
+        y_test,
+    )
 
 def add_padding(matrix: np.ndarray,
                 padding: Tuple[int, int]) -> np.ndarray:
@@ -65,7 +97,7 @@ def _check_params(matrix, kernel, stride, dilation, padding):
 
 def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[float]]], np.ndarray],
                              kernel_size:Tuple[int, int]=(3, 3),
-                             stride:Tuple[int, int] = (1, 1),
+                             stride:Tuple[int, int] = (3, 3),
                              dilation:Tuple[int, int]=(1, 1),
                              padding: Tuple[int, int]=(0,0),
                              encoding_gate_parameter_size:int=3) -> List[List[List[float]]]:
@@ -86,9 +118,9 @@ def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[flo
             unpadded_data = submatrix.flatten().tolist()
             num_data_gates = len(unpadded_data)//encoding_gate_parameter_size + 1
             data_pad_size = encoding_gate_parameter_size * num_data_gates - len(unpadded_data)
-            padded_data = unpadded_data
+            padded_data = submatrix.flatten().tolist()
             for _ in range(data_pad_size):
-                padded_data = padded_data.append(0)
+                padded_data.append(0)
             row.append(padded_data)
         output.append(row)
     return output
@@ -170,6 +202,9 @@ def convolution_reupload_encoding(kernel_params, data):
         for i in range(num_qubits):
             single_qubit_data = data[i]
             encoding_circ = encoding_circ.compose(single_kernel_encoding(kernel_params, single_qubit_data[j]), qubits=[i])
+    inst = encoding_circ.to_instruction()
+    encoding_circ = QuantumCircuit(num_qubits)
+    encoding_circ.append(inst, list(range(num_qubits)))
 
     return encoding_circ
 
@@ -182,7 +217,7 @@ for i in range(9):
     for j in range(9):
         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
     data.append(single_qubit_data)
-conv_encode_circ = convolution_reupload_encoding(kernel_params_draw, data)
+conv_encode_circ = convolution_reupload_encoding(kernel_params_draw, data).decompose()
 conv_encode_circ.draw(output='mpl', style='bw', filename="conv_encoding_9x9_feature_map.png", fold=-1)
 
 def entangling_after_encoding(params):
@@ -222,6 +257,7 @@ def convolution_layer(params):
 
 def conv_net_9x9_encoding_4_class(params, single_image_data):
     """
+
     encoding has 9 parameters;
 
     entangling has 15*8 = 120 parameters;
@@ -234,7 +270,9 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
     which leads to 4 different conv operations on the remaining 2 qubits based on the measurement results
     then the second pooling layer has 4*(15) = 60 parameters;
 
-    total number of parameters is 9+120+1440+60 = 1629 > 2^9 = 512, over-parameterization achieved
+    total number of parameters is 9+120+1440+60 = 1629 > 2^9 = 512, over-parameterization achieved.
+
+    This structure has some flavor of decision trees.
     :param params:
     :param single_image_data:
     :return:
@@ -246,5 +284,42 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
 
     circ = QuantumCircuit(qreg, pooling_layer_1_meas, pooling_layer_2_meas, prob_meas)
 
+    # data re-uploading layer
+    circ.compose(convolution_reupload_encoding(params[:9], single_image_data), qubits=qreg, inplace=True)
+    # entangling after encoding layer
+    circ.compose(entangling_after_encoding(params[9:9+15*8]), qubits=qreg, inplace=True)
+    # first pooling layer
+    circ.measure(qreg[4:], pooling_layer_1_meas)
+    first_pooling_params = params[9+15*8:9+15*8+32*(3*15)]
+    for i in range(32):
+        with circ.if_test((pooling_layer_1_meas, i)):
+            circ.append(convolution_layer(first_pooling_params[15*3*i:15*3*(i+1)]).to_instruction(), qreg[:4])
+    # second pooling layer
+    circ.measure(qreg[2:4], pooling_layer_2_meas)
+    second_pooling_params = params[9+15*8+32*(3*15):9+15*8+32*(3*15)+4*15]
+    for i in range(4):
+        with circ.if_test((pooling_layer_2_meas, i)):
+            circ.append(convolution_layer(second_pooling_params[15*i:15*(i+1)]).to_instruction(), qreg[:2])
+    # output classification probabilities
+    circ.measure(qreg[:2], prob_meas)
 
+    return circ
+
+# draw the conv net
+parameter_convnet = ParameterVector("θ", length=1629)
+convnet_draw = conv_net_9x9_encoding_4_class(parameter_convnet, data)
+convnet_draw.draw(output='mpl', filename='conv_net_9x9_encoding_4_class.png', style='bw', fold=-1)
+
+# run the circuit with random data, see what kind of measurements will appear in the output
+backend_sim = Aer.get_backend('aer_simulator')
+seed = 42
+rng = np.random.default_rng(seed=seed)
+data = load_data(10,10,rng)[0][0]
+print(len(data), len(data[0]))
+parameter_convnet = np.random.random(1629)
+sample_run_convnet = transpile(conv_net_9x9_encoding_4_class(parameter_convnet, data), backend_sim)
+job = backend_sim.run(sample_run_convnet, shots = 4096)
+results = job.result()
+counts = results.get_counts()
+print(counts)
 
