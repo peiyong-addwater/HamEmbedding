@@ -286,7 +286,7 @@ if __name__ == '__main__':
                                                           pnp.random.normal(loc=0, scale=1, size=(18, NUM_CONV_POOL_LAYERS), requires_grad=True),
                                                           pnp.random.normal(loc=0, scale=1, size=4 ** FINAL_LAYER_QUBITS - 1, requires_grad=True),
                                                           extract_convolution_data(np.random.rand(28*28).reshape((28,28)),stride=STRIDE, kernel_size=KERNEL_SIZE))
-    plt.savefig("circuit-su4-encoding-no-compact-multiclass.pdf")
+    plt.savefig("circuit-su4-encoding-no-compact-multiclass.png")
 
     def load_data(num_train, num_test, rng, stride = STRIDE, kernel_size = KERNEL_SIZE):
         """Return training and testing data of digits dataset."""
