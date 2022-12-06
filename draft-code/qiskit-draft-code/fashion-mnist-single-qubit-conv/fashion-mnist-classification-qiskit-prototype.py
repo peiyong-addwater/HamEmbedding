@@ -129,12 +129,15 @@ def su4_circuit(params):
     su4.cx(0, 1)
     su4.u(params[9], params[10], params[11], 0)
     su4.u(params[12], params[13], params[14], 1)
+    su4_inst = su4.to_instruction()
+    su4 = QuantumCircuit(2)
+    su4.append(su4_inst, list(range(2)))
     return su4
 
 # draw the su4 circuit
 params_su4_draw = ParameterVector("θ", length=15)
-circuit_su4_draw = su4_circuit(params_su4_draw)
-circuit_su4_draw.draw(output='mpl', filename="su4_circuit.pdf",style='bw')
+circuit_su4_draw = su4_circuit(params_su4_draw).decompose()
+circuit_su4_draw.draw(output='mpl', filename="su4_circuit.png",style='bw')
 
 def single_kernel_encoding(kernel_params, data_in_kernel_view):
     """
@@ -145,17 +148,20 @@ def single_kernel_encoding(kernel_params, data_in_kernel_view):
     :return:
     """
     num_combo_gates = len(kernel_params)//3
-    encoding_circ = QuantumCircuit(1)
+    encoding_circ = QuantumCircuit(1, name="Single Kernel Encoding")
     for i in range(num_combo_gates):
         encoding_circ.u(data_in_kernel_view[3 * i], data_in_kernel_view[3 * i + 1], data_in_kernel_view[3 * i + 2], 0)
         encoding_circ.u(kernel_params[3*i], kernel_params[3*i+1], kernel_params[3*i+2], 0)
+    circ_inst = encoding_circ.to_instruction()
+    encoding_circ = QuantumCircuit(1)
+    encoding_circ.append(circ_inst, [0])
     return encoding_circ
 
 # draw the single kernel encoding circuit.
 kernel_params_draw = ParameterVector("θ", length=9)
 data_draw = ParameterVector("x", length=9)
-ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw)
-ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.pdf', style='bw')
+ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw).decompose()
+ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.png', style='bw')
 
 def convolution_reupload_encoding(kernel_params, data):
     num_qubits, num_conv_per_qubit = len(data), len(data[0])
@@ -196,4 +202,12 @@ entangling_params = ParameterVector("θ", length=15*8) # 9 qubits
 entangling_circ = entangling_after_encoding(entangling_params)
 entangling_circ.draw(output='mpl', style='bw', filename='entangling_after_encoding.png', fold=-1)
 
-
+def conv_net_9x9_encoding_4_class(params, single_image_data):
+    """
+    encoding has 9 parameters;
+    entangling has 15*8 = 120 parameters;
+    first pooling layer measures bottom 5 qubits, there are 2^5 = 32 different measurement results
+    :param params:
+    :param single_image_data:
+    :return:
+    """
