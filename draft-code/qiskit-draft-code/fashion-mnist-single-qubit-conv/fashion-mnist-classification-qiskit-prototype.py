@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List, Tuple, Union
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit.circuit import ParameterVector
 
 
 def add_padding(matrix: np.ndarray,
@@ -66,7 +67,8 @@ def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[flo
                              kernel_size:Tuple[int, int]=(3, 3),
                              stride:Tuple[int, int] = (1, 1),
                              dilation:Tuple[int, int]=(1, 1),
-                             padding: Tuple[int, int]=(0,0)) -> np.ndarray:
+                             padding: Tuple[int, int]=(0,0),
+                             encoding_gate_parameter_size:int=3) -> List[List[List[float]]]:
     kernel_placeholder = np.ones(kernel_size)
     matrix, kernel, k, h_out, w_out = _check_params(matrix, kernel_placeholder, stride, dilation, padding)
     b = k[0] // 2, k[1] // 2
@@ -81,9 +83,15 @@ def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[flo
             center_y = center_y_0 + j * stride[1]
             indices_y = [center_y + l * dilation[1] for l in range(-b[1], b[1] + 1)]
             submatrix = matrix[indices_x, :][:, indices_y]
-            row.append(submatrix.flatten().tolist())
+            unpadded_data = submatrix.flatten().tolist()
+            num_data_gates = len(unpadded_data)//encoding_gate_parameter_size + 1
+            data_pad_size = encoding_gate_parameter_size * num_data_gates - len(unpadded_data)
+            padded_data = unpadded_data
+            for _ in range(data_pad_size):
+                padded_data = padded_data.append(0)
+            row.append(padded_data)
         output.append(row)
-    return np.array(output)
+    return output
 
 def load_fashion_mnist(path, kind='train'):
     # from https://github.com/zalandoresearch/fashion-mnist/blob/master/utils/mnist_reader.py
@@ -123,5 +131,30 @@ def su4_circuit(params):
     su4.u(params[12], params[13], params[14], 1)
     return su4
 
+# draw the su4 circuit
+params_su4_draw = ParameterVector("θ", length=15)
+circuit_su4_draw = su4_circuit(params_su4_draw)
+circuit_su4_draw.draw(output='mpl', filename="su4_circuit.pdf",style='bw')
+
+def single_kernel_encoding(kernel_params, data_in_kernel_view):
+    """
+    Size of the data_params should be the same as the size of the kernel_params
+    Encoding with U3 gates
+    :param kernel_params: Should be an integer times of number of parameter in a single encoding unitary
+    :param data_in_kernel_view: needs to be padded
+    :return:
+    """
+    num_combo_gates = len(kernel_params)//3
+    encoding_circ = QuantumCircuit(1)
+    for i in range(num_combo_gates):
+        encoding_circ.u(data_in_kernel_view[3 * i], data_in_kernel_view[3 * i + 1], data_in_kernel_view[3 * i + 2], 0)
+        encoding_circ.u(kernel_params[3*i], kernel_params[3*i+1], kernel_params[3*i+2], 0)
+    return encoding_circ
+
+# draw the encoding circuit.
+kernel_params_draw = ParameterVector("θ", length=9)
+data_draw = ParameterVector("x", length=9)
+ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw)
+ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.pdf', style='bw')
 
 
