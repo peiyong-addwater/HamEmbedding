@@ -1,5 +1,6 @@
 import numpy as np
 from typing import List, Tuple, Union
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 
 
 def add_padding(matrix: np.ndarray,
@@ -107,3 +108,4 @@ def load_fashion_mnist(path, kind='train'):
                                offset=16).reshape(len(labels), 784)
 
     return images, labels
+
