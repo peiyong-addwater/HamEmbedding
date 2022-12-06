@@ -195,19 +195,48 @@ def entangling_after_encoding(params):
     circ = QuantumCircuit(num_qubits, name="Entangling Layer")
     for i in range(num_qubits-1):
         circ.compose(su4_circuit(params[15*i:15*(i+1)]), [i, i+1], inplace=True)
+    circ_inst = circ.to_instruction()
+    circ = QuantumCircuit(num_qubits)
+    circ.append(circ_inst, list(range(num_qubits)))
     return circ
 
 # draw the entangling layer
 entangling_params = ParameterVector("θ", length=15*8) # 9 qubits
-entangling_circ = entangling_after_encoding(entangling_params)
+entangling_circ = entangling_after_encoding(entangling_params).decompose()
 entangling_circ.draw(output='mpl', style='bw', filename='entangling_after_encoding.png', fold=-1)
+
+def convolution_layer(params):
+    """
+    same structure as entangling_after_encoding
+    :param params:
+    :return:
+    """
+    num_qubits = len(params) // 15 + 1
+    circ = QuantumCircuit(num_qubits, name="Convolution Layer")
+    for i in range(num_qubits - 1):
+        circ.compose(su4_circuit(params[15 * i:15 * (i + 1)]), [i, i + 1], inplace=True)
+    circ_inst = circ.to_instruction()
+    circ = QuantumCircuit(num_qubits)
+    circ.append(circ_inst,list(range(num_qubits)))
+    return circ
 
 def conv_net_9x9_encoding_4_class(params, single_image_data):
     """
     encoding has 9 parameters;
+
     entangling has 15*8 = 120 parameters;
+
     first pooling layer measures bottom 5 qubits, there are 2^5 = 32 different measurement results
+    which leads to 32 different conv operations on the remaining 4 qubits based on the measurement results
+    then the first pooling layer has 32*(3*15) = 1440 parameters;
+
+    second pooling layer measures 2 of the remaining 4 qubits, there are 2^2 = 4 different measurement results
+    which leads to 4 different conv operations on the remaining 2 qubits based on the measurement results
+    then the second pooling layer has 4*(15) = 60 parameters;
+
+    total number of parameters is 9+120+1440+60 = 1629
     :param params:
     :param single_image_data:
     :return:
     """
+
