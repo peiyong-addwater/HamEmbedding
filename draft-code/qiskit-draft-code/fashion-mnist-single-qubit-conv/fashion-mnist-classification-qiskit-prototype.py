@@ -310,6 +310,7 @@ parameter_convnet = ParameterVector("θ", length=1629)
 convnet_draw = conv_net_9x9_encoding_4_class(parameter_convnet, data)
 convnet_draw.draw(output='mpl', filename='conv_net_9x9_encoding_4_class.png', style='bw', fold=-1)
 
+
 # run the circuit with random data, see what kind of measurements will appear in the output
 backend_sim = Aer.get_backend('aer_simulator')
 seed = 42
@@ -321,5 +322,11 @@ sample_run_convnet = transpile(conv_net_9x9_encoding_4_class(parameter_convnet, 
 job = backend_sim.run(sample_run_convnet, shots = 4096)
 results = job.result()
 counts = results.get_counts()
-print(counts)
-
+#print(counts)
+#print(list(counts.keys())[0].split(' '))
+probs = [0]*4
+for key in counts.keys():
+    classification = int(key.split(' ')[0], 2)
+    probs[classification] = probs[classification]+counts[key]
+probs = [c/sum(probs) for c in probs]
+print(probs, sum(probs))
