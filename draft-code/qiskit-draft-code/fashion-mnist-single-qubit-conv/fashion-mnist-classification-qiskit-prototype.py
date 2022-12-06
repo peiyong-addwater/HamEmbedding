@@ -118,7 +118,7 @@ def load_fashion_mnist(path, kind='train'):
     return images, labels
 
 def su4_circuit(params):
-    su4 = QuantumCircuit(2)
+    su4 = QuantumCircuit(2, name='su4')
     su4.u(params[0], params[1], params[2], qubit=0)
     su4.u(params[3], params[4], params[5], qubit=1)
     su4.cx(0,1)
@@ -159,7 +159,7 @@ ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.pdf', st
 
 def convolution_reupload_encoding(kernel_params, data):
     num_qubits, num_conv_per_qubit = len(data), len(data[0])
-    encoding_circ = QuantumCircuit(num_qubits)
+    encoding_circ = QuantumCircuit(num_qubits, name="Encoding Layer")
     for j in range(num_conv_per_qubit):
         for i in range(num_qubits):
             single_qubit_data = data[i]
@@ -179,5 +179,21 @@ for i in range(9):
 conv_encode_circ = convolution_reupload_encoding(kernel_params_draw, data)
 conv_encode_circ.draw(output='mpl', style='bw', filename="conv_encoding_9x9_feature_map.png", fold=-1)
 
+def entangling_after_encoding(params):
+    """
+    Entangling layer with su4 gates
+    :param params:
+    :return:
+    """
+    num_qubits = len(params) // 15 + 1
+    circ = QuantumCircuit(num_qubits, name="Entangling Layer")
+    for i in range(num_qubits-1):
+        circ.compose(su4_circuit(params[15*i:15*(i+1)]), [i, i+1], inplace=True)
+    return circ
+
+# draw the entangling layer
+entangling_params = ParameterVector("θ", length=15*8) # 9 qubits
+entangling_circ = entangling_after_encoding(entangling_params)
+entangling_circ.draw(output='mpl', style='bw', filename='entangling_after_encoding.png', fold=-1)
 
 
