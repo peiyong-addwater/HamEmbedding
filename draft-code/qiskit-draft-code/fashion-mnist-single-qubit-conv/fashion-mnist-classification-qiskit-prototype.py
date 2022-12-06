@@ -234,9 +234,17 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
     which leads to 4 different conv operations on the remaining 2 qubits based on the measurement results
     then the second pooling layer has 4*(15) = 60 parameters;
 
-    total number of parameters is 9+120+1440+60 = 1629
+    total number of parameters is 9+120+1440+60 = 1629 > 2^9 = 512, over-parameterization achieved
     :param params:
     :param single_image_data:
     :return:
     """
+    qreg = QuantumRegister(9)
+    pooling_layer_1_meas = ClassicalRegister(5, name='pooling1meas')
+    pooling_layer_2_meas = ClassicalRegister(2, name='pooling2meas')
+    prob_meas = ClassicalRegister(2, name='classification')
+
+    circ = QuantumCircuit(qreg, pooling_layer_1_meas, pooling_layer_2_meas, prob_meas)
+
+
 
