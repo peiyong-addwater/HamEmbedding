@@ -372,3 +372,12 @@ def softmax_cross_entropy_loss_with_one_hot_labels(y, y_pred):
     y_pred = np.exp(y_pred)/np.sum(np.exp(y_pred), axis=0)
     return -np.sum(y*np.log(y_pred))/len(y)
 
+def single_data_probs(params, data):
+    backend_sim = Aer.get_backend('aer_simulator')
+    convnet = transpile(conv_net_9x9_encoding_4_class(params, data), backend_sim)
+    job = backend_sim.run(convnet, shots=4096)
+    results = job.result()
+    counts = results.get_counts()
+    probs = get_probs_from_counts(counts, num_classes=4)
+    return probs
+
