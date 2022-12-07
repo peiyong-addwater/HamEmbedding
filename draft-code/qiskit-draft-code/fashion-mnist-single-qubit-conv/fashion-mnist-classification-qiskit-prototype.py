@@ -4,6 +4,26 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit.circuit import ParameterVector
 from qiskit import Aer
 from dask.distributed import LocalCluster, Client
+from qiskit.algorithms.optimizers import SPSA
+
+class TerminationChecker:
+
+    def __init__(self, N : int):
+        self.N = N
+        self.values = []
+
+    def __call__(self, nfev, parameters, value, stepsize, accepted) -> bool:
+        self.values.append(value)
+
+        if len(self.values) > self.N:
+            last_values = self.values[-self.N:]
+            pp = np.polyfit(range(self.N), last_values, 1)
+            slope = pp[0] / self.N
+
+            if slope > 0:
+                return True
+        return False
+
 
 
 def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3, one_hot=True):
