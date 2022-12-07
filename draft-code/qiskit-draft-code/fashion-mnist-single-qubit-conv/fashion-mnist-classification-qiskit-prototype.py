@@ -413,38 +413,13 @@ def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_s
     probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
     return np.array(probs)
 
-# from math import pi
-# def q_exec():
-#     # Generate circuits
-#     circ = QuantumCircuit(3, 3)
-#     circ.h(0)
-#     circ.cx(0, 1)
-#     circ.cx(1, 2)
-#     circ.p(pi/2, 2)
-#     circ.measure([0, 1, 2], [0, 1 ,2])
-#
-#     circ2 = QuantumCircuit(15, 15)
-#     circ2.h(0)
-#     circ2.cx(0, 1)
-#     circ2.cx(1, 2)
-#     #circ2.p(pi/2, 2)
-#     circ2.measure([0, 1, 2], [0, 1 ,2])
-#
-#     circ_list = [circ, circ2]
-#
-#     exc = Client(address=LocalCluster(n_workers=2, processes=True))
-#     # Set executor and max_job_size
-#     qbackend = Aer.get_backend('aer_simulator')
-#     qbackend.set_options(executor=exc)
-#     qbackend.set_options(max_job_size=1)
-#     result = qbackend.run(circ_list).result()
-#     return result
 
 if __name__ == '__main__':
     seed = 42
     rng = np.random.default_rng(seed=seed)
-    sample_data = load_data(10, 10, rng)
-    xtrain = sample_data[0]
-    parameter_convnet = np.random.random(1209)
-    probs = batch_data_probs_sim(parameter_convnet, xtrain, n_workers=4)
-    print(probs.shape)
+    # sample_data = load_data(10, 10, rng)
+    # xtrain = sample_data[0]
+    # parameter_convnet = np.random.random(1209)
+    # probs = batch_data_probs_sim(parameter_convnet, xtrain, n_workers=4)
+    # print(probs.shape)
+
