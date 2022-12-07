@@ -5,7 +5,7 @@ from qiskit.circuit import ParameterVector
 from qiskit import Aer
 
 
-def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3):
+def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3, one_hot=True):
     """Return training and testing data of digits dataset."""
     data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
     features, labels = load_fashion_mnist(data_folder)
@@ -26,9 +26,18 @@ def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding
     )
 
     x_train, y_train = features[train_indices], labels[train_indices]
-    x_train = [extract_convolution_data(x_train[i], stride=stride, kernel_size=kernel_size) for i in range(num_train)]
+    x_train = [extract_convolution_data(x_train[i], stride=stride, kernel_size=kernel_size, encoding_gate_parameter_size=encoding_gate_parameter_size) for i in range(num_train)]
     x_test, y_test = features[test_indices], labels[test_indices]
-    x_test = [extract_convolution_data(x_test[i], stride=stride, kernel_size=kernel_size) for i in range(num_test)]
+    x_test = [extract_convolution_data(x_test[i], stride=stride, kernel_size=kernel_size, encoding_gate_parameter_size=encoding_gate_parameter_size) for i in range(num_test)]
+    if one_hot:
+        train_labels = np.zeros((len(y_train), 4))
+        test_labels = np.zeros((len(y_test), 4))
+        train_labels[np.arange(len(y_train)), y_train] = 1
+        test_labels[np.arange(len(y_test)), y_test] = 1
+
+        y_train = train_labels
+        y_test = test_labels
+
     return (
         x_train,
         y_train,
@@ -167,9 +176,9 @@ def su4_circuit(params):
     return su4
 
 # draw the su4 circuit
-params_su4_draw = ParameterVector("θ", length=15)
-circuit_su4_draw = su4_circuit(params_su4_draw).decompose()
-circuit_su4_draw.draw(output='mpl', filename="su4_circuit.png",style='bw')
+# params_su4_draw = ParameterVector("θ", length=15)
+# circuit_su4_draw = su4_circuit(params_su4_draw).decompose()
+# circuit_su4_draw.draw(output='mpl', filename="su4_circuit.png",style='bw')
 
 def single_kernel_encoding(kernel_params, data_in_kernel_view):
     """
@@ -190,10 +199,10 @@ def single_kernel_encoding(kernel_params, data_in_kernel_view):
     return encoding_circ
 
 # draw the single kernel encoding circuit.
-kernel_params_draw = ParameterVector("θ", length=9)
-data_draw = ParameterVector("x", length=9)
-ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw).decompose()
-ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.png', style='bw')
+# kernel_params_draw = ParameterVector("θ", length=9)
+# data_draw = ParameterVector("x", length=9)
+# ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw).decompose()
+# ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.png', style='bw')
 
 def convolution_reupload_encoding(kernel_params, data):
     num_qubits, num_conv_per_qubit = len(data), len(data[0])
@@ -209,16 +218,16 @@ def convolution_reupload_encoding(kernel_params, data):
     return encoding_circ
 
 # draw the full encoding circuit corresponding to a 9 by 9 feature map
-kernel_params_draw = ParameterVector("θ", length=9)
+# kernel_params_draw = ParameterVector("θ", length=9)
 # data
-data = []
-for i in range(9):
-    single_qubit_data = []
-    for j in range(9):
-        single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
-    data.append(single_qubit_data)
-conv_encode_circ = convolution_reupload_encoding(kernel_params_draw, data).decompose()
-conv_encode_circ.draw(output='mpl', style='bw', filename="conv_encoding_9x9_feature_map.png", fold=-1)
+# data = []
+# for i in range(9):
+#     single_qubit_data = []
+#     for j in range(9):
+#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
+#     data.append(single_qubit_data)
+# conv_encode_circ = convolution_reupload_encoding(kernel_params_draw, data).decompose()
+# conv_encode_circ.draw(output='mpl', style='bw', filename="conv_encoding_9x9_feature_map.png", fold=-1)
 
 def entangling_after_encoding(params):
     """
@@ -236,9 +245,9 @@ def entangling_after_encoding(params):
     return circ
 
 # draw the entangling layer
-entangling_params = ParameterVector("θ", length=15*8) # 9 qubits
-entangling_circ = entangling_after_encoding(entangling_params).decompose()
-entangling_circ.draw(output='mpl', style='bw', filename='entangling_after_encoding.png', fold=-1)
+# entangling_params = ParameterVector("θ", length=15*8) # 9 qubits
+# entangling_circ = entangling_after_encoding(entangling_params).decompose()
+# entangling_circ.draw(output='mpl', style='bw', filename='entangling_after_encoding.png', fold=-1)
 
 def convolution_layer(params):
     """
@@ -306,27 +315,60 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
     return circ
 
 # draw the conv net
-parameter_convnet = ParameterVector("θ", length=1629)
-convnet_draw = conv_net_9x9_encoding_4_class(parameter_convnet, data)
-convnet_draw.draw(output='mpl', filename='conv_net_9x9_encoding_4_class.png', style='bw', fold=-1)
+# data = []
+# for i in range(9):
+#     single_qubit_data = []
+#     for j in range(9):
+#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
+#     data.append(single_qubit_data)
+# parameter_convnet = ParameterVector("θ", length=1629)
+# convnet_draw = conv_net_9x9_encoding_4_class(parameter_convnet, data)
+# convnet_draw.draw(output='mpl', filename='conv_net_9x9_encoding_4_class.png', style='bw', fold=-1)
 
 
 # run the circuit with random data, see what kind of measurements will appear in the output
-backend_sim = Aer.get_backend('aer_simulator')
-seed = 42
-rng = np.random.default_rng(seed=seed)
-data = load_data(10,10,rng)[0][0]
-print(len(data), len(data[0]))
-parameter_convnet = np.random.random(1629)
-sample_run_convnet = transpile(conv_net_9x9_encoding_4_class(parameter_convnet, data), backend_sim)
-job = backend_sim.run(sample_run_convnet, shots = 4096)
-results = job.result()
-counts = results.get_counts()
-#print(counts)
-#print(list(counts.keys())[0].split(' '))
-probs = [0]*4
-for key in counts.keys():
-    classification = int(key.split(' ')[0], 2)
-    probs[classification] = probs[classification]+counts[key]
-probs = [c/sum(probs) for c in probs]
-print(probs, sum(probs))
+# backend_sim = Aer.get_backend('aer_simulator')
+# seed = 42
+# rng = np.random.default_rng(seed=seed)
+# data = load_data(10,10,rng)[0][0]
+# print(len(data), len(data[0]))
+# labels = load_data(10,10,rng)[1]
+# print(labels)
+# parameter_convnet = np.random.random(1629)
+# sample_run_convnet = transpile(conv_net_9x9_encoding_4_class(parameter_convnet, data), backend_sim)
+# job = backend_sim.run(sample_run_convnet, shots = 4096)
+# results = job.result()
+# counts = results.get_counts()
+# print(counts)
+# print(list(counts.keys())[0].split(' '))
+# probs = [0]*4
+# for key in counts.keys():
+#     classification = int(key.split(' ')[0], 2)
+#     probs[classification] = probs[classification]+counts[key]
+# probs = [c/sum(probs) for c in probs]
+# print(probs, sum(probs))
+
+def get_probs_from_counts(counts, num_classes=4):
+    """
+    for count keys like '00 011 0010', where the first two digits are the class
+    :param counts:
+    :param num_classes:
+    :return:
+    """
+    probs = [0]*num_classes
+    for key in counts.keys():
+        classification = int(key.split(' ')[0], 2)
+        probs[classification] = probs[classification] + counts[key]
+    probs = [c / sum(probs) for c in probs]
+    return probs
+
+def softmax_cross_entropy_loss_with_one_hot_labels(y, y_pred):
+    """
+    average cross entropy loss after softmax.
+    :param y:
+    :param y_pred:
+    :return:
+    """
+    y_pred = np.exp(y_pred)/np.sum(np.exp(y_pred), axis=0)
+    return -np.sum(y*np.log(y_pred))/len(y)
+
