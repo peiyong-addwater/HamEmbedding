@@ -422,4 +422,10 @@ if __name__ == '__main__':
     # parameter_convnet = np.random.random(1209)
     # probs = batch_data_probs_sim(parameter_convnet, xtrain, n_workers=4)
     # print(probs.shape)
+    KERNEL_SIZE = (3, 3)
+    STRIDE = (3, 3)
+    n_test = 100
+    n_epochs = 100
+    n_reps = 5
+    train_sizes = [40, 200, 500, 1000]
 
