@@ -547,6 +547,9 @@ if __name__ == '__main__':
     n_epochs = 5
     n_reps = 5
     train_sizes = [40, 200, 500, 1000]
-    res = train_model(train_sizes[1], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=10, max_job_size =10)
+    res = train_model(train_sizes[2], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=10, max_job_size =10)
     print(res)
+    print(res.keys())
+    print(res["x"])
+    print(res["fun"])
 
