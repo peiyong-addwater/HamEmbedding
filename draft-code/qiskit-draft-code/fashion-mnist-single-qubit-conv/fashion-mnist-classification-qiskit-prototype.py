@@ -4,26 +4,20 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit.circuit import ParameterVector
 from qiskit import Aer
 from dask.distributed import LocalCluster, Client
-from qiskit.algorithms.optimizers import SPSA
+from noisyopt import minimizeSPSA
+import json
+import time
 
-class TerminationChecker:
-
-    def __init__(self, N : int):
-        self.N = N
-        self.values = []
-
-    def __call__(self, nfev, parameters, value, stepsize, accepted) -> bool:
-        self.values.append(value)
-
-        if len(self.values) > self.N:
-            last_values = self.values[-self.N:]
-            pp = np.polyfit(range(self.N), last_values, 1)
-            slope = pp[0] / self.N
-
-            if slope > 0:
-                return True
-        return False
-
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NpEncoder, self).default(obj)
 
 
 def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3, one_hot=True):
@@ -383,7 +377,7 @@ def get_probs_from_counts(counts, num_classes=4):
     probs = [c / sum(probs) for c in probs]
     return probs
 
-def softmax_cross_entropy_loss_with_one_hot_labels(y, y_pred):
+def avg_softmax_cross_entropy_loss_with_one_hot_labels(y, y_pred):
     """
     average cross entropy loss after softmax.
     :param y:
@@ -413,6 +407,67 @@ def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_s
     probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
     return np.array(probs)
 
+def batch_avg_accuracy(probs, labels):
+    """
+    average accuracy with one-hot labels
+    :param probs:
+    :param labels:
+    :return:
+    """
+    preds = np.argmax(probs, axis=1)
+    targets = np.argmax(labels, axis=1)
+    return np.mean(np.array(preds == targets).astype(int))
+
+def batch_data_loss_avg(params, data_list, labels, shots = 2048, n_workers=8, max_job_size =1):
+    probs = batch_data_probs_sim(params, data_list, shots, n_workers, max_job_size)
+    return avg_softmax_cross_entropy_loss_with_one_hot_labels(probs, labels)
+
+def train_model(n_train, n_test, n_epochs, rep, rng, shots = 2048, n_workers=8, max_job_size =1):
+    """
+
+    :param n_train:
+    :param n_test:
+    :param n_epochs:
+    :param rep:
+    :return:
+    """
+    x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
+    params = np.random.random(1209)
+    train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
+    print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
+    cost = lambda xk:batch_data_loss_avg(xk, x_train, y_train, shots, n_workers, max_job_size)
+    start = time.time()
+
+    def callback_fn(xk):
+        train_cost = cost(xk)
+        train_cost_epochs.append(train_cost)
+        test_cost = batch_data_loss_avg(xk, x_test, y_test, shots, n_workers, max_job_size)
+        test_cost_epochs.append(test_cost)
+        train_prob = batch_data_probs_sim(xk, x_train, shots, n_workers, max_job_size)
+        test_prob = batch_data_probs_sim(xk, x_test, shots, n_workers, max_job_size)
+        train_acc = batch_avg_accuracy(train_prob, y_train)
+        test_acc = batch_avg_accuracy(test_prob, y_test)
+        train_acc_epochs.append(train_acc)
+        test_acc_epochs.append(test_acc)
+        iteration_num = len(train_cost_epochs)
+        time_till_now = time.time()-start
+        avg_epoch_time = time_till_now/iteration_num
+        if iteration_num % 1 == 0:
+            print(
+                f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc {train_acc}, "
+                f"train cost {train_cost}, test acc {test_acc}, test cost {test_cost}, epoch time "
+                f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
+    res = minimizeSPSA(
+        cost,
+        x0 = params,
+        niter=n_epochs,
+        paired=False,
+        c=0.15,
+        a=0.2,
+        callback=callback_fn
+    )
+    return res
+
 
 if __name__ == '__main__':
     seed = 42
@@ -428,4 +483,6 @@ if __name__ == '__main__':
     n_epochs = 100
     n_reps = 5
     train_sizes = [40, 200, 500, 1000]
+    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng)
+    print(res)
 
