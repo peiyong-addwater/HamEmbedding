@@ -4,6 +4,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit.circuit import ParameterVector
 from qiskit import Aer
 from dask.distributed import LocalCluster, Client
+from concurrent.futures import ThreadPoolExecutor
 from noisyopt import minimizeSPSA
 import json
 import time
@@ -399,10 +400,20 @@ def single_data_probs_sim(params, data, shots = 2048):
     return probs
 
 def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1):
+    """
+    no ThreadPoolExecutor, 40 train, 100 test, SPSA,
+    :param params:
+    :param data_list:
+    :param shots:
+    :param n_workers:
+    :param max_job_size:
+    :return:
+    """
     backend_sim = Aer.get_backend('aer_simulator')
     circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
-    exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
-    backend_sim.set_options(executor=exc)
+    # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
+    exc = ThreadPoolExecutor(max_workers=n_workers)
+    #backend_sim.set_options(executor=exc)
     backend_sim.set_options(max_job_size=max_job_size)
     results = backend_sim.run(circs, shots=shots).result()
     counts = results.get_counts()
@@ -479,60 +490,59 @@ if __name__ == '__main__':
     #
     #
     # def q_exec():
-    #     # Generate circuits
-    #     circ = qiskit.QuantumCircuit(15, 15)
-    #     circ.h(0)
-    #     circ.cx(0, 1)
-    #     circ.cx(1, 2)
-    #     circ.p(pi / 2, 2)
-    #     circ.measure([0, 1, 2], [0, 1, 2])
+    #      # Generate circuits
+    #      circ = qiskit.QuantumCircuit(15, 15)
+    #      circ.h(0)
+    #      circ.cx(0, 1)
+    #      circ.cx(1, 2)
+    #      circ.p(pi / 2, 2)
+    #      circ.measure([0, 1, 2], [0, 1, 2])
     #
-    #     circ2 = qiskit.QuantumCircuit(7, 7)
-    #     circ2.h(0)
-    #     circ2.cx(0, 1)
-    #     circ2.cx(1, 2)
-    #     circ2.p(pi / 2, 2)
-    #     circ2.measure([0, 1, 2], [0, 1, 2])
+    #      circ2 = qiskit.QuantumCircuit(7, 7)
+    #      circ2.h(0)
+    #      circ2.cx(0, 1)
+    #      circ2.cx(1, 2)
+    #      circ2.p(pi / 2, 2)
+    #      circ2.measure([0, 1, 2], [0, 1, 2])
     #
-    #     circ3 = qiskit.QuantumCircuit(3, 3)
-    #     circ3.h(0)
-    #     circ3.cx(0, 1)
-    #     circ3.cx(1, 2)
-    #     circ3.p(pi / 2, 2)
-    #     circ3.measure([0, 1, 2], [0, 1, 2])
+    #      circ3 = qiskit.QuantumCircuit(3, 3)
+    #      circ3.h(0)
+    #      circ3.cx(0, 1)
+    #      circ3.cx(1, 2)
+    #      circ3.p(pi / 2, 2)
+    #      circ3.measure([0, 1, 2], [0, 1, 2])
     #
-    #     circ4 = qiskit.QuantumCircuit(2, 2)
-    #     circ4.h(0)
-    #     circ4.cx(0, 1)
-    #     circ4.p(pi / 2, 1)
-    #     circ4.measure([0, 1], [0, 1])
+    #      circ4 = qiskit.QuantumCircuit(2, 2)
+    #      circ4.h(0)
+    #      circ4.cx(0, 1)
+    #      circ4.p(pi / 2, 1)
+    #      circ4.measure([0, 1], [0, 1])
     #
-    #     circ_list = [circ, circ2, circ3, circ4]
+    #      circ_list = [circ, circ2, circ3, circ4]
     #
-    #     exc = Client(address=LocalCluster(n_workers=4, processes=True))
-    #     # Set executor and max_job_size
-    #     qbackend = AerSimulator()
-    #     qbackend.set_options(executor=exc)
-    #     qbackend.set_options(max_job_size=2)
-    #     result = qbackend.run(circ_list).result()
-    #     return result
+    #      #exc = Client(address=LocalCluster(n_workers=4, processes=True))
+    #      exc = ThreadPoolExecutor(max_workers=12)
+    #
+    #      # Set executor and max_job_size
+    #      qbackend = AerSimulator()
+    #      qbackend.set_options(executor=exc)
+    #      qbackend.set_options(max_job_size=12)
+    #      result = qbackend.run(circ_list).result()
+    #      return result
     # res = q_exec()
     # print(res)
     # print(res.get_counts())
-    # sample_data = load_data(10, 10, rng)
-    # xtrain = sample_data[0]
-    # parameter_convnet = np.random.random(1209)
-    # probs = batch_data_probs_sim(parameter_convnet, xtrain, n_workers=4)
-    # print(probs.shape)
+    # exit(0)
+
 
     seed = 42
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
-    n_test = 10
+    n_test = 100
     n_epochs = 5
     n_reps = 5
-    train_sizes = [4, 200, 500, 1000]
-    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=2, max_job_size =1)
+    train_sizes = [40, 200, 500, 1000]
+    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=12, max_job_size =2)
     print(res)
 
