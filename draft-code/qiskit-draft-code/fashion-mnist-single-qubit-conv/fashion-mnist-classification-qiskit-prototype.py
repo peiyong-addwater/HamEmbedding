@@ -401,7 +401,9 @@ def single_data_probs_sim(params, data, shots = 2048):
 
 def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1):
     """
-    no ThreadPoolExecutor, 40 train, 100 test, SPSA, single epoch time around 370
+    no ThreadPoolExecutor, 1024 shots,  40 train, 100 test, SPSA, single epoch time around 370 seconds;
+    with ThreadPoolExecutor, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around 367 seconds
+    with dask Client, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around
     :param params:
     :param data_list:
     :param shots:
@@ -411,11 +413,13 @@ def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_s
     """
     backend_sim = Aer.get_backend('aer_simulator')
     circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
-    # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
-    exc = ThreadPoolExecutor(max_workers=n_workers)
+    exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
+    # exc = ThreadPoolExecutor(max_workers=n_workers)
     backend_sim.set_options(executor=exc)
     backend_sim.set_options(max_job_size=max_job_size)
     results = backend_sim.run(circs, shots=shots).result()
+    # if using dask, close the Client
+    exc.close()
     counts = results.get_counts()
     probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
     return np.array(probs)
