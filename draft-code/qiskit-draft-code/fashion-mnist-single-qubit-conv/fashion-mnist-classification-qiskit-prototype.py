@@ -533,6 +533,6 @@ if __name__ == '__main__':
     n_epochs = 5
     n_reps = 5
     train_sizes = [4, 200, 500, 1000]
-    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=4, max_job_size =12)
+    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=2, max_job_size =1)
     print(res)
 
