@@ -7,6 +7,8 @@ from dask.distributed import LocalCluster, Client
 from noisyopt import minimizeSPSA
 import json
 import time
+import shutup
+shutup.please()
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -470,8 +472,6 @@ def train_model(n_train, n_test, n_epochs, rep, rng, shots = 2048, n_workers=8, 
 
 
 if __name__ == '__main__':
-    import shutup
-    shutup.please()
     # import qiskit
     # from qiskit_aer import AerSimulator
     # from dask.distributed import LocalCluster, Client
