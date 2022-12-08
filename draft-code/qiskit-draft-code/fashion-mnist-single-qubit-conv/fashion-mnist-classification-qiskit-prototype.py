@@ -441,12 +441,12 @@ def train_model(n_train, n_test, n_epochs, rep, rng, shots = 2048, n_workers=8, 
     start = time.time()
 
     def callback_fn(xk):
-        train_cost = cost(xk)
-        train_cost_epochs.append(train_cost)
-        test_cost = batch_data_loss_avg(xk, x_test, y_test, shots, n_workers, max_job_size)
-        test_cost_epochs.append(test_cost)
         train_prob = batch_data_probs_sim(xk, x_train, shots, n_workers, max_job_size)
+        train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(train_prob, y_train)
+        train_cost_epochs.append(train_cost)
         test_prob = batch_data_probs_sim(xk, x_test, shots, n_workers, max_job_size)
+        test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(test_prob, y_test)
+        test_cost_epochs.append(test_cost)
         train_acc = batch_avg_accuracy(train_prob, y_train)
         test_acc = batch_avg_accuracy(test_prob, y_test)
         train_acc_epochs.append(train_acc)
@@ -533,6 +533,6 @@ if __name__ == '__main__':
     n_epochs = 5
     n_reps = 5
     train_sizes = [4, 200, 500, 1000]
-    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=4, max_job_size =1)
+    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=4, max_job_size =12)
     print(res)
 
