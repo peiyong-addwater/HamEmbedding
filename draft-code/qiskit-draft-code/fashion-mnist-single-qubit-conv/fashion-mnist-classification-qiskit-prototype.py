@@ -401,7 +401,7 @@ def single_data_probs_sim(params, data, shots = 2048):
 
 def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1):
     """
-    no ThreadPoolExecutor, 40 train, 100 test, SPSA,
+    no ThreadPoolExecutor, 40 train, 100 test, SPSA, single epoch time around 370
     :param params:
     :param data_list:
     :param shots:
@@ -413,7 +413,7 @@ def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_s
     circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
     # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
     exc = ThreadPoolExecutor(max_workers=n_workers)
-    #backend_sim.set_options(executor=exc)
+    backend_sim.set_options(executor=exc)
     backend_sim.set_options(max_job_size=max_job_size)
     results = backend_sim.run(circs, shots=shots).result()
     counts = results.get_counts()
@@ -468,7 +468,7 @@ def train_model(n_train, n_test, n_epochs, rep, rng, shots = 2048, n_workers=8, 
         if iteration_num % 1 == 0:
             print(
                 f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc {train_acc}, "
-                f"train cost {train_cost}, test acc {test_acc}, test cost {test_cost}, epoch time "
+                f"train cost {train_cost}, test acc {test_acc}, test cost {test_cost}, avg epoch time "
                 f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
     res = minimizeSPSA(
         cost,
@@ -543,6 +543,6 @@ if __name__ == '__main__':
     n_epochs = 5
     n_reps = 5
     train_sizes = [40, 200, 500, 1000]
-    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=12, max_job_size =2)
+    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=12, max_job_size =1)
     print(res)
 
