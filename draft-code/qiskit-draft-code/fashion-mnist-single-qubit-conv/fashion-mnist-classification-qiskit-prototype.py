@@ -529,10 +529,10 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
-    n_test = 100
-    n_epochs = 100
+    n_test = 10
+    n_epochs = 5
     n_reps = 5
-    train_sizes = [40, 200, 500, 1000]
-    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 2048, n_workers=8, max_job_size =8)
+    train_sizes = [4, 200, 500, 1000]
+    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=12, max_job_size =1)
     print(res)
 
