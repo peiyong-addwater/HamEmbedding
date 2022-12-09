@@ -380,15 +380,19 @@ def get_probs_from_counts(counts, num_classes=4):
     probs = [c / sum(probs) for c in probs]
     return probs
 
-def avg_softmax_cross_entropy_loss_with_one_hot_labels(y, y_pred):
+def avg_softmax_cross_entropy_loss_with_one_hot_labels(y, y_prob):
     """
     average cross entropy loss after softmax.
     :param y:
     :param y_pred:
     :return:
     """
-    y_pred = np.exp(y_pred)/np.sum(np.exp(y_pred), axis=0)
-    return -np.sum(y*np.log(y_pred))/len(y)
+    # print(y_prob)
+    # print(np.sum(np.exp(y_prob), axis=1), 1)
+    # y_prob = np.divide(np.exp(y_prob), np.sum(np.exp(y_prob), axis=1).reshape((-1,1)))
+    # print(y_prob)
+    # print("|||")
+    return -np.sum(y*np.log(y_prob))/len(y)
 
 def single_data_probs_sim(params, data, shots = 2048):
     backend_sim = Aer.get_backend('aer_simulator')
@@ -437,7 +441,7 @@ def batch_avg_accuracy(probs, labels):
 
 def batch_data_loss_avg(params, data_list, labels, shots = 2048, n_workers=8, max_job_size =1):
     probs = batch_data_probs_sim(params, data_list, shots, n_workers, max_job_size)
-    return avg_softmax_cross_entropy_loss_with_one_hot_labels(probs, labels)
+    return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
 
 def train_model(n_train, n_test, n_epochs, rep, rng, shots = 2048, n_workers=8, max_job_size =1):
     """
@@ -546,8 +550,8 @@ if __name__ == '__main__':
     n_test = 100
     n_epochs = 5
     n_reps = 5
-    train_sizes = [40, 200, 500, 1000]
-    res = train_model(train_sizes[2], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=10, max_job_size =10)
+    train_sizes = [10, 200, 500, 1000]
+    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=10, max_job_size =10)
     print(res)
     print(res.keys())
     print(res["x"])
