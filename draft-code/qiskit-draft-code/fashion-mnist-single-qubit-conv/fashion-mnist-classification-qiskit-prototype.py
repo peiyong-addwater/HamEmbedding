@@ -542,7 +542,6 @@ if __name__ == '__main__':
     # print(res.get_counts())
     # exit(0)
 
-
     seed = 42
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (3, 3)
