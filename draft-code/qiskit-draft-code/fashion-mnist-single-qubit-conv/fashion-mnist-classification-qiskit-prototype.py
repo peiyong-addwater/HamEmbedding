@@ -389,7 +389,7 @@ def avg_softmax_cross_entropy_loss_with_one_hot_labels(y, y_prob):
     """
     # print(y_prob)
     # print(np.sum(np.exp(y_prob), axis=1), 1)
-    # y_prob = np.divide(np.exp(y_prob), np.sum(np.exp(y_prob), axis=1).reshape((-1,1)))
+    y_prob = np.divide(np.exp(y_prob), np.sum(np.exp(y_prob), axis=1).reshape((-1,1)))
     # print(y_prob)
     # print("|||")
     return -np.sum(y*np.log(y_prob))/len(y)
