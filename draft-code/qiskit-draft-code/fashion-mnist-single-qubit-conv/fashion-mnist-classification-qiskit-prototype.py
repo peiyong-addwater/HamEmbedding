@@ -415,6 +415,7 @@ def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_s
     :param max_job_size:
     :return:
     """
+    # TODO: Add execution on IBMQ cloud
     backend_sim = Aer.get_backend('aer_simulator')
     circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
     # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
@@ -478,6 +479,7 @@ def train_model(n_train, n_test, n_epochs, rep, rng, shots = 2048, n_workers=8, 
                 f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc {np.round(train_acc, 4)}, "
                 f"train cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test cost {np.round(test_cost, 4)}, avg epoch time "
                 f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
+    # TODO: Add parameter bounds
     res = minimizeSPSA(
         cost,
         x0 = params,
