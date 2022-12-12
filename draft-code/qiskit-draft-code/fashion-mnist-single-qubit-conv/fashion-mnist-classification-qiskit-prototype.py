@@ -11,6 +11,12 @@ import time
 import shutup
 shutup.please()
 
+from qiskit_ibm_provider import IBMProvider
+PROVIDER = IBMProvider()
+
+# get IBM's simulator backend
+IBMQ_QASM_SIMULATOR = PROVIDER.get_backend('ibmq_qasm_simulator')
+
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -403,7 +409,7 @@ def single_data_probs_sim(params, data, shots = 2048):
     probs = get_probs_from_counts(counts, num_classes=4)
     return probs
 
-def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1, ibm_cloud = False):
+def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1, ibm_cloud = True):
     """
     no ThreadPoolExecutor, 1024 shots,  40 train, 100 test, SPSA, single epoch time around 370 seconds;
     with ThreadPoolExecutor, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around 367 seconds
@@ -415,17 +421,21 @@ def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_s
     :param max_job_size:
     :return:
     """
-    # TODO: Add execution on IBMQ cloud
-    backend_sim = Aer.get_backend('aer_simulator')
     circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
-    # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
-    exc = ThreadPoolExecutor(max_workers=n_workers)
-    backend_sim.set_options(executor=exc)
-    backend_sim.set_options(max_job_size=max_job_size)
-    backend_sim.set_options(device='GPU')
-    results = backend_sim.run(circs, shots=shots).result()
-    # if using dask, close the Client
-    # exc.close()
+    # TODO: Add execution on IBMQ cloud
+    if not ibm_cloud:
+        backend_sim = Aer.get_backend('aer_simulator')
+        # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
+        exc = ThreadPoolExecutor(max_workers=n_workers)
+        backend_sim.set_options(executor=exc)
+        backend_sim.set_options(max_job_size=max_job_size)
+        backend_sim.set_options(device='GPU')
+        results = backend_sim.run(circs, shots=shots).result()
+        # if using dask, close the Client
+        # exc.close()
+    else:
+        results = IBMQ_QASM_SIMULATOR.run(circs, shots=shots).result()
+
     counts = results.get_counts()
     probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
     return np.array(probs)
@@ -552,7 +562,7 @@ if __name__ == '__main__':
     n_test = 100
     n_epochs = 5
     n_reps = 5
-    train_sizes = [10, 200, 500, 1000]
+    train_sizes = [40, 200, 500, 1000]
     res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=10, max_job_size =10)
     print(res)
     print(res.keys())
