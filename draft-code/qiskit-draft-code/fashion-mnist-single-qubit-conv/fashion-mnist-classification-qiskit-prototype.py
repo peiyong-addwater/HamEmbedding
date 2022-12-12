@@ -409,7 +409,7 @@ def single_data_probs_sim(params, data, shots = 2048):
     probs = get_probs_from_counts(counts, num_classes=4)
     return probs
 
-def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1, ibm_cloud = True):
+def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1, ibm_cloud = False):
     """
     no ThreadPoolExecutor, 1024 shots,  40 train, 100 test, SPSA, single epoch time around 370 seconds;
     with ThreadPoolExecutor, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around 367 seconds
@@ -422,7 +422,6 @@ def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_s
     :return:
     """
     circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
-    # TODO: Add execution on IBMQ cloud
     if not ibm_cloud:
         backend_sim = Aer.get_backend('aer_simulator')
         # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
@@ -490,17 +489,28 @@ def train_model(n_train, n_test, n_epochs, rep, rng, shots = 2048, n_workers=8, 
                 f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc {np.round(train_acc, 4)}, "
                 f"train cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test cost {np.round(test_cost, 4)}, avg epoch time "
                 f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
-    # TODO: Add parameter bounds
+    bounds = [[0, 2*np.pi]] * 1209
     res = minimizeSPSA(
         cost,
         x0 = params,
         niter=n_epochs,
         paired=False,
+        bounds=bounds,
         c=0.15,
         a=0.2,
         callback=callback_fn
     )
-    return res
+    optimized_params = res["x"]
+    return dict(
+        n_train=[n_train] * n_epochs,
+        step=np.arange(1, n_epochs + 1, dtype=int),
+        train_cost=train_cost_epochs,
+        train_acc=train_acc_epochs,
+        test_cost=test_cost_epochs,
+        test_acc=test_acc_epochs,
+    ), optimized_params
+
+
 
 
 if __name__ == '__main__':
@@ -554,18 +564,75 @@ if __name__ == '__main__':
     # print(res)
     # print(res.get_counts())
     # exit(0)
+    import matplotlib as mpl
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import pandas as pd
 
     seed = 42
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
-    n_test = 100
-    n_epochs = 5
-    n_reps = 5
-    train_sizes = [40, 200, 500, 1000]
-    res = train_model(train_sizes[0], n_test=n_test, n_epochs=n_epochs, rep=0, rng=rng, shots = 1024, n_workers=10, max_job_size =10)
-    print(res)
-    print(res.keys())
-    print(res["x"])
-    print(res["fun"])
+    n_test = 20
+    n_epochs = 50
+    n_reps = 2
+    train_sizes = [200]
+
+
+    def run_iterations(n_train, rng):
+        results_df = pd.DataFrame(
+            columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
+        )
+        for rep in range(n_reps):
+            results, _ = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng, shots=1024,
+                                     n_workers=10, max_job_size=10)
+            results_df = pd.concat(
+                [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
+            )
+
+    results_df = run_iterations(n_train=train_sizes[0], rng =rng)
+    # aggregate dataframe
+    df_agg = results_df.groupby(["n_train", "step"]).agg(["mean", "std"])
+    df_agg = df_agg.reset_index()
+
+    sns.set_style('whitegrid')
+    colors = sns.color_palette()
+    fig, axes = plt.subplots(ncols=3, figsize=(16.5, 5))
+
+    # plot losses and accuracies
+    for i, n_train in enumerate(train_sizes):
+        df = df_agg[df_agg.n_train == n_train]
+
+        dfs = [df.train_cost["mean"], df.test_cost["mean"], df.train_acc["mean"], df.test_acc["mean"]]
+        lines = ["o-", "x--", "o-", "x--"]
+        labels = [fr"$N={n_train}$", None, fr"$N={n_train}$", None]
+        axs = [0, 0, 2, 2]
+
+        for k in range(4):
+            ax = axes[axs[k]]
+            ax.plot(df.step, dfs[k], lines[k], label=labels[k], markevery=10, color=colors[i], alpha=0.8)
+
+    # format loss plot
+    ax = axes[0]
+    ax.set_title('Train and Test Losses', fontsize=14)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+
+    # format loss plot
+    ax = axes[1]
+    ax.set_title('Train and Test Accuracies', fontsize=14)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Accuracy')
+    ax.set_ylim(0., 1.05)
+
+    legend_elements = [
+                          mpl.lines.Line2D([0], [0], label=f'N={n}', color=colors[i]) for i, n in enumerate(train_sizes)
+                      ] + [
+                          mpl.lines.Line2D([0], [0], marker='o', ls='-', label='Train', color='Black'),
+                          mpl.lines.Line2D([0], [0], marker='x', ls='--', label='Test', color='Black')
+                      ]
+
+    axes[0].legend(handles=legend_elements, ncol=3)
+    axes[1].legend(handles=legend_elements, ncol=3)
+    plt.savefig(f"qiskit-fashion-mnist-multiclass-results-{n_test}-test-{n_reps}-reps.pdf")
 
