@@ -409,7 +409,7 @@ def single_data_probs_sim(params, data, shots = 2048):
     probs = get_probs_from_counts(counts, num_classes=4)
     return probs
 
-def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1, ibm_cloud = False):
+def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1, ibm_cloud = True):
     """
     no ThreadPoolExecutor, 1024 shots,  40 train, 100 test, SPSA, single epoch time around 370 seconds;
     with ThreadPoolExecutor, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around 367 seconds
@@ -431,12 +431,12 @@ def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_s
         # backend_sim.set_options(device='GPU')
         backend_sim.set_options(max_parallel_experiments=0)
         results = backend_sim.run(circs, shots=shots).result()
+        counts = results.get_counts()
         # if using dask, close the Client
         # exc.close()
     else:
-        results = IBMQ_QASM_SIMULATOR.run(circs, shots=shots).result()
+        counts = [IBMQ_QASM_SIMULATOR.run(circ, shots=shots).result().get_counts() for circ in circs]
 
-    counts = results.get_counts()
     probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
     return np.array(probs)
 
