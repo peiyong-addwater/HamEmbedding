@@ -403,7 +403,7 @@ def single_data_probs_sim(params, data, shots = 2048):
     probs = get_probs_from_counts(counts, num_classes=4)
     return probs
 
-def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1):
+def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1, ibm_cloud = False):
     """
     no ThreadPoolExecutor, 1024 shots,  40 train, 100 test, SPSA, single epoch time around 370 seconds;
     with ThreadPoolExecutor, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around 367 seconds
@@ -422,6 +422,7 @@ def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_s
     exc = ThreadPoolExecutor(max_workers=n_workers)
     backend_sim.set_options(executor=exc)
     backend_sim.set_options(max_job_size=max_job_size)
+    backend_sim.set_options(device='GPU')
     results = backend_sim.run(circs, shots=shots).result()
     # if using dask, close the Client
     # exc.close()
