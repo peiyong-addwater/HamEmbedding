@@ -262,8 +262,8 @@ if __name__ == '__main__':
     import pandas as pd
 
     NUM_SHOTS = 512
-    N_WORKERS = 4
-    MAX_JOB_SIZE = 1
+    N_WORKERS = 8
+    MAX_JOB_SIZE = 10
 
     BACKEND_SIM = Aer.get_backend('aer_simulator')
     EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
