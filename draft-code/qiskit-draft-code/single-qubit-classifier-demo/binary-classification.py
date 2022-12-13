@@ -210,7 +210,7 @@ def single_qubit_binary_classifier(params, data):
     for j in range(num_column):
         for i in range(num_row):
             single_qubit_data = data[i]
-            circ = circ.compose(single_kernel_encoding(params[param_index:param_index+9], single_qubit_data[j]), qubits=[0])
+            circ = circ.compose(single_kernel_encoding(params[param_index:param_index+9], single_qubit_data[j]).decompose(), qubits=[0])
             param_index = param_index+9
     circ.measure(0,0)
     return circ
@@ -441,6 +441,6 @@ if __name__ == '__main__':
 
     axes[1].set_yscale('log', base=2)
     plt.savefig(
-        f"fashion-mnist-4class-su4-encoding-no-compact-kernel-{KERNEL_SIZE[0]}-stride{STRIDE[0]}-results-"
+        f"single-qubit-binary-classification-demo-{KERNEL_SIZE[0]}-stride{STRIDE[0]}-results-"
         f"{n_test}-test-{n_reps}-reps.pdf")
 
