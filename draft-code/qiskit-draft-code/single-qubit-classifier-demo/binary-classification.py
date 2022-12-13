@@ -277,7 +277,7 @@ if __name__ == '__main__':
     STRIDE = (3, 3)
     n_test = 100
     n_epochs = 100
-    n_reps = 2
+    n_reps = 3
     train_sizes = [20, 200]
 
     def batch_data_probs_sim(params, data_list):
