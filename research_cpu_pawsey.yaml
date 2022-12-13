@@ -1,0 +1,44 @@
+name: research_cpu_pawsey_qml
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - pip
+  - pandas
+  - matplotlib
+  - python
+  - scikit-learn
+  - scipy
+  - pip:
+     - sympy
+     - quantum-decomp
+     - quimb
+     - networkx
+     - tqdm
+     - matplotlib
+     - pydot
+     - graphviz
+     - IBMQuantumExperience
+     - numpydoc
+     - qiskit[visualization, machine-learning, optimization, finance, nature]
+     - qiskit-machine-learning[torch]
+     - cplex
+     - networkx
+     - Typing
+     - pennylane
+     - pennylane-qchem
+     - pennylane-qiskit
+     - pylatex
+     - pylatexenc
+     - shutup
+     - SciencePlots
+     - pyscf
+     - openfermion
+     - openfermionpyscf
+     - fqe
+     - noisyopt
+     - pipreqs
+     - dask[complete]
+     - dask-jobqueue
