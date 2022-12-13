@@ -278,7 +278,7 @@ if __name__ == '__main__':
     n_test = 100
     n_epochs = 100
     n_reps = 2
-    train_sizes = [20, 200, 2000]
+    train_sizes = [20, 200]
 
     def batch_data_probs_sim(params, data_list):
         """
