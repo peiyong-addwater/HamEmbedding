@@ -323,10 +323,10 @@ if __name__ == '__main__':
 
         def callback_fn(xk):
             train_prob = batch_data_probs_sim(xk, x_train)
-            train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(train_prob, y_train)
+            train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_train,train_prob)
             train_cost_epochs.append(train_cost)
             test_prob = batch_data_probs_sim(xk, x_test)
-            test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(test_prob, y_test)
+            test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test,test_prob)
             test_cost_epochs.append(test_cost)
             train_acc = batch_avg_accuracy(train_prob, y_train)
             test_acc = batch_avg_accuracy(test_prob, y_test)
