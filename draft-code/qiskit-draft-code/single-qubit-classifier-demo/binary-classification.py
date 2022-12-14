@@ -351,8 +351,8 @@ if __name__ == '__main__':
             niter=n_epochs,
             paired=False,
             bounds=bounds,
-            c=0.15,
-            a=0.2,
+            c=0.5,
+            a=1,
             callback=callback_fn
         )
         optimized_params = res["x"]
