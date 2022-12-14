@@ -455,120 +455,26 @@ def batch_data_loss_avg(params, data_list, labels, shots = 2048, n_workers=8, ma
     probs = batch_data_probs_sim(params, data_list, shots, n_workers, max_job_size)
     return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
 
-def train_model(n_train, n_test, n_epochs, rep, rng, shots = 2048, n_workers=8, max_job_size =1):
-    """
 
-    :param n_train:
-    :param n_test:
-    :param n_epochs:
-    :param rep:
-    :return:
-    """
-    x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
-    params = np.random.random(1209)
-    train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
-    print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
-    cost = lambda xk:batch_data_loss_avg(xk, x_train, y_train, shots, n_workers, max_job_size)
-    start = time.time()
-
-    def callback_fn(xk):
-        train_prob = batch_data_probs_sim(xk, x_train, shots, n_workers, max_job_size)
-        train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_train,train_prob)
-        train_cost_epochs.append(train_cost)
-        test_prob = batch_data_probs_sim(xk, x_test, shots, n_workers, max_job_size)
-        test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test,test_prob)
-        test_cost_epochs.append(test_cost)
-        train_acc = batch_avg_accuracy(train_prob, y_train)
-        test_acc = batch_avg_accuracy(test_prob, y_test)
-        train_acc_epochs.append(train_acc)
-        test_acc_epochs.append(test_acc)
-        iteration_num = len(train_cost_epochs)
-        time_till_now = time.time()-start
-        avg_epoch_time = time_till_now/iteration_num
-        if iteration_num % 1 == 0:
-            print(
-                f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc {np.round(train_acc, 4)}, "
-                f"train cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test cost {np.round(test_cost, 4)}, avg epoch time "
-                f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
-    bounds = [[0, 2*np.pi]] * 1209
-    res = minimizeSPSA(
-        cost,
-        x0 = params,
-        niter=n_epochs,
-        paired=False,
-        bounds=bounds,
-        c=0.15,
-        a=0.2,
-        callback=callback_fn
-    )
-    optimized_params = res["x"]
-    return dict(
-        n_train=[n_train] * n_epochs,
-        step=np.arange(1, n_epochs + 1, dtype=int),
-        train_cost=train_cost_epochs,
-        train_acc=train_acc_epochs,
-        test_cost=test_cost_epochs,
-        test_acc=test_acc_epochs,
-    ), optimized_params
 
 
 
 
 if __name__ == '__main__':
-    # import qiskit
-    # from qiskit_aer import AerSimulator
-    # from dask.distributed import LocalCluster, Client
-    # from math import pi
-    #
-    #
-    # def q_exec():
-    #      # Generate circuits
-    #      circ = qiskit.QuantumCircuit(15, 15)
-    #      circ.h(0)
-    #      circ.cx(0, 1)
-    #      circ.cx(1, 2)
-    #      circ.p(pi / 2, 2)
-    #      circ.measure([0, 1, 2], [0, 1, 2])
-    #
-    #      circ2 = qiskit.QuantumCircuit(7, 7)
-    #      circ2.h(0)
-    #      circ2.cx(0, 1)
-    #      circ2.cx(1, 2)
-    #      circ2.p(pi / 2, 2)
-    #      circ2.measure([0, 1, 2], [0, 1, 2])
-    #
-    #      circ3 = qiskit.QuantumCircuit(3, 3)
-    #      circ3.h(0)
-    #      circ3.cx(0, 1)
-    #      circ3.cx(1, 2)
-    #      circ3.p(pi / 2, 2)
-    #      circ3.measure([0, 1, 2], [0, 1, 2])
-    #
-    #      circ4 = qiskit.QuantumCircuit(2, 2)
-    #      circ4.h(0)
-    #      circ4.cx(0, 1)
-    #      circ4.p(pi / 2, 1)
-    #      circ4.measure([0, 1], [0, 1])
-    #
-    #      circ_list = [circ, circ2, circ3, circ4]
-    #
-    #      #exc = Client(address=LocalCluster(n_workers=4, processes=True))
-    #      exc = ThreadPoolExecutor(max_workers=12)
-    #
-    #      # Set executor and max_job_size
-    #      qbackend = AerSimulator()
-    #      qbackend.set_options(executor=exc)
-    #      qbackend.set_options(max_job_size=12)
-    #      result = qbackend.run(circ_list).result()
-    #      return result
-    # res = q_exec()
-    # print(res)
-    # print(res.get_counts())
-    # exit(0)
     import matplotlib as mpl
     import seaborn as sns
     import matplotlib.pyplot as plt
     import pandas as pd
+
+    NUM_SHOTS = 512
+    N_WORKERS = 8
+    MAX_JOB_SIZE = 10
+
+    BACKEND_SIM = Aer.get_backend('aer_simulator')
+    EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
+    BACKEND_SIM.set_options(executor=EXC)
+    BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
+    BACKEND_SIM.set_options(max_parallel_experiments=0)
 
     seed = 42
     rng = np.random.default_rng(seed=seed)
@@ -577,7 +483,93 @@ if __name__ == '__main__':
     n_test = 20
     n_epochs = 50
     n_reps = 2
-    train_sizes = [200]
+    train_sizes = [20, 200]
+
+
+    def batch_data_probs_sim(params, data_list):
+        """
+        no ThreadPoolExecutor, 1024 shots,  40 train, 100 test, SPSA, single epoch time around 370 seconds;
+        with ThreadPoolExecutor, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch
+        time around 367 seconds
+        with dask Client, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time
+        around 446 seconds, but will encounter OSError: [Errno 24] Too many open files
+        :param params:
+        :param data_list:
+        :param shots:
+        :param n_workers:
+        :param max_job_size:
+        :return:
+        """
+        circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
+        results = BACKEND_SIM.run(circs, shots=NUM_SHOTS).result()
+        counts = results.get_counts()
+        probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
+        return np.array(probs)
+
+
+    def train_model(n_train, n_test, n_epochs, rep, rng, shots=2048, n_workers=8, max_job_size=1):
+        """
+
+        :param n_train:
+        :param n_test:
+        :param n_epochs:
+        :param rep:
+        :return:
+        """
+        x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
+        params = np.random.random(1209)
+        train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
+        print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
+        cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train, shots, n_workers, max_job_size)
+        start = time.time()
+
+        def callback_fn(xk):
+            train_prob = batch_data_probs_sim(xk, x_train, shots, n_workers, max_job_size)
+            train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_train, train_prob)
+            train_cost_epochs.append(train_cost)
+            test_prob = batch_data_probs_sim(xk, x_test, shots, n_workers, max_job_size)
+            test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test, test_prob)
+            test_cost_epochs.append(test_cost)
+            train_acc = batch_avg_accuracy(train_prob, y_train)
+            test_acc = batch_avg_accuracy(test_prob, y_test)
+            train_acc_epochs.append(train_acc)
+            test_acc_epochs.append(test_acc)
+            iteration_num = len(train_cost_epochs)
+            time_till_now = time.time() - start
+            avg_epoch_time = time_till_now / iteration_num
+            if iteration_num % 1 == 0:
+                print(
+                    f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc "
+                    f"{np.round(train_acc, 4)}, "
+                    f"train cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test cost "
+                    f"{np.round(test_cost, 4)}, avg epoch time "
+                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
+
+        bounds = [[0, 2 * np.pi]] * 1209
+        # according to Spall, IEEE, 1998, 34, 817-823,
+        # one typically finds that in a high-noise setting (Le., poor quality measurements of L(theta))
+        # it is necessary to pick a smaller a and larger c than in a low-noise setting.
+        res = minimizeSPSA(
+            cost,
+            x0=params,
+            niter=n_epochs,
+            paired=False,
+            bounds=bounds,
+            c=1,
+            a=0.05,
+            callback=callback_fn
+        )
+        optimized_params = res["x"]
+        return dict(
+            n_train=[n_train] * n_epochs,
+            step=np.arange(1, n_epochs + 1, dtype=int),
+            train_cost=train_cost_epochs,
+            train_acc=train_acc_epochs,
+            test_cost=test_cost_epochs,
+            test_acc=test_acc_epochs,
+        ), optimized_params
+
+
 
 
     def run_iterations(n_train, rng):
