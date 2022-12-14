@@ -374,6 +374,7 @@ if __name__ == '__main__':
             results_df = pd.concat(
                 [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
             )
+        return results_df
 
 
     results_df = run_iterations(n_train=train_sizes[0], rng=rng)
