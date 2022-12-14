@@ -433,7 +433,7 @@ if __name__ == '__main__':
     MAX_JOB_SIZE = 10
 
     BACKEND_SIM = Aer.get_backend('aer_simulator')
-    EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
+    EXC = ThreadPoolExecutor(max_workers=N_WORKERS) # 125 secs/iteration for 20 train 20 test
     #EXC = Client(address=LocalCluster(n_workers=N_WORKERS, processes=True)) # 150 secs/iteration for 20 train 20 test
     BACKEND_SIM.set_options(executor=EXC)
     BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
@@ -444,7 +444,7 @@ if __name__ == '__main__':
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
     n_test = 20
-    n_epochs = 50
+    n_epochs = 200
     n_reps = 2
     train_sizes = [20, 200]
 
