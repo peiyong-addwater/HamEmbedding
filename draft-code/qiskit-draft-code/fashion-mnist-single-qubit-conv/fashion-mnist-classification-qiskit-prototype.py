@@ -409,36 +409,6 @@ def single_data_probs_sim(params, data, shots = 2048):
     probs = get_probs_from_counts(counts, num_classes=4)
     return probs
 
-def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1, ibm_cloud = False):
-    """
-    no ThreadPoolExecutor, 1024 shots,  40 train, 100 test, SPSA, single epoch time around 370 seconds;
-    with ThreadPoolExecutor, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around 367 seconds
-    with dask Client, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around 446 seconds, but will encounter OSError: [Errno 24] Too many open files
-    :param params:
-    :param data_list:
-    :param shots:
-    :param n_workers:
-    :param max_job_size:
-    :return:
-    """
-    circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
-    if not ibm_cloud:
-        backend_sim = Aer.get_backend('aer_simulator')
-        # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
-        exc = ThreadPoolExecutor(max_workers=n_workers)
-        backend_sim.set_options(executor=exc)
-        backend_sim.set_options(max_job_size=max_job_size)
-        # backend_sim.set_options(device='GPU')
-        backend_sim.set_options(max_parallel_experiments=0)
-        results = backend_sim.run(circs, shots=shots).result()
-        counts = results.get_counts()
-        # if using dask, close the Client
-        # exc.close()
-    else:
-        counts = [IBMQ_QASM_SIMULATOR.run(circ, shots=shots).result().get_counts() for circ in circs]
-
-    probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
-    return np.array(probs)
 
 def batch_avg_accuracy(probs, labels):
     """
@@ -450,14 +420,6 @@ def batch_avg_accuracy(probs, labels):
     preds = np.argmax(probs, axis=1)
     targets = np.argmax(labels, axis=1)
     return np.mean(np.array(preds == targets).astype(int))
-
-def batch_data_loss_avg(params, data_list, labels, shots = 2048, n_workers=8, max_job_size =1):
-    probs = batch_data_probs_sim(params, data_list, shots, n_workers, max_job_size)
-    return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
-
-
-
-
 
 
 if __name__ == '__main__':
@@ -471,7 +433,8 @@ if __name__ == '__main__':
     MAX_JOB_SIZE = 10
 
     BACKEND_SIM = Aer.get_backend('aer_simulator')
-    EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
+    #EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
+    EXC = Client(address=LocalCluster(n_workers=N_WORKERS, processes=True))
     BACKEND_SIM.set_options(executor=EXC)
     BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
     BACKEND_SIM.set_options(max_parallel_experiments=0)
@@ -507,7 +470,12 @@ if __name__ == '__main__':
         return np.array(probs)
 
 
-    def train_model(n_train, n_test, n_epochs, rep, rng, shots=2048, n_workers=8, max_job_size=1):
+    def batch_data_loss_avg(params, data_list, labels):
+        probs = batch_data_probs_sim(params, data_list)
+        return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
+
+
+    def train_model(n_train, n_test, n_epochs, rep, rng):
         """
 
         :param n_train:
@@ -520,14 +488,14 @@ if __name__ == '__main__':
         params = np.random.random(1209)
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
         print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
-        cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train, shots, n_workers, max_job_size)
+        cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
         start = time.time()
 
         def callback_fn(xk):
-            train_prob = batch_data_probs_sim(xk, x_train, shots, n_workers, max_job_size)
+            train_prob = batch_data_probs_sim(xk, x_train)
             train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_train, train_prob)
             train_cost_epochs.append(train_cost)
-            test_prob = batch_data_probs_sim(xk, x_test, shots, n_workers, max_job_size)
+            test_prob = batch_data_probs_sim(xk, x_test)
             test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test, test_prob)
             test_cost_epochs.append(test_cost)
             train_acc = batch_avg_accuracy(train_prob, y_train)
@@ -577,8 +545,7 @@ if __name__ == '__main__':
             columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
         )
         for rep in range(n_reps):
-            results, _ = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng, shots=1024,
-                                     n_workers=10, max_job_size=10)
+            results, _ = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng)
             results_df = pd.concat(
                 [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
             )
