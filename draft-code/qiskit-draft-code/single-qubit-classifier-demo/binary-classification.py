@@ -345,7 +345,9 @@ if __name__ == '__main__':
 
         bounds = [[0, 2 * np.pi]] * 9*9*9
 
-        # according to Spall, IEEE, 1998, 34, 817-823, one typically finds that in a high-noise setting (Le., poor quality measurements of L(8)) it is necessary to pick a smaller a and larger c than in a low-noise setting.
+        # according to Spall, IEEE, 1998, 34, 817-823,
+        # one typically finds that in a high-noise setting (Le., poor quality measurements of L(theta))
+        # it is necessary to pick a smaller a and larger c than in a low-noise setting.
         res = minimizeSPSA(
             cost,
             x0=params,
