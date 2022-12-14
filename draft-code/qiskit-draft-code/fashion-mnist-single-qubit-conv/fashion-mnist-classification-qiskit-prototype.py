@@ -6,6 +6,7 @@ from qiskit import Aer
 from dask.distributed import LocalCluster, Client
 from concurrent.futures import ThreadPoolExecutor
 from noisyopt import minimizeSPSA
+from qiskit.algorithms.optimizers import COBYLA
 import json
 import time
 import shutup
@@ -513,21 +514,27 @@ if __name__ == '__main__':
                     f"{np.round(test_cost, 4)}, avg epoch time "
                     f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
 
-        bounds = [[0, 2 * np.pi]] * 1209
+        bounds = [(0, 2 * np.pi)] * 1209
+        opt = COBYLA(maxiter=n_epochs, callback=callback_fn) # single iteration around 97 seconds, SPSA (noisyopt) is 150 seconds at the same condition.
+        res = opt.minimize(
+            cost,
+            x0 = params,
+            bounds=bounds
+        )
         # according to Spall, IEEE, 1998, 34, 817-823,
         # one typically finds that in a high-noise setting (Le., poor quality measurements of L(theta))
         # it is necessary to pick a smaller a and larger c than in a low-noise setting.
-        res = minimizeSPSA(
-            cost,
-            x0=params,
-            niter=n_epochs,
-            paired=False,
-            bounds=bounds,
-            c=1,
-            a=0.05,
-            callback=callback_fn
-        )
-        optimized_params = res["x"]
+        # res = minimizeSPSA(
+        #     cost,
+        #     x0=params,
+        #     niter=n_epochs,
+        #     paired=False,
+        #     bounds=bounds,
+        #     c=1,
+        #     a=0.05,
+        #     callback=callback_fn
+        # )
+        optimized_params = res.x
         return dict(
             n_train=[n_train] * n_epochs,
             step=np.arange(1, n_epochs + 1, dtype=int),
