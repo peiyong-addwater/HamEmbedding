@@ -445,9 +445,9 @@ if __name__ == '__main__':
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
     n_test = 20
-    n_epochs = 200
+    n_epochs = 500
     n_reps = 2
-    train_sizes = [20, 200]
+    train_sizes = [20, 200, 500]
 
 
     def batch_data_probs_sim(params, data_list):
@@ -536,8 +536,8 @@ if __name__ == '__main__':
         # )
         optimized_params = res.x
         return dict(
-            n_train=[n_train] * n_epochs,
-            step=np.arange(1, n_epochs + 1, dtype=int),
+            n_train=[n_train] * (n_epochs+1),
+            step=np.arange(1, n_epochs + 1 +1, dtype=int),
             train_cost=train_cost_epochs,
             train_acc=train_acc_epochs,
             test_cost=test_cost_epochs,
