@@ -445,8 +445,8 @@ if __name__ == '__main__':
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
     n_test = 20
-    n_epochs = 500
-    n_reps = 2
+    n_epochs = 100
+    n_reps = 3
     train_sizes = [20, 200, 500]
 
 
