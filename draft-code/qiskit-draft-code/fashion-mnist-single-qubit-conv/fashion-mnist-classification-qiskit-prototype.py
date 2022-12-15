@@ -492,6 +492,8 @@ if __name__ == '__main__':
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
         start = time.time()
 
+        # For the callback function for SPSA in qiskit
+        # 5 arguments needed: number of function evaluations, parameters, loss, stepsize, accepted
         def callback_fn(xk):
             train_prob = batch_data_probs_sim(xk, x_train)
             train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_train, train_prob)
@@ -514,9 +516,32 @@ if __name__ == '__main__':
                     f"{np.round(test_cost, 4)}, avg epoch time "
                     f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
 
+        def callback_fn_qiskit_spsa(n_func_eval, xk, next_loss, stepsize, accepted):
+            train_prob = batch_data_probs_sim(xk, x_train)
+            #train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_train, train_prob)
+            train_cost_epochs.append(next_loss)
+            test_prob = batch_data_probs_sim(xk, x_test)
+            test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test, test_prob)
+            test_cost_epochs.append(test_cost)
+            train_acc = batch_avg_accuracy(train_prob, y_train)
+            test_acc = batch_avg_accuracy(test_prob, y_test)
+            train_acc_epochs.append(train_acc)
+            test_acc_epochs.append(test_acc)
+            iteration_num = len(train_cost_epochs)
+            time_till_now = time.time() - start
+            avg_epoch_time = time_till_now / iteration_num
+            if iteration_num % 1 == 0:
+                print(
+                    f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc "
+                    f"{np.round(train_acc, 4)}, "
+                    f"train cost {np.round(next_loss, 4)}, test acc {np.round(test_acc, 4)}, test cost "
+                    f"{np.round(test_cost, 4)}, avg epoch time "
+                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
+
         bounds = [(0, 2 * np.pi)] * 1209
         # COBYLA single iteration around 97 seconds, SPSA (noisyopt) is 150 seconds at the same condition.
-        opt = SPSA(maxiter=n_epochs, callback=callback_fn)
+        # opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
+        opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
         res = opt.minimize(
             cost,
             x0 = params,
