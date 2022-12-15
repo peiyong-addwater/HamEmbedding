@@ -6,7 +6,7 @@ from qiskit import Aer
 from dask.distributed import LocalCluster, Client
 from concurrent.futures import ThreadPoolExecutor
 from noisyopt import minimizeSPSA
-from qiskit.algorithms.optimizers import COBYLA
+from qiskit.algorithms.optimizers import COBYLA, SPSA
 import json
 import time
 import shutup
@@ -515,7 +515,8 @@ if __name__ == '__main__':
                     f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
 
         bounds = [(0, 2 * np.pi)] * 1209
-        opt = COBYLA(maxiter=n_epochs, callback=callback_fn) # single iteration around 97 seconds, SPSA (noisyopt) is 150 seconds at the same condition.
+        # COBYLA single iteration around 97 seconds, SPSA (noisyopt) is 150 seconds at the same condition.
+        opt = SPSA(maxiter=n_epochs, callback=callback_fn)
         res = opt.minimize(
             cost,
             x0 = params,
