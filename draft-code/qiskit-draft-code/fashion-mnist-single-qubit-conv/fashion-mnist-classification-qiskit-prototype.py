@@ -593,7 +593,7 @@ if __name__ == '__main__':
 
     sns.set_style('whitegrid')
     colors = sns.color_palette()
-    fig, axes = plt.subplots(ncols=3, figsize=(16.5, 5))
+    fig, axes = plt.subplots(ncols=2, figsize=(16.5, 5))
 
     # plot losses and accuracies
     for i, n_train in enumerate(train_sizes):
