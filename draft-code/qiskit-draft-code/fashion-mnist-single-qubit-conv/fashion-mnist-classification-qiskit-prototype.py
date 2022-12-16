@@ -585,6 +585,8 @@ if __name__ == '__main__':
         return results_df
 
     results_df = run_iterations(n_train=train_sizes[0], rng =rng)
+    for n_train in train_sizes[1:]:
+        results_df = pd.concat([results_df, run_iterations(n_train=n_train, rng=rng)])
     # aggregate dataframe
     df_agg = results_df.groupby(["n_train", "step"]).agg(["mean", "std"])
     df_agg = df_agg.reset_index()
