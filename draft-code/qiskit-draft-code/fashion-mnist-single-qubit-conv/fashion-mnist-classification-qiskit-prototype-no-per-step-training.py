@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from noisyopt import minimizeSPSA
 from qiskit.algorithms.optimizers import COBYLA, SPSA, BOBYQA
 import pybobyqa
+from skquant.opt import minimize
 import json
 import time
 import shutup
@@ -29,7 +30,6 @@ class NpEncoder(json.JSONEncoder):
             return obj.tolist()
         else:
             return super(NpEncoder, self).default(obj)
-
 
 def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3, one_hot=True):
     """Return training and testing data of digits dataset."""
@@ -312,40 +312,6 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
 
     return circ
 
-# draw the conv net
-# data = []
-# for i in range(9):
-#     single_qubit_data = []
-#     for j in range(9):
-#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
-#     data.append(single_qubit_data)
-# parameter_convnet = ParameterVector("θ", length=1629)
-# convnet_draw = conv_net_9x9_encoding_4_class(parameter_convnet, data)
-# convnet_draw.draw(output='mpl', filename='conv_net_9x9_encoding_4_class.png', style='bw', fold=-1)
-
-
-# run the circuit with random data, see what kind of measurements will appear in the output
-# backend_sim = Aer.get_backend('aer_simulator')
-# seed = 42
-# rng = np.random.default_rng(seed=seed)
-# data = load_data(10,10,rng)[0][0]
-# print(len(data), len(data[0]))
-# labels = load_data(10,10,rng)[1]
-# print(labels)
-# parameter_convnet = np.random.random(1629)
-# sample_run_convnet = transpile(conv_net_9x9_encoding_4_class(parameter_convnet, data), backend_sim)
-# job = backend_sim.run(sample_run_convnet, shots = 4096)
-# results = job.result()
-# counts = results.get_counts()
-# print(counts)
-# print(list(counts.keys())[0].split(' '))
-# probs = [0]*4
-# for key in counts.keys():
-#     classification = int(key.split(' ')[0], 2)
-#     probs[classification] = probs[classification]+counts[key]
-# probs = [c/sum(probs) for c in probs]
-# print(probs, sum(probs))
-
 def get_probs_from_counts(counts, num_classes=4):
     """
     for count keys like '00 011 0010', where the first two digits are the class
@@ -401,13 +367,14 @@ if __name__ == '__main__':
     import seaborn as sns
     import matplotlib.pyplot as plt
     import pandas as pd
+    import json
     import logging
-    logging.basicConfig(filename="myfile.log", level=logging.INFO, format='%(message)s', filemode='w')
+    logging.basicConfig(filename="qiskit-prototype-pybobyqa.log", level=logging.INFO, format='%(message)s', filemode='w')
 
-    NUM_SHOTS = 512
+    NUM_SHOTS = 1024
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
-    BUDGET = 10000
+    BUDGET = 5000
     BACKEND_SIM = Aer.get_backend('aer_simulator')
     EXC = ThreadPoolExecutor(max_workers=N_WORKERS) # 125 secs/iteration for 20 train 20 test
     #EXC = Client(address=LocalCluster(n_workers=N_WORKERS, processes=True)) # 150 secs/iteration for 20 train 20 test
@@ -422,7 +389,7 @@ if __name__ == '__main__':
     n_test = 20
     n_epochs = 100
     n_reps = 3
-    train_sizes = [20, 200, 500]
+    train_sizes = [20, 200]
 
 
     def batch_data_probs_sim(params, data_list):
@@ -452,7 +419,6 @@ if __name__ == '__main__':
 
 
     def train_model(n_train, n_test, n_epochs, rep, rng):
-        #TODO: optimize use BOBYQA from scikit-quant or PyBOBYQA
         """
 
         :param n_train:
@@ -463,80 +429,34 @@ if __name__ == '__main__':
         """
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
         params = np.random.random(1209)
-        print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
+        print(f"Rep {rep}, Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
         start = time.time()
         bounds = [(0, 2 * np.pi)] * 1209
+        lower = np.array([0] * 1299)
+        upper = np.array([2 * np.pi] * 1299)
+
+        result, history = \
+            minimize(cost, params, bounds, BUDGET, method='bobyqa',do_logging=True, print_progress=True)
+
+        optval = result.optval
+        optparams = result.optpar
 
 
-        return dict(
-            n_train=[n_train] * (n_epochs+1),
-            step=np.arange(1, n_epochs + 1 +1, dtype=int),
-            train_cost=train_cost_epochs,
-            train_acc=train_acc_epochs,
-            test_cost=test_cost_epochs,
-            test_acc=test_acc_epochs,
-        ), optimized_params
-
-
-
+        return optval, optparams, history
 
     def run_iterations(n_train, rng):
-        results_df = pd.DataFrame(
-            columns=["train_cost"]
-        )
+        results = {}
         for rep in range(n_reps):
-            results, _ = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng)
-            results_df = pd.concat(
-                [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
-            )
-        return results_df
+            optval, optparams, history = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng)
+            results[rep] = {}
+            results[rep]['optval'] = optval
+            results[rep]['optparams'] = optparams
+            results[rep]['history'] = history
+        return results
 
-    results_df = run_iterations(n_train=train_sizes[0], rng =rng)
-    for n_train in train_sizes[1:]:
-        results_df = pd.concat([results_df, run_iterations(n_train=n_train, rng=rng)])
-    # aggregate dataframe
-    df_agg = results_df.groupby(["n_train", "step"]).agg(["mean", "std"])
-    df_agg = df_agg.reset_index()
-
-    sns.set_style('whitegrid')
-    colors = sns.color_palette()
-    fig, axes = plt.subplots(ncols=2, figsize=(16.5, 5))
-
-    # plot losses and accuracies
-    for i, n_train in enumerate(train_sizes):
-        df = df_agg[df_agg.n_train == n_train]
-
-        dfs = [df.train_cost["mean"], df.test_cost["mean"], df.train_acc["mean"], df.test_acc["mean"]]
-        lines = ["o-", "x--", "o-", "x--"]
-        labels = [fr"$N={n_train}$", None, fr"$N={n_train}$", None]
-        axs = [0, 0, 2, 2]
-
-        for k in range(4):
-            ax = axes[axs[k]]
-            ax.plot(df.step, dfs[k], lines[k], label=labels[k], markevery=10, color=colors[i], alpha=0.8)
-
-    # format loss plot
-    ax = axes[0]
-    ax.set_title('Train and Test Losses', fontsize=14)
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-
-    # format loss plot
-    ax = axes[1]
-    ax.set_title('Train and Test Accuracies', fontsize=14)
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Accuracy')
-    ax.set_ylim(0., 1.05)
-
-    legend_elements = [
-                          mpl.lines.Line2D([0], [0], label=f'N={n}', color=colors[i]) for i, n in enumerate(train_sizes)
-                      ] + [
-                          mpl.lines.Line2D([0], [0], marker='o', ls='-', label='Train', color='Black'),
-                          mpl.lines.Line2D([0], [0], marker='x', ls='--', label='Test', color='Black')
-                      ]
-
-    axes[0].legend(handles=legend_elements, ncol=3)
-    axes[1].legend(handles=legend_elements, ncol=3)
-    plt.savefig(f"qiskit-fashion-mnist-multiclass-results-{n_test}-test-{n_reps}-reps.pdf")
-
+    for n_train in train_sizes:
+        filename = f"qiskit-fashion-mnist-multiclass-results{n_train}-train-{n_test}-test.json"
+        res = run_iterations(n_train, rng)
+        with open(filename, 'w') as f:
+            json.dump(res, f, indent=4, cls=NpEncoder)
