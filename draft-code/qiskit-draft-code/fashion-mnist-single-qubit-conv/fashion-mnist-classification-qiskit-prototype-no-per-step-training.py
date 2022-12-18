@@ -201,11 +201,6 @@ def su4_circuit(params):
     su4.append(su4_inst, list(range(2)))
     return su4
 
-# draw the su4 circuit
-# params_su4_draw = ParameterVector("θ", length=15)
-# circuit_su4_draw = su4_circuit(params_su4_draw).decompose()
-# circuit_su4_draw.draw(output='mpl', filename="su4_circuit.png",style='bw')
-
 def single_kernel_encoding(kernel_params, data_in_kernel_view):
     """
     Size of the data_params should be the same as the size of the kernel_params
@@ -224,12 +219,6 @@ def single_kernel_encoding(kernel_params, data_in_kernel_view):
     encoding_circ.append(circ_inst, [0])
     return encoding_circ
 
-# draw the single kernel encoding circuit.
-# kernel_params_draw = ParameterVector("θ", length=9)
-# data_draw = ParameterVector("x", length=9)
-# ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw).decompose()
-# ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.png', style='bw')
-
 def convolution_reupload_encoding(kernel_params, data):
     num_qubits, num_conv_per_qubit = len(data), len(data[0])
     encoding_circ = QuantumCircuit(num_qubits, name="Encoding Layer")
@@ -242,18 +231,6 @@ def convolution_reupload_encoding(kernel_params, data):
     encoding_circ.append(inst, list(range(num_qubits)))
 
     return encoding_circ
-
-# draw the full encoding circuit corresponding to a 9 by 9 feature map
-# kernel_params_draw = ParameterVector("θ", length=9)
-# data
-# data = []
-# for i in range(9):
-#     single_qubit_data = []
-#     for j in range(9):
-#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
-#     data.append(single_qubit_data)
-# conv_encode_circ = convolution_reupload_encoding(kernel_params_draw, data).decompose()
-# conv_encode_circ.draw(output='mpl', style='bw', filename="conv_encoding_9x9_feature_map.png", fold=-1)
 
 def entangling_after_encoding(params):
     """
@@ -269,11 +246,6 @@ def entangling_after_encoding(params):
     circ = QuantumCircuit(num_qubits)
     circ.append(circ_inst, list(range(num_qubits)))
     return circ
-
-# draw the entangling layer
-# entangling_params = ParameterVector("θ", length=15*8) # 9 qubits
-# entangling_circ = entangling_after_encoding(entangling_params).decompose()
-# entangling_circ.draw(output='mpl', style='bw', filename='entangling_after_encoding.png', fold=-1)
 
 def convolution_layer(params):
     """
@@ -429,11 +401,13 @@ if __name__ == '__main__':
     import seaborn as sns
     import matplotlib.pyplot as plt
     import pandas as pd
+    import logging
+    logging.basicConfig(filename="myfile.log", level=logging.INFO, format='%(message)s', filemode='w')
 
     NUM_SHOTS = 512
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
-
+    BUDGET = 10000
     BACKEND_SIM = Aer.get_backend('aer_simulator')
     EXC = ThreadPoolExecutor(max_workers=N_WORKERS) # 125 secs/iteration for 20 train 20 test
     #EXC = Client(address=LocalCluster(n_workers=N_WORKERS, processes=True)) # 150 secs/iteration for 20 train 20 test
@@ -493,16 +467,7 @@ if __name__ == '__main__':
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
         start = time.time()
         bounds = [(0, 2 * np.pi)] * 1209
-        # COBYLA single iteration around 97 seconds, SPSA (noisyopt) is 150 seconds at the same condition.
-        # opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
-        opt = COBYLA(maxiter=n_epochs)
-        res = opt.minimize(
-            cost,
-            x0 = params,
-            bounds=bounds
-        )
-        optimized_params = res.x
-        min_train_cost = res.fun
+
 
         return dict(
             n_train=[n_train] * (n_epochs+1),
@@ -518,7 +483,7 @@ if __name__ == '__main__':
 
     def run_iterations(n_train, rng):
         results_df = pd.DataFrame(
-            columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
+            columns=["train_cost"]
         )
         for rep in range(n_reps):
             results, _ = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng)
