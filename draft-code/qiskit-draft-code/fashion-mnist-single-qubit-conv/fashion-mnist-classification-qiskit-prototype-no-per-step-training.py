@@ -432,9 +432,8 @@ if __name__ == '__main__':
         print(f"Rep {rep}, Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
         start = time.time()
-        bounds = [(0, 2 * np.pi)] * 1209
-        lower = np.array([0] * 1299)
-        upper = np.array([2 * np.pi] * 1299)
+        bounds = np.array([[0, 2 * np.pi]] * 1209)
+
 
         result, history = \
             minimize(cost, params, bounds, BUDGET, method='bobyqa',do_logging=True, print_progress=True)
