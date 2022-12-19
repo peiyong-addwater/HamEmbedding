@@ -426,8 +426,7 @@ if __name__ == '__main__':
         :return:
         """
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
-        params = np.random.random((1209, init_pop))
-        print(f"Rep {rep}, Training with {n_train} data, testing with {n_test} data, for max {BUDGET} function evaluations...")
+        params = np.random.random((init_pop, 1209))
         fitness = lambda xk, sol_idx: 1.0/(np.abs(batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train) - 1)+eps)
         train_accs, test_accs = [], []
         start = time.time()
