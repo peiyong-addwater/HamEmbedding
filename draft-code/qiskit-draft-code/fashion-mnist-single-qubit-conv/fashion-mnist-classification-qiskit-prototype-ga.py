@@ -385,6 +385,7 @@ if __name__ == '__main__':
     STRIDE = (3, 3)
     n_test = 20
     n_generations = 100
+    init_pop = 500
     n_reps = 3
     train_sizes = [20, 200]
 
@@ -425,7 +426,7 @@ if __name__ == '__main__':
         :return:
         """
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
-        params = np.random.random(1209)
+        params = np.random.random((1209, init_pop))
         print(f"Rep {rep}, Training with {n_train} data, testing with {n_test} data, for max {BUDGET} function evaluations...")
         fitness = lambda xk, sol_idx: 1.0/(np.abs(batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train) - 1)+eps)
         train_accs, test_accs = [], []
@@ -444,9 +445,9 @@ if __name__ == '__main__':
             print(f"Rep={rep},n_train={n_train},n_test={n_test},generation={generation},train acc={round(avg_best_solutions_acc, 5)},test acc={round(test_acc, 5)},avg gen time={round(avg_gen_time,5)},time till now={ttn}")
         ga_instance = pygad.GA(
             num_generations=n_generations,
+            initial_population=params,
             num_parents_mating=50,
             fitness_func=fitness,
-            num_genes=1209,
             on_generation=on_generation,
             gene_space=[{'low':0.0, 'high':np.pi}]*1209,
             allow_duplicate_genes=False,
