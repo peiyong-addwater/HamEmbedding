@@ -416,7 +416,7 @@ if __name__ == '__main__':
         return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
 
 
-    def train_model(n_train, n_test, n_epochs, rep, rng):
+    def train_model(n_train, n_test, rep, rng):
         """
 
         :param n_train:
@@ -427,14 +427,14 @@ if __name__ == '__main__':
         """
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
         params = np.random.random(1209)
-        print(f"Rep {rep}, Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
+        print(f"Rep {rep}, Training with {n_train} data, testing with {n_test} data, for max {BUDGET} function evaluations...")
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
         start = time.time()
         bounds = np.array([[0, 2 * np.pi]] * 1209)
 
 
         result, history = \
-            minimize(cost, params, bounds, BUDGET, method='bobyqa',do_logging=False, print_progress=True)
+            minimize(cost, params, bounds, BUDGET, method='bobyqa',do_logging=True, print_progress=True)
 
         optval = result.optval
         optparams = result.optpar
@@ -445,7 +445,7 @@ if __name__ == '__main__':
     def run_iterations(n_train, rng):
         results = {}
         for rep in range(n_reps):
-            optval, optparams, history = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng)
+            optval, optparams, history = train_model(n_train=n_train, n_test=n_test, rep=rep, rng=rng)
             results[rep] = {}
             results[rep]['optval'] = optval
             results[rep]['optparams'] = optparams
