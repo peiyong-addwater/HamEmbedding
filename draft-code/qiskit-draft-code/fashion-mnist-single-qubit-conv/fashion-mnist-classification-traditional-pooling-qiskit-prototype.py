@@ -292,51 +292,56 @@ def convolution_layer(params):
     circ.append(circ_inst,list(range(num_qubits)))
     return circ
 
-def conv_net_9x9_encoding_4_class(params, single_image_data):
+def simple_conv_net_9x9_encoding_4_class(params, single_image_data):
     """
 
     encoding has 9 parameters;
 
     entangling has 15*8 = 120 parameters;
 
-    first pooling layer measures bottom 4 qubits, there are 2^4 = 16 different measurement results
-    which leads to 32 different conv operations on the remaining 5 qubits based on the measurement results
-    then the first pooling layer has 16*(4*15) = 960 parameters;
+    first pooling layer utilizes the information on the bottom 4 qubits. The bottom 4 qubits will act as control qubits,
+    and the target will be the first four qubits (we'll leave the fifth qubit out). Each gate on the target qubit will
+    be a U3 gate. Total parameters: 4*3 = 12
 
-    second pooling layer measures 3 of the remaining 5 qubits, there are 2^3 = 8 different measurement results
-    which leads to 4 different conv operations on the remaining 2 qubits based on the measurement results
-    then the second pooling layer has 8*(15) = 120 parameters;
+    after the first pooling layer, there will be 5 qubits left (first 5 qubits). Then there will be 4 SU4 layers between
+    qubits (0,1), (1,2), (2,3), (3,4) acting as a convolutional layer. Total number of parameters: 15*4 = 60
 
-    total number of parameters is 9+120+960+120 = 1209 > 2^9 = 512, over-parameterization achieved.
+    second pooling layer utilizes the information on qubits 2 and 3, which acts as control qubits for the U3 gates on
+    qubits 0 and 1. Total number of parameters: 6
 
-    This structure has some flavor of decision trees.
+    after the second pooling layer, a SU4 layer will be acting on the first two qubits. Total number of parameters: 15
+
+    total number of parameters is 9+120+12+60+6+15 = 222
     :param params:
     :param single_image_data:
     :return:
     """
     qreg = QuantumRegister(9)
-    pooling_layer_1_meas = ClassicalRegister(4, name='pooling1meas')
-    pooling_layer_2_meas = ClassicalRegister(3, name='pooling2meas')
     prob_meas = ClassicalRegister(2, name='classification')
 
-    circ = QuantumCircuit(qreg, pooling_layer_1_meas, pooling_layer_2_meas, prob_meas)
+    circ = QuantumCircuit(qreg, prob_meas)
 
     # data re-uploading layer
     circ.compose(convolution_reupload_encoding(params[:9], single_image_data), qubits=qreg, inplace=True)
     # entangling after encoding layer
     circ.compose(entangling_after_encoding(params[9:9+15*8]), qubits=qreg, inplace=True)
     # first pooling layer
-    circ.measure(qreg[5:], pooling_layer_1_meas)
-    first_pooling_params = params[9+15*8:9+15*8+16*(4*15)]
-    for i in range(16):
-        with circ.if_test((pooling_layer_1_meas, i)):
-            circ.append(convolution_layer(first_pooling_params[15*4*i:15*4*(i+1)]).to_instruction(), qreg[:5])
+    first_pooling_params = params[9+15*8:9+15*8+12]
+    for i in range(4):
+        circ.cu3(first_pooling_params[3*i], first_pooling_params[3*i+1], first_pooling_params[3*i+2], control_qubit=qreg[i+5], target_qubit=qreg[i])
+    # convolution layer
+    first_convolution_params = params[9+15*8+12:9+15*8+12+15*4]
+    for i in range(4):
+        circ.compose(su4_circuit(first_convolution_params[15*i:15*i+15]), qubits=[qreg[i], qreg[i+1]], inplace=True)
     # second pooling layer
-    circ.measure(qreg[2:5], pooling_layer_2_meas)
-    second_pooling_params = params[9+15*8+16*(4*15):9+15*8+16*(4*15)+8*15]
-    for i in range(8):
-        with circ.if_test((pooling_layer_2_meas, i)):
-            circ.append(convolution_layer(second_pooling_params[15*i:15*(i+1)]).to_instruction(), qreg[:2])
+    second_pooling_params = params[9+15*8+12+15*4:9+15*8+12+15*4+6]
+    for i in range(2):
+        circ.cu3(second_pooling_params[3*i], second_pooling_params[3*i+1], second_pooling_params[3*i+2], control_qubit=qreg[i+2], target_qubit=qreg[i])
+    # second conv layer
+    second_conv_params = params[9+15*8+12+15*4+6:]
+    circ.compose(su4_circuit(second_conv_params), qubits=[qreg[0], qreg[1]], inplace=True)
+
+
     # output classification probabilities
     circ.measure(qreg[:2], prob_meas)
 
@@ -349,10 +354,11 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
 #     for j in range(9):
 #         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
 #     data.append(single_qubit_data)
-# parameter_convnet = ParameterVector("θ", length=1629)
-# convnet_draw = conv_net_9x9_encoding_4_class(parameter_convnet, data)
-# convnet_draw.draw(output='mpl', filename='conv_net_9x9_encoding_4_class.png', style='bw', fold=-1)
-
+# parameter_convnet = ParameterVector("θ", length=222)
+# convnet_draw = simple_conv_net_9x9_encoding_4_class(parameter_convnet, data)
+# convnet_draw.draw(output='mpl', filename='simple_conv_net_9x9_encoding_4_class.png', style='bw', fold=-1)
+#
+# exit(0)
 
 # run the circuit with random data, see what kind of measurements will appear in the output
 # backend_sim = Aer.get_backend('aer_simulator')
@@ -362,8 +368,8 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
 # print(len(data), len(data[0]))
 # labels = load_data(10,10,rng)[1]
 # print(labels)
-# parameter_convnet = np.random.random(1629)
-# sample_run_convnet = transpile(conv_net_9x9_encoding_4_class(parameter_convnet, data), backend_sim)
+# parameter_convnet = np.random.random(222)
+# sample_run_convnet = transpile(simple_conv_net_9x9_encoding_4_class(parameter_convnet, data), backend_sim)
 # job = backend_sim.run(sample_run_convnet, shots = 4096)
 # results = job.result()
 # counts = results.get_counts()
@@ -375,6 +381,7 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
 #     probs[classification] = probs[classification]+counts[key]
 # probs = [c/sum(probs) for c in probs]
 # print(probs, sum(probs))
+# exit(0)
 
 def get_probs_from_counts(counts, num_classes=4):
     """
@@ -406,7 +413,7 @@ def avg_softmax_cross_entropy_loss_with_one_hot_labels(y_target, y_prob):
 
 def single_data_probs_sim(params, data, shots = 2048):
     backend_sim = Aer.get_backend('aer_simulator')
-    convnet = transpile(conv_net_9x9_encoding_4_class(params, data), backend_sim)
+    convnet = transpile(simple_conv_net_9x9_encoding_4_class(params, data), backend_sim)
     job = backend_sim.run(convnet, shots=shots)
     results = job.result()
     counts = results.get_counts()
@@ -467,7 +474,7 @@ if __name__ == '__main__':
         :param max_job_size:
         :return:
         """
-        circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
+        circs = [simple_conv_net_9x9_encoding_4_class(params, data) for data in data_list]
         results = BACKEND_SIM.run(circs, shots=NUM_SHOTS).result()
         counts = results.get_counts()
         probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
@@ -605,7 +612,7 @@ if __name__ == '__main__':
         dfs = [df.train_cost["mean"], df.test_cost["mean"], df.train_acc["mean"], df.test_acc["mean"]]
         lines = ["o-", "x--", "o-", "x--"]
         labels = [fr"$N={n_train}$", None, fr"$N={n_train}$", None]
-        axs = [0, 0, 2, 2]
+        axs = [0, 0, 1,1]
 
         for k in range(4):
             ax = axes[axs[k]]
@@ -633,5 +640,5 @@ if __name__ == '__main__':
 
     axes[0].legend(handles=legend_elements, ncol=3)
     axes[1].legend(handles=legend_elements, ncol=3)
-    plt.savefig(f"qiskit-fashion-mnist-multiclass-results-{n_test}-test-{n_reps}-reps.pdf")
+    plt.savefig(f"qiskit-fashion-mnist-simple-conv-multiclass-results-{n_test}-test-{n_reps}-reps.pdf")
 
