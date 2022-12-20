@@ -416,7 +416,7 @@ if __name__ == '__main__':
         return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
 
 
-    def train_model(n_train, n_test, rep, rng, eps = 1e-5):
+    def train_model(n_train, n_test, rep, rng):
         """
 
         :param n_train:
@@ -427,13 +427,13 @@ if __name__ == '__main__':
         """
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
         params = np.random.random((init_pop, 1209))
-        fitness = lambda xk, sol_idx: 1.0/(np.abs(batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train) - 1)+eps)
+        fitness = lambda xk, sol_idx: batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train)*100
         train_accs, test_accs = [], []
         start = time.time()
         def on_generation(ga_instance):
             generation = ga_instance.generations_completed
             best_solutions_fitness = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[1]
-            best_solutions_acc = 1/np.array(best_solutions_fitness) - eps
+            best_solutions_acc = best_solutions_fitness/100
             avg_best_solutions_acc = float(np.mean(best_solutions_acc))
             xk = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[0]
             test_acc = float(batch_avg_accuracy(batch_data_probs_sim(xk, x_test), y_test))
