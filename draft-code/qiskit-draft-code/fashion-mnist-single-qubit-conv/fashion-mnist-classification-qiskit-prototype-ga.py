@@ -14,11 +14,6 @@ import time
 import shutup
 shutup.please()
 
-from qiskit_ibm_provider import IBMProvider
-PROVIDER = IBMProvider()
-
-# get IBM's simulator backend
-IBMQ_QASM_SIMULATOR = PROVIDER.get_backend('ibmq_qasm_simulator')
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
