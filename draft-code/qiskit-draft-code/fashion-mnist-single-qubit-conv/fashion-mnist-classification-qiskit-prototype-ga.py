@@ -385,9 +385,9 @@ if __name__ == '__main__':
     STRIDE = (3, 3)
     n_test = 20
     n_generations = 100
-    init_pop = 50
+    init_pop = 100
     n_reps = 3
-    train_sizes = [20, 200]
+    train_sizes = [8, 20, 100]
 
 
     def batch_data_probs_sim(params, data_list):
