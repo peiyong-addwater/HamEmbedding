@@ -385,7 +385,7 @@ if __name__ == '__main__':
     STRIDE = (3, 3)
     n_test = 20
     n_generations = 100
-    init_pop = 500
+    init_pop = 50
     n_reps = 3
     train_sizes = [20, 200]
 
