@@ -445,7 +445,7 @@ if __name__ == '__main__':
         ga_instance = pygad.GA(
             num_generations=n_generations,
             initial_population=params,
-            num_parents_mating=50,
+            num_parents_mating=2,
             fitness_func=fitness,
             on_generation=on_generation,
             gene_space=[{'low':0.0, 'high':np.pi}]*1209,
