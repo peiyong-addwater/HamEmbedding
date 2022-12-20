@@ -430,6 +430,21 @@ if __name__ == '__main__':
         fitness = lambda xk, sol_idx: batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train)*100
         train_accs, test_accs = [], []
         start = time.time()
+
+        def on_start(ga_instance):
+            print("Starting a new generation...")
+
+        def on_fitness(ga_instance, population_fitness):
+            print("Population fitness calculated...")
+
+        def on_parents(ga_instance, selected_parents):
+            print("Parents selected...")
+
+        def on_crossover(ga_instance, offspring_crossover):
+            print("Crossover...")
+
+        def on_mutation(ga_instance, offspring_mutation):
+            print("Mutation")
         def on_generation(ga_instance):
             generation = ga_instance.generations_completed
             best_solutions_fitness = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[1]
@@ -445,9 +460,14 @@ if __name__ == '__main__':
         ga_instance = pygad.GA(
             num_generations=n_generations,
             initial_population=params,
-            num_parents_mating=2,
+            num_parents_mating=4,
             fitness_func=fitness,
             on_generation=on_generation,
+            on_start=on_start,
+            on_fitness=on_fitness,
+            on_parents=on_parents,
+            on_crossover=on_crossover,
+            on_mutation=on_mutation,
             gene_space=[{'low':0.0, 'high':np.pi}]*1209,
             allow_duplicate_genes=False,
             gene_type=[np.float, 4],
