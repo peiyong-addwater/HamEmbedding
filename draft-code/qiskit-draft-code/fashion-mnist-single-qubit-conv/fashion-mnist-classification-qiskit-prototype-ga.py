@@ -471,7 +471,7 @@ if __name__ == '__main__':
             gene_space=[{'low':0.0, 'high':np.pi}]*1209,
             allow_duplicate_genes=False,
             gene_type=[np.float, 4],
-            parallel_processing=12
+            parallel_processing=None
         )
         ga_instance.run()
         ga_instance.save(f"qiskit-fashion-mnist-multiclass-ga-instance-{n_train}-train-{n_test}-test.pkl")
