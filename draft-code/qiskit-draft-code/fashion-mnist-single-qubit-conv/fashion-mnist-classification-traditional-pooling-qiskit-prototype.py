@@ -474,7 +474,7 @@ if __name__ == '__main__':
         :param max_job_size:
         :return:
         """
-        circs = [simple_conv_net_9x9_encoding_4_class(params, data) for data in data_list]
+        circs = [transpile(simple_conv_net_9x9_encoding_4_class(params, data), BACKEND_SIM) for data in data_list]
         results = BACKEND_SIM.run(circs, shots=NUM_SHOTS).result()
         counts = results.get_counts()
         probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
