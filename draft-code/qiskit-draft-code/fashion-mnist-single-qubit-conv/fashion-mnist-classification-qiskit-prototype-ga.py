@@ -430,7 +430,7 @@ if __name__ == '__main__':
         fitness = lambda xk, sol_idx: batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train)*100
         train_accs, test_accs = [], []
         start = time.time()
-
+        print(f"Staring training with genetic algorithm for train {n_train} test {n_test} at repetition {rep}...")
         def on_start(ga_instance):
             print("Starting a new generation...")
 
