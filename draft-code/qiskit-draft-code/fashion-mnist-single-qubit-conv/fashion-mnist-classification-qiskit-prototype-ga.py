@@ -422,7 +422,10 @@ if __name__ == '__main__':
         """
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
         params = np.random.random((init_pop, 1209))
-        fitness = lambda xk, sol_idx: batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train)*100
+        def fitness(xk, sol_idx):
+            return batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train)*100
+        # fitness = lambda xk, sol_idx: batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train)*100
+        # pickle cannot save lambda functions
         train_accs, test_accs = [], []
         start = time.time()
         print(f"Staring training with genetic algorithm for train {n_train} test {n_test} at repetition {rep}...")
