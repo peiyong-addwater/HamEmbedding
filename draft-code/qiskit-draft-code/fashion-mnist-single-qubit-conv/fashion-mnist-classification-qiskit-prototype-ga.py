@@ -459,7 +459,7 @@ if __name__ == '__main__':
             test_accs.append(test_acc)
             ttn = time.time()- start
             avg_gen_time = ttn/generation
-            print(f"-------Rep={rep},n_train={n_train},n_test={n_test},generation={generation},train acc={round(avg_best_solutions_acc, 5)},test acc={round(test_acc, 5)},avg gen time={round(avg_gen_time,5)},time till now={ttn}")
+            print(f"-------Rep={rep},n_train={n_train},n_test={n_test},generation={generation},train acc={round(avg_best_solutions_acc, 5)},test acc={round(test_acc, 5)},avg gen time={round(avg_gen_time,5)},time till now={round(ttn,2)}")
         ga_instance = pygad.GA(
             num_generations=n_generations,
             initial_population=params,
