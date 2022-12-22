@@ -430,19 +430,24 @@ if __name__ == '__main__':
         start = time.time()
         print(f"Staring training with genetic algorithm for train {n_train} test {n_test} at repetition {rep}...")
         def on_start(ga_instance):
-            print("Starting a new generation...")
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Starting a new generation...")
 
         def on_fitness(ga_instance, population_fitness):
-            print("Population fitness calculated...")
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Population fitness calculated...")
 
         def on_parents(ga_instance, selected_parents):
-            print("Parents selected...")
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Parents selected...")
 
         def on_crossover(ga_instance, offspring_crossover):
-            print("Crossover...")
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Crossover...")
 
         def on_mutation(ga_instance, offspring_mutation):
-            print("Mutation")
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Mutation")
         def on_generation(ga_instance):
             generation = ga_instance.generations_completed
             best_solutions_fitness = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[1]
@@ -454,7 +459,7 @@ if __name__ == '__main__':
             test_accs.append(test_acc)
             ttn = time.time()- start
             avg_gen_time = ttn/generation
-            print(f"Rep={rep},n_train={n_train},n_test={n_test},generation={generation},train acc={round(avg_best_solutions_acc, 5)},test acc={round(test_acc, 5)},avg gen time={round(avg_gen_time,5)},time till now={ttn}")
+            print(f"-------Rep={rep},n_train={n_train},n_test={n_test},generation={generation},train acc={round(avg_best_solutions_acc, 5)},test acc={round(test_acc, 5)},avg gen time={round(avg_gen_time,5)},time till now={ttn}")
         ga_instance = pygad.GA(
             num_generations=n_generations,
             initial_population=params,
