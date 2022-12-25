@@ -477,7 +477,8 @@ if __name__ == '__main__':
             parallel_processing=None
         )
         ga_instance.run()
-        ga_instance.save(f"qiskit-fashion-mnist-multiclass-ga-instance-{n_train}-train-{n_test}-test.pkl")
+        # Having trouble saving the fitness function with Qiskit
+        # ga_instance.save(f"qiskit-fashion-mnist-multiclass-ga-instance-{n_train}-train-{n_test}-test.pkl")
         best_solution = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[0]
         return dict(
             n_train = [n_train]*n_generations,
