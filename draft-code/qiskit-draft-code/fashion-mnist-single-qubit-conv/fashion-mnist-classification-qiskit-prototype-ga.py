@@ -378,10 +378,10 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
-    n_test = 20
+    n_test = 10
     n_generations = 50
-    init_pop = 50
-    n_reps = 3
+    init_pop = 80
+    n_reps = 2
     train_sizes = [8, 20, 100]
 
 
@@ -480,9 +480,11 @@ if __name__ == '__main__':
         # Having trouble saving the fitness function with Qiskit
         # ga_instance.save(f"qiskit-fashion-mnist-multiclass-ga-instance-{n_train}-train-{n_test}-test.pkl")
         best_solution = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[0]
+        n_gen = len(train_accs)
+        assert n_gen == len(test_accs)
         return dict(
-            n_train = [n_train]*n_generations,
-            step = np.arange(1, n_generations, dtype=int),
+            n_train = [n_train]*n_gen,
+            step = np.arange(1, n_gen+1, dtype=int),
             train_acc = train_accs,
             test_acc = test_accs
         ), best_solution
