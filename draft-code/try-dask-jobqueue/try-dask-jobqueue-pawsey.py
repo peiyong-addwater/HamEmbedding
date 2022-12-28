@@ -6,16 +6,14 @@ from qiskit import Aer
 from dask.distributed import LocalCluster, Client
 from concurrent.futures import ThreadPoolExecutor
 from noisyopt import minimizeSPSA
+from qiskit.algorithms.optimizers import COBYLA, SPSA, BOBYQA
+import pybobyqa
+import pygad
 import json
 import time
 import shutup
 shutup.please()
 
-from qiskit_ibm_provider import IBMProvider
-PROVIDER = IBMProvider()
-
-# get IBM's simulator backend
-IBMQ_QASM_SIMULATOR = PROVIDER.get_backend('ibmq_qasm_simulator')
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -27,7 +25,6 @@ class NpEncoder(json.JSONEncoder):
             return obj.tolist()
         else:
             return super(NpEncoder, self).default(obj)
-
 
 def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3, one_hot=True):
     """Return training and testing data of digits dataset."""
@@ -199,11 +196,6 @@ def su4_circuit(params):
     su4.append(su4_inst, list(range(2)))
     return su4
 
-# draw the su4 circuit
-# params_su4_draw = ParameterVector("θ", length=15)
-# circuit_su4_draw = su4_circuit(params_su4_draw).decompose()
-# circuit_su4_draw.draw(output='mpl', filename="su4_circuit.png",style='bw')
-
 def single_kernel_encoding(kernel_params, data_in_kernel_view):
     """
     Size of the data_params should be the same as the size of the kernel_params
@@ -222,12 +214,6 @@ def single_kernel_encoding(kernel_params, data_in_kernel_view):
     encoding_circ.append(circ_inst, [0])
     return encoding_circ
 
-# draw the single kernel encoding circuit.
-# kernel_params_draw = ParameterVector("θ", length=9)
-# data_draw = ParameterVector("x", length=9)
-# ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw).decompose()
-# ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.png', style='bw')
-
 def convolution_reupload_encoding(kernel_params, data):
     num_qubits, num_conv_per_qubit = len(data), len(data[0])
     encoding_circ = QuantumCircuit(num_qubits, name="Encoding Layer")
@@ -240,18 +226,6 @@ def convolution_reupload_encoding(kernel_params, data):
     encoding_circ.append(inst, list(range(num_qubits)))
 
     return encoding_circ
-
-# draw the full encoding circuit corresponding to a 9 by 9 feature map
-# kernel_params_draw = ParameterVector("θ", length=9)
-# data
-# data = []
-# for i in range(9):
-#     single_qubit_data = []
-#     for j in range(9):
-#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
-#     data.append(single_qubit_data)
-# conv_encode_circ = convolution_reupload_encoding(kernel_params_draw, data).decompose()
-# conv_encode_circ.draw(output='mpl', style='bw', filename="conv_encoding_9x9_feature_map.png", fold=-1)
 
 def entangling_after_encoding(params):
     """
@@ -267,11 +241,6 @@ def entangling_after_encoding(params):
     circ = QuantumCircuit(num_qubits)
     circ.append(circ_inst, list(range(num_qubits)))
     return circ
-
-# draw the entangling layer
-# entangling_params = ParameterVector("θ", length=15*8) # 9 qubits
-# entangling_circ = entangling_after_encoding(entangling_params).decompose()
-# entangling_circ.draw(output='mpl', style='bw', filename='entangling_after_encoding.png', fold=-1)
 
 def convolution_layer(params):
     """
@@ -338,40 +307,6 @@ def conv_net_9x9_encoding_4_class(params, single_image_data):
 
     return circ
 
-# draw the conv net
-# data = []
-# for i in range(9):
-#     single_qubit_data = []
-#     for j in range(9):
-#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
-#     data.append(single_qubit_data)
-# parameter_convnet = ParameterVector("θ", length=1629)
-# convnet_draw = conv_net_9x9_encoding_4_class(parameter_convnet, data)
-# convnet_draw.draw(output='mpl', filename='conv_net_9x9_encoding_4_class.png', style='bw', fold=-1)
-
-
-# run the circuit with random data, see what kind of measurements will appear in the output
-# backend_sim = Aer.get_backend('aer_simulator')
-# seed = 42
-# rng = np.random.default_rng(seed=seed)
-# data = load_data(10,10,rng)[0][0]
-# print(len(data), len(data[0]))
-# labels = load_data(10,10,rng)[1]
-# print(labels)
-# parameter_convnet = np.random.random(1629)
-# sample_run_convnet = transpile(conv_net_9x9_encoding_4_class(parameter_convnet, data), backend_sim)
-# job = backend_sim.run(sample_run_convnet, shots = 4096)
-# results = job.result()
-# counts = results.get_counts()
-# print(counts)
-# print(list(counts.keys())[0].split(' '))
-# probs = [0]*4
-# for key in counts.keys():
-#     classification = int(key.split(' ')[0], 2)
-#     probs[classification] = probs[classification]+counts[key]
-# probs = [c/sum(probs) for c in probs]
-# print(probs, sum(probs))
-
 def get_probs_from_counts(counts, num_classes=4):
     """
     for count keys like '00 011 0010', where the first two digits are the class
@@ -386,7 +321,7 @@ def get_probs_from_counts(counts, num_classes=4):
     probs = [c / sum(probs) for c in probs]
     return probs
 
-def avg_softmax_cross_entropy_loss_with_one_hot_labels(y, y_prob):
+def avg_softmax_cross_entropy_loss_with_one_hot_labels(y_target, y_prob):
     """
     average cross entropy loss after softmax.
     :param y:
@@ -398,7 +333,7 @@ def avg_softmax_cross_entropy_loss_with_one_hot_labels(y, y_prob):
     y_prob = np.divide(np.exp(y_prob), np.sum(np.exp(y_prob), axis=1).reshape((-1,1)))
     # print(y_prob)
     # print("|||")
-    return -np.sum(y*np.log(y_prob))/len(y)
+    return -np.sum(y_target*np.log(y_prob))/len(y_target)
 
 def single_data_probs_sim(params, data, shots = 2048):
     backend_sim = Aer.get_backend('aer_simulator')
@@ -408,37 +343,6 @@ def single_data_probs_sim(params, data, shots = 2048):
     counts = results.get_counts()
     probs = get_probs_from_counts(counts, num_classes=4)
     return probs
-
-def batch_data_probs_sim(params, data_list, shots=2048, n_workers = 8, max_job_size =1, ibm_cloud = False):
-    """
-    no ThreadPoolExecutor, 1024 shots,  40 train, 100 test, SPSA, single epoch time around 370 seconds;
-    with ThreadPoolExecutor, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around 367 seconds
-    with dask Client, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time around 446 seconds, but will encounter OSError: [Errno 24] Too many open files
-    :param params:
-    :param data_list:
-    :param shots:
-    :param n_workers:
-    :param max_job_size:
-    :return:
-    """
-    circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
-    if not ibm_cloud:
-        backend_sim = Aer.get_backend('aer_simulator')
-        # exc = Client(address=LocalCluster(n_workers=n_workers, processes=True))
-        exc = ThreadPoolExecutor(max_workers=n_workers)
-        backend_sim.set_options(executor=exc)
-        backend_sim.set_options(max_job_size=max_job_size)
-        # backend_sim.set_options(device='GPU')
-        backend_sim.set_options(max_parallel_experiments=0)
-        results = backend_sim.run(circs, shots=shots).result()
-        counts = results.get_counts()
-        # if using dask, close the Client
-        # exc.close()
-    else:
-        counts = [IBMQ_QASM_SIMULATOR.run(circ, shots=shots).result().get_counts() for circ in circs]
-
-    probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
-    return np.array(probs)
 
 def batch_avg_accuracy(probs, labels):
     """
@@ -451,190 +355,136 @@ def batch_avg_accuracy(probs, labels):
     targets = np.argmax(labels, axis=1)
     return np.mean(np.array(preds == targets).astype(int))
 
-def batch_data_loss_avg(params, data_list, labels, shots = 2048, n_workers=8, max_job_size =1):
-    probs = batch_data_probs_sim(params, data_list, shots, n_workers, max_job_size)
-    return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
-
-def train_model(n_train, n_test, n_epochs, rep, rng, shots = 2048, n_workers=8, max_job_size =1):
-    """
-
-    :param n_train:
-    :param n_test:
-    :param n_epochs:
-    :param rep:
-    :return:
-    """
-    x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
-    params = np.random.random(1209)
-    train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
-    print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
-    cost = lambda xk:batch_data_loss_avg(xk, x_train, y_train, shots, n_workers, max_job_size)
-    start = time.time()
-
-    def callback_fn(xk):
-        train_prob = batch_data_probs_sim(xk, x_train, shots, n_workers, max_job_size)
-        train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels( y_train,train_prob)
-        train_cost_epochs.append(train_cost)
-        test_prob = batch_data_probs_sim(xk, x_test, shots, n_workers, max_job_size)
-        test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test,test_prob)
-        test_cost_epochs.append(test_cost)
-        train_acc = batch_avg_accuracy(train_prob, y_train)
-        test_acc = batch_avg_accuracy(test_prob, y_test)
-        train_acc_epochs.append(train_acc)
-        test_acc_epochs.append(test_acc)
-        iteration_num = len(train_cost_epochs)
-        time_till_now = time.time()-start
-        avg_epoch_time = time_till_now/iteration_num
-        if iteration_num % 1 == 0:
-            print(
-                f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc {np.round(train_acc, 4)}, "
-                f"train cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test cost {np.round(test_cost, 4)}, avg epoch time "
-                f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
-    bounds = [[0, 2*np.pi]] * 1209
-    res = minimizeSPSA(
-        cost,
-        x0 = params,
-        niter=n_epochs,
-        paired=False,
-        bounds=bounds,
-        c=0.15,
-        a=0.2,
-        callback=callback_fn
-    )
-    optimized_params = res["x"]
-    return dict(
-        n_train=[n_train] * n_epochs,
-        step=np.arange(1, n_epochs + 1, dtype=int),
-        train_cost=train_cost_epochs,
-        train_acc=train_acc_epochs,
-        test_cost=test_cost_epochs,
-        test_acc=test_acc_epochs,
-    ), optimized_params
-
-
-
 
 if __name__ == '__main__':
-    # import qiskit
-    # from qiskit_aer import AerSimulator
-    # from dask.distributed import LocalCluster, Client
-    # from math import pi
-    #
-    #
-    # def q_exec():
-    #      # Generate circuits
-    #      circ = qiskit.QuantumCircuit(15, 15)
-    #      circ.h(0)
-    #      circ.cx(0, 1)
-    #      circ.cx(1, 2)
-    #      circ.p(pi / 2, 2)
-    #      circ.measure([0, 1, 2], [0, 1, 2])
-    #
-    #      circ2 = qiskit.QuantumCircuit(7, 7)
-    #      circ2.h(0)
-    #      circ2.cx(0, 1)
-    #      circ2.cx(1, 2)
-    #      circ2.p(pi / 2, 2)
-    #      circ2.measure([0, 1, 2], [0, 1, 2])
-    #
-    #      circ3 = qiskit.QuantumCircuit(3, 3)
-    #      circ3.h(0)
-    #      circ3.cx(0, 1)
-    #      circ3.cx(1, 2)
-    #      circ3.p(pi / 2, 2)
-    #      circ3.measure([0, 1, 2], [0, 1, 2])
-    #
-    #      circ4 = qiskit.QuantumCircuit(2, 2)
-    #      circ4.h(0)
-    #      circ4.cx(0, 1)
-    #      circ4.p(pi / 2, 1)
-    #      circ4.measure([0, 1], [0, 1])
-    #
-    #      circ_list = [circ, circ2, circ3, circ4]
-    #
-    #      #exc = Client(address=LocalCluster(n_workers=4, processes=True))
-    #      exc = ThreadPoolExecutor(max_workers=12)
-    #
-    #      # Set executor and max_job_size
-    #      qbackend = AerSimulator()
-    #      qbackend.set_options(executor=exc)
-    #      qbackend.set_options(max_job_size=12)
-    #      result = qbackend.run(circ_list).result()
-    #      return result
-    # res = q_exec()
-    # print(res)
-    # print(res.get_counts())
-    # exit(0)
     import matplotlib as mpl
     import seaborn as sns
     import matplotlib.pyplot as plt
     import pandas as pd
+    import json
+
+    NUM_SHOTS = 512
+    N_WORKERS = 8
+    MAX_JOB_SIZE = 10
+    BUDGET = 1000
+    BACKEND_SIM = Aer.get_backend('aer_simulator')
+    EXC = ThreadPoolExecutor(max_workers=N_WORKERS) # 125 secs/iteration for 20 train 20 test
+    #EXC = Client(address=LocalCluster(n_workers=N_WORKERS, processes=True)) # 150 secs/iteration for 20 train 20 test
+    BACKEND_SIM.set_options(executor=EXC)
+    BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
+    BACKEND_SIM.set_options(max_parallel_experiments=0)
 
     seed = 42
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
-    n_test = 20
-    n_epochs = 50
+    n_test = 10
+    n_generations = 50
+    init_pop = 80
     n_reps = 2
-    train_sizes = [200]
+    train_sizes = [8, 20, 100]
 
 
-    def run_iterations(n_train, rng):
-        results_df = pd.DataFrame(
-            columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
+    def batch_data_probs_sim(params, data_list):
+        """
+        no ThreadPoolExecutor, 1024 shots,  40 train, 100 test, SPSA, single epoch time around 370 seconds;
+        with ThreadPoolExecutor, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch
+        time around 367 seconds
+        with dask Client, n_workers=12, max_job_size =1, 1024 shots, 40 train, 100 test, SPSA, single epoch time
+        around 446 seconds, but will encounter OSError: [Errno 24] Too many open files
+        :param params:
+        :param data_list:
+        :param shots:
+        :param n_workers:
+        :param max_job_size:
+        :return:
+        """
+        circs = [conv_net_9x9_encoding_4_class(params, data) for data in data_list]
+        results = BACKEND_SIM.run(circs, shots=NUM_SHOTS).result()
+        counts = results.get_counts()
+        probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
+        return np.array(probs)
+
+
+    def batch_data_loss_avg(params, data_list, labels):
+        probs = batch_data_probs_sim(params, data_list)
+        return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
+
+
+    def train_model(n_train, n_test, rep, rng):
+        """
+
+        :param n_train:
+        :param n_test:
+        :param n_epochs:
+        :param rep:
+        :return:
+        """
+        x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
+        params = np.random.random((init_pop, 1209))
+        def fitness(xk, sol_idx):
+            return batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train)*100
+        # fitness = lambda xk, sol_idx: batch_avg_accuracy(batch_data_probs_sim(xk, x_train), y_train)*100
+        # pickle cannot save lambda functions
+        train_accs, test_accs = [], []
+        start = time.time()
+        print(f"Staring training with genetic algorithm for train {n_train} test {n_test} at repetition {rep}...")
+        def on_start(ga_instance):
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Starting a new generation...")
+
+        def on_fitness(ga_instance, population_fitness):
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Population fitness calculated...")
+
+        def on_parents(ga_instance, selected_parents):
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Parents selected...")
+
+        def on_crossover(ga_instance, offspring_crossover):
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Crossover...")
+
+        def on_mutation(ga_instance, offspring_mutation):
+            generation = ga_instance.generations_completed
+            print(f"Gen {generation} Mutation")
+        def on_generation(ga_instance):
+            generation = ga_instance.generations_completed
+            best_solutions_fitness = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[1]
+            best_solutions_acc = best_solutions_fitness/100
+            avg_best_solutions_acc = float(np.mean(best_solutions_acc))
+            xk = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[0]
+            test_acc = float(batch_avg_accuracy(batch_data_probs_sim(xk, x_test), y_test))
+            train_accs.append(avg_best_solutions_acc)
+            test_accs.append(test_acc)
+            ttn = time.time()- start
+            avg_gen_time = ttn/generation
+            print(f"-------Rep={rep},n_train={n_train},n_test={n_test},generation={generation},train acc={round(avg_best_solutions_acc, 5)},test acc={round(test_acc, 5)},avg gen time={round(avg_gen_time,5)},time till now={round(ttn,2)}")
+        ga_instance = pygad.GA(
+            num_generations=n_generations,
+            initial_population=params,
+            num_parents_mating=4,
+            fitness_func=fitness,
+            on_generation=on_generation,
+            on_start=on_start,
+            on_fitness=on_fitness,
+            on_parents=on_parents,
+            on_crossover=on_crossover,
+            on_mutation=on_mutation,
+            gene_space=[{'low':0.0, 'high':np.pi}]*1209,
+            allow_duplicate_genes=False,
+            gene_type=[np.float, 4],
+            parallel_processing=None
         )
-        for rep in range(n_reps):
-            results, _ = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng, shots=1024,
-                                     n_workers=10, max_job_size=10)
-            results_df = pd.concat(
-                [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
-            )
-        return results_df
-
-    results_df = run_iterations(n_train=train_sizes[0], rng =rng)
-    # aggregate dataframe
-    df_agg = results_df.groupby(["n_train", "step"]).agg(["mean", "std"])
-    df_agg = df_agg.reset_index()
-
-    sns.set_style('whitegrid')
-    colors = sns.color_palette()
-    fig, axes = plt.subplots(ncols=3, figsize=(16.5, 5))
-
-    # plot losses and accuracies
-    for i, n_train in enumerate(train_sizes):
-        df = df_agg[df_agg.n_train == n_train]
-
-        dfs = [df.train_cost["mean"], df.test_cost["mean"], df.train_acc["mean"], df.test_acc["mean"]]
-        lines = ["o-", "x--", "o-", "x--"]
-        labels = [fr"$N={n_train}$", None, fr"$N={n_train}$", None]
-        axs = [0, 0, 2, 2]
-
-        for k in range(4):
-            ax = axes[axs[k]]
-            ax.plot(df.step, dfs[k], lines[k], label=labels[k], markevery=10, color=colors[i], alpha=0.8)
-
-    # format loss plot
-    ax = axes[0]
-    ax.set_title('Train and Test Losses', fontsize=14)
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-
-    # format loss plot
-    ax = axes[1]
-    ax.set_title('Train and Test Accuracies', fontsize=14)
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Accuracy')
-    ax.set_ylim(0., 1.05)
-
-    legend_elements = [
-                          mpl.lines.Line2D([0], [0], label=f'N={n}', color=colors[i]) for i, n in enumerate(train_sizes)
-                      ] + [
-                          mpl.lines.Line2D([0], [0], marker='o', ls='-', label='Train', color='Black'),
-                          mpl.lines.Line2D([0], [0], marker='x', ls='--', label='Test', color='Black')
-                      ]
-
-    axes[0].legend(handles=legend_elements, ncol=3)
-    axes[1].legend(handles=legend_elements, ncol=3)
-    plt.savefig(f"qiskit-fashion-mnist-multiclass-results-{n_test}-test-{n_reps}-reps.pdf")
-
+        ga_instance.run()
+        # Having trouble saving the fitness function with Qiskit
+        # ga_instance.save(f"qiskit-fashion-mnist-multiclass-ga-instance-{n_train}-train-{n_test}-test.pkl")
+        best_solution = ga_instance.best_solution(pop_fitness=ga_instance.last_generation_fitness)[0]
+        n_gen = len(train_accs)
+        assert n_gen == len(test_accs)
+        return dict(
+            n_train = [n_train]*n_gen,
+            step = np.arange(1, n_gen+1, dtype=int),
+            train_acc = train_accs,
+            test_acc = test_accs
+        ), best_solution
