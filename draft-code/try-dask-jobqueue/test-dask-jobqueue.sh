@@ -1,6 +1,5 @@
 #!/bin/bash --login
 #SBATCH --job-name=testDaskJobQueue
-#SBATCH --partition=workq
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
 #SBATCH --account=pawsey0419
