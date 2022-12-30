@@ -4,6 +4,8 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit.circuit import ParameterVector
 from qiskit import Aer
 from dask.distributed import LocalCluster, Client
+from dask_jobqueue import SLURMCluster
+import os
 from concurrent.futures import ThreadPoolExecutor
 from noisyopt import minimizeSPSA
 from qiskit.algorithms.optimizers import COBYLA, SPSA, BOBYQA
@@ -28,7 +30,7 @@ class NpEncoder(json.JSONEncoder):
 
 def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3, one_hot=True):
     """Return training and testing data of digits dataset."""
-    data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
+    data_folder = "/scratch/pawsey0419/peiyongw/QML-ImageClassification/data/fashion"
     features, labels = load_fashion_mnist(data_folder)
     features = [features[i].reshape(28, 28) for i in range(len(features))]
     features = np.array(features)
@@ -363,13 +365,28 @@ if __name__ == '__main__':
     import pandas as pd
     import json
 
+    cluster = SLURMCluster(
+        cores=4,
+        processes=2,
+        memory="8GB",
+        shebang='#!/bin/bash --login',
+        queue="workq",
+        walltime="00:30:00",
+        local_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
+        death_timeout="1000s",
+        #interface="ib0",
+        log_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
+        account="pawsey0419",
+        job_script_prologue = ["module load hpc-python-collection/2022.11-py3.9.15"]
+    )
+    print(cluster.job_script())
     NUM_SHOTS = 512
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
     BUDGET = 1000
     BACKEND_SIM = Aer.get_backend('aer_simulator')
-    EXC = ThreadPoolExecutor(max_workers=N_WORKERS) # 125 secs/iteration for 20 train 20 test
-    #EXC = Client(address=LocalCluster(n_workers=N_WORKERS, processes=True)) # 150 secs/iteration for 20 train 20 test
+    #EXC = ThreadPoolExecutor(max_workers=N_WORKERS) # 125 secs/iteration for 20 train 20 test
+    EXC = Client(cluster) # Using dask-jobqueue
     BACKEND_SIM.set_options(executor=EXC)
     BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
     BACKEND_SIM.set_options(max_parallel_experiments=0)

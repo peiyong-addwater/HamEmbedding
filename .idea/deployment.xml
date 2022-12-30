@@ -3,13 +3,6 @@
   <component name="PublishConfigData" autoUpload="Always" serverName="peiyongw@10.100.238.77:22 password (2)" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
     <option name="confirmBeforeUploading" value="false" />
     <serverData>
-      <paths name="Pawsey">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/scratch/pawsey0419/peiyongw/QML-ImageClassification" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
       <paths name="peiyongw@10.100.238.77:22 password">
         <serverdata>
           <mappings>
@@ -24,10 +17,10 @@
           </mappings>
         </serverdata>
       </paths>
-      <paths name="peiyongw@10.100.238.77:22 password (3)">
+      <paths name="setonix.pawsey.org.au">
         <serverdata>
           <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/scratch/pawsey0419/peiyongw/QML-ImageClassification" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
