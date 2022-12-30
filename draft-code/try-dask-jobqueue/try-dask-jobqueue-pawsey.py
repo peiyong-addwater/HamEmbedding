@@ -508,7 +508,7 @@ if __name__ == '__main__':
     def try_dask_jobqueue(n_train, n_test, rng):
         print(f"--------Number of training {n_train}, testing {n_test}...--------")
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
-        params = np.random.random((init_pop, 1209))
+        params = np.random.random(1209)
         acc_start_time = time.time()
         probs = batch_data_probs_sim(params, x_train)
         acc = batch_avg_accuracy(probs, y_train)
