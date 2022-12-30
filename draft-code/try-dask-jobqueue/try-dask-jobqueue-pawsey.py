@@ -374,7 +374,7 @@ if __name__ == '__main__':
         walltime="00:30:00",
         local_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
         death_timeout="1000s",
-        interface="ib0",
+        interface='lo',
         log_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
         account="pawsey0419",
         job_script_prologue = ["module load hpc-python-collection/2022.11-py3.9.15"]
