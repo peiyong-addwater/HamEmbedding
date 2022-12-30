@@ -372,10 +372,10 @@ if __name__ == '__main__':
         shebang='#!/bin/bash --login',
         #queue="workq",
         walltime="00:10:00",
-        #local_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
+        local_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
         death_timeout="1000s",
         interface='lo',
-        #log_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
+        log_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
         account="pawsey0419",
         job_script_prologue = ["module load hpc-python-collection/2022.11-py3.9.15"]
     )
