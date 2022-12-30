@@ -506,7 +506,7 @@ if __name__ == '__main__':
         ), best_solution
 
     def try_dask_jobqueue(n_train, n_test, rng):
-        print(f"Number of training {n_train}, testing {n_test}...")
+        print(f"--------Number of training {n_train}, testing {n_test}...--------")
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
         params = np.random.random((init_pop, 1209))
         acc_start_time = time.time()
@@ -526,3 +526,5 @@ if __name__ == '__main__':
         print(f"Time for calculating accuracy on test data {acc_time}")
 
 
+    for c in train_sizes:
+        try_dask_jobqueue(c, n_test, rng)
