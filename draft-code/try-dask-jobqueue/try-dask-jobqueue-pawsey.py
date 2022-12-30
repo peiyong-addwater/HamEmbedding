@@ -368,7 +368,7 @@ if __name__ == '__main__':
     cluster = SLURMCluster(
         cores=4,
         processes=2,
-        memory="8GB",
+        memory="16GB",
         shebang='#!/bin/bash --login',
         #queue="workq",
         walltime="00:10:00",
