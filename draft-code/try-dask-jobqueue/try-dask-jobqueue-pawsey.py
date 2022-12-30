@@ -380,7 +380,7 @@ if __name__ == '__main__':
         job_script_prologue = ["module load hpc-python-collection/2022.11-py3.9.15"]
     )
     print(cluster.job_script())
-    NUM_SHOTS = 512
+    NUM_SHOTS = 1024
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
     BUDGET = 1000
@@ -395,11 +395,11 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
-    n_test = 10
+    n_test = 100
     n_generations = 50
     init_pop = 80
     n_reps = 2
-    train_sizes = [8, 20, 100]
+    train_sizes = [8, 50, 100, 500]
 
 
     def batch_data_probs_sim(params, data_list):
@@ -524,3 +524,5 @@ if __name__ == '__main__':
         print(probs)
         print(f"accuracy {acc}")
         print(f"Time for calculating accuracy on test data {acc_time}")
+
+
