@@ -374,7 +374,7 @@ if __name__ == '__main__':
         walltime="00:30:00",
         local_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
         death_timeout="1000s",
-        #interface="ib0",
+        interface="ib0",
         log_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
         account="pawsey0419",
         job_script_prologue = ["module load hpc-python-collection/2022.11-py3.9.15"]
@@ -426,7 +426,6 @@ if __name__ == '__main__':
     def batch_data_loss_avg(params, data_list, labels):
         probs = batch_data_probs_sim(params, data_list)
         return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
-
 
     def train_model(n_train, n_test, rep, rng):
         """
@@ -505,3 +504,23 @@ if __name__ == '__main__':
             train_acc = train_accs,
             test_acc = test_accs
         ), best_solution
+
+    def try_dask_jobqueue(n_train, n_test, rng):
+        print(f"Number of training {n_train}, testing {n_test}...")
+        x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
+        params = np.random.random((init_pop, 1209))
+        acc_start_time = time.time()
+        probs = batch_data_probs_sim(params, x_train)
+        acc = batch_avg_accuracy(probs, y_train)
+        acc_time = time.time() - acc_start_time
+        print(probs)
+        print(f"accuracy {acc}")
+        print(f"Time for calculating accuracy on training data {acc_time}")
+
+        acc_start_time = time.time()
+        probs = batch_data_probs_sim(params, x_test)
+        acc = batch_avg_accuracy(probs, y_test)
+        acc_time = time.time() - acc_start_time
+        print(probs)
+        print(f"accuracy {acc}")
+        print(f"Time for calculating accuracy on test data {acc_time}")
