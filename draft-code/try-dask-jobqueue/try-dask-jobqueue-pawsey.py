@@ -373,7 +373,7 @@ if __name__ == '__main__':
         #queue="workq",
         walltime="00:10:00",
         local_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
-        death_timeout="1000s",
+        death_timeout="100s",
         interface='lo',
         log_directory='/scratch/pawsey0419/peiyongw/dask-jobqueue-logs/QML-ImageClassification',
         account="pawsey0419",
