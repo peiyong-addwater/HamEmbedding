@@ -6,8 +6,7 @@
 #SBATCH --export=NONE
 #SBATCH --mem=32G
 
-Export OMP_NUM_THREADS=64
 
 module load hpc-python-collection/2022.11-py3.9.15
 
-srun -N 1 -n 1 -c 64 python try-dask-jobqueue-pawsey.py
+srun python try-dask-jobqueue-pawsey.py

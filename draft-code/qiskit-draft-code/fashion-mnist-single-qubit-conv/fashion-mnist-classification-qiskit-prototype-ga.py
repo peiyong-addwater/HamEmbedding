@@ -364,8 +364,14 @@ if __name__ == '__main__':
     import pandas as pd
     import json
 
+    from multiprocessing import cpu_count
+
+    n_cores = cpu_count()
+
+    print(f"Num of cores: {n_cores}")
+
     NUM_SHOTS = 512
-    N_WORKERS = 64
+    N_WORKERS = n_cores
     MAX_JOB_SIZE = 1
     BUDGET = 1000
     BACKEND_SIM = Aer.get_backend('aer_simulator')
