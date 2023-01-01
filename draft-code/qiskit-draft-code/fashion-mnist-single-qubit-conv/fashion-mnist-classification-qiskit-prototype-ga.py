@@ -10,6 +10,7 @@ from qiskit.algorithms.optimizers import COBYLA, SPSA, BOBYQA
 import pybobyqa
 import pygad
 import json
+import pickle
 import time
 import shutup
 shutup.please()
@@ -364,8 +365,8 @@ if __name__ == '__main__':
     import json
 
     NUM_SHOTS = 512
-    N_WORKERS = 8
-    MAX_JOB_SIZE = 10
+    N_WORKERS = 64 * 2
+    MAX_JOB_SIZE = 1
     BUDGET = 1000
     BACKEND_SIM = Aer.get_backend('aer_simulator')
     EXC = ThreadPoolExecutor(max_workers=N_WORKERS) # 125 secs/iteration for 20 train 20 test
