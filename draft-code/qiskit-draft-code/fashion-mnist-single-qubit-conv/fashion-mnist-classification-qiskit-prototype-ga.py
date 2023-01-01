@@ -365,7 +365,7 @@ if __name__ == '__main__':
     import json
 
     NUM_SHOTS = 512
-    N_WORKERS = 64 * 2
+    N_WORKERS = 64
     MAX_JOB_SIZE = 1
     BUDGET = 1000
     BACKEND_SIM = Aer.get_backend('aer_simulator')
