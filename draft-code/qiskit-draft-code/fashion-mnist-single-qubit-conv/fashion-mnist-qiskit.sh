@@ -1,5 +1,5 @@
 #!/bin/bash --login
-#SBATCH --job-name=gaqiskitFMNIST
+#SBATCH --job-name=qiskitFMNIST
 #SBATCH --nodes=1
 #SBATCH --time=03:30:00
 #SBATCH --account=pawsey0419
