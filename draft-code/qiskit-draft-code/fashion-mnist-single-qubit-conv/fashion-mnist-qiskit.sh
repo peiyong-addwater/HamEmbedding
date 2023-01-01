@@ -9,4 +9,4 @@
 
 module load hpc-python-collection/2022.11-py3.9.15
 
-srun python try-dask-jobqueue-pawsey.py
+srun python fashion-mnist-classification-qiskit-prototype-ga.py
