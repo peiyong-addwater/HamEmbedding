@@ -371,7 +371,7 @@ if __name__ == '__main__':
 
     print(f"Num of cores: {n_cores}")
 
-    NUM_SHOTS = 512
+    NUM_SHOTS = 1024
     N_WORKERS = n_cores
     MAX_JOB_SIZE = 1
     BUDGET = 1000
@@ -390,7 +390,7 @@ if __name__ == '__main__':
     n_generations = 50
     init_pop = 80
     n_reps = 2
-    train_sizes = [8, 20, 100]
+    train_sizes = [100]
 
 
     def batch_data_probs_sim(params, data_list):
