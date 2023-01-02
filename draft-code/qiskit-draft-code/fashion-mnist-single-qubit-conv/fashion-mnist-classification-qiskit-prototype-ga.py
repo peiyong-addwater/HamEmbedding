@@ -386,11 +386,11 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
-    n_test = 10
+    n_test = 100
     n_generations = 50
     init_pop = 80
     n_reps = 2
-    train_sizes = [100]
+    train_sizes = [1000]
 
 
     def batch_data_probs_sim(params, data_list):
