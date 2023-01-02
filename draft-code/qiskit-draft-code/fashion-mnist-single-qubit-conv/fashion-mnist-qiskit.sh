@@ -1,7 +1,7 @@
 #!/bin/bash --login
 #SBATCH --job-name=qiskitFMNIST
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=00:06:00
 #SBATCH --account=pawsey0419
 #SBATCH --export=NONE
 #SBATCH --mem=16G
