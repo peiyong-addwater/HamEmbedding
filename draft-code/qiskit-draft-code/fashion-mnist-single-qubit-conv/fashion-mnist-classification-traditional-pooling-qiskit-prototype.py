@@ -317,18 +317,22 @@ def simple_conv_net_9x9_encoding_4_class(params, single_image_data):
     :return:
     """
     qreg = QuantumRegister(9)
+    first_pooling_classical = ClassicalRegister(4, name='firstpooling')
+    second_pooling_classical = ClassicalRegister(3, name='secondpooling')
     prob_meas = ClassicalRegister(2, name='classification')
 
-    circ = QuantumCircuit(qreg, prob_meas)
+    circ = QuantumCircuit(qreg,first_pooling_classical, second_pooling_classical, prob_meas)
 
     # data re-uploading layer
     circ.compose(convolution_reupload_encoding(params[:9], single_image_data), qubits=qreg, inplace=True)
     # entangling after encoding layer
     circ.compose(entangling_after_encoding(params[9:9+15*8]), qubits=qreg, inplace=True)
     # first pooling layer
+    for i in range(4):
+        circ.measure(qreg[i+5], first_pooling_classical[i])
     first_pooling_params = params[9+15*8:9+15*8+12]
     for i in range(4):
-        circ.cu3(first_pooling_params[3*i], first_pooling_params[3*i+1], first_pooling_params[3*i+2], control_qubit=qreg[i+5], target_qubit=qreg[i])
+        circ.u3(first_pooling_params[3*i], first_pooling_params[3*i+1], first_pooling_params[3*i+2], qreg[i]).c_if(first_pooling_classical[i], 1)
     # convolution layer
     first_convolution_params = params[9+15*8+12:9+15*8+12+15*4]
     for i in range(4):
@@ -336,7 +340,9 @@ def simple_conv_net_9x9_encoding_4_class(params, single_image_data):
     # second pooling layer
     second_pooling_params = params[9+15*8+12+15*4:9+15*8+12+15*4+6]
     for i in range(2):
-        circ.cu3(second_pooling_params[3*i], second_pooling_params[3*i+1], second_pooling_params[3*i+2], control_qubit=qreg[i+2], target_qubit=qreg[i])
+        circ.measure(qreg[i+2], second_pooling_classical[i])
+    for i in range(2):
+        circ.u3(second_pooling_params[3*i], second_pooling_params[3*i+1], second_pooling_params[3*i+2], qreg[i]).c_if(second_pooling_classical[i], 1)
     # second conv layer
     second_conv_params = params[9+15*8+12+15*4+6:]
     circ.compose(su4_circuit(second_conv_params), qubits=[qreg[0], qreg[1]], inplace=True)
