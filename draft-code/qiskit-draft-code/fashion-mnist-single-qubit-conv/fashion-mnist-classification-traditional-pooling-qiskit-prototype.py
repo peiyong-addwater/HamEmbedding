@@ -11,7 +11,6 @@ import json
 import time
 import shutup
 
-# TODO: modify the pooling layer according to the Qiskit QCNN tutorial.
 
 shutup.please()
 
