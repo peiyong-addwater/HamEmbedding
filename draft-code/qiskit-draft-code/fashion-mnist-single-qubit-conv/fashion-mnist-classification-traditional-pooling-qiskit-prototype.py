@@ -6,7 +6,7 @@ from qiskit import Aer
 from dask.distributed import LocalCluster, Client
 from concurrent.futures import ThreadPoolExecutor
 from noisyopt import minimizeSPSA
-from qiskit.algorithms.optimizers import COBYLA, SPSA
+from qiskit.algorithms.optimizers import COBYLA, SPSA, GradientDescent
 import json
 import time
 import shutup
@@ -487,7 +487,7 @@ if __name__ == '__main__':
     KERNEL_SIZE = (3, 3)
     STRIDE = (3, 3)
     n_test = 20
-    n_epochs = 100
+    n_epochs = 1000
     n_reps = 3
     train_sizes = [20, 200, 500]
 
