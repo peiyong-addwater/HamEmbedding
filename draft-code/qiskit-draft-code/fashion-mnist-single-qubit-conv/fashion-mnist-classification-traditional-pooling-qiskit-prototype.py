@@ -211,33 +211,48 @@ def single_kernel_encoding(kernel_params, data_in_kernel_view):
     """
     Size of the data_params should be the same as the size of the kernel_params
     Encoding with U3 gates
+    gate_param = theta * x + w
     :param kernel_params: Should be an integer times of number of parameter in a single encoding unitary
     :param data_in_kernel_view: needs to be padded
     :return:
     """
-    num_combo_gates = len(kernel_params)//3
+    total_num_params = len(kernel_params)
+    num_theta = total_num_params // 2
+    num_w = total_num_params // 2
+    theta = kernel_params[:num_theta]
+    w = kernel_params[num_theta:]
+    num_combo_gates = num_theta//3
     encoding_circ = QuantumCircuit(1, name="Single Kernel Encoding")
     for i in range(num_combo_gates):
-        encoding_circ.u(data_in_kernel_view[3 * i], data_in_kernel_view[3 * i + 1], data_in_kernel_view[3 * i + 2], 0)
-        encoding_circ.u(kernel_params[3*i], kernel_params[3*i+1], kernel_params[3*i+2], 0)
+        encoding_circ.u(theta[3*i]*data_in_kernel_view[3 * i]+w[3*i], theta[3*i+1]*data_in_kernel_view[3 * i + 1]+w[3*i+1], theta[3*i+2]*data_in_kernel_view[3 * i + 2]+w[3*i+2], 0)
     circ_inst = encoding_circ.to_instruction()
     encoding_circ = QuantumCircuit(1)
     encoding_circ.append(circ_inst, [0])
     return encoding_circ
 
 # draw the single kernel encoding circuit.
-# kernel_params_draw = ParameterVector("θ", length=9)
+# kernel_params_draw = ParameterVector("θ", length=18)
 # data_draw = ParameterVector("x", length=9)
 # ske_circuit = single_kernel_encoding(kernel_params_draw, data_draw).decompose()
 # ske_circuit.draw(output='mpl', filename='single-kernel-encoding-circuit.png', style='bw')
+# exit(0)
 
 def convolution_reupload_encoding(kernel_params, data):
+    """
+    one single kernel encoding requires 18 parameters
+    there will be 9 by 9 single kernel encoding
+    :param kernel_params:
+    :param data:
+    :return:
+    """
     num_qubits, num_conv_per_qubit = len(data), len(data[0])
     encoding_circ = QuantumCircuit(num_qubits, name="Encoding Layer")
+    counter = 0
     for j in range(num_conv_per_qubit):
         for i in range(num_qubits):
             single_qubit_data = data[i]
-            encoding_circ = encoding_circ.compose(single_kernel_encoding(kernel_params, single_qubit_data[j]), qubits=[i])
+            encoding_circ = encoding_circ.compose(single_kernel_encoding(kernel_params[counter*18:counter*18+18], single_qubit_data[j]), qubits=[i])
+            counter = counter + 1
     inst = encoding_circ.to_instruction()
     encoding_circ = QuantumCircuit(num_qubits)
     encoding_circ.append(inst, list(range(num_qubits)))
@@ -245,8 +260,8 @@ def convolution_reupload_encoding(kernel_params, data):
     return encoding_circ
 
 # draw the full encoding circuit corresponding to a 9 by 9 feature map
-# kernel_params_draw = ParameterVector("θ", length=9)
-# data
+# kernel_params_draw = ParameterVector("θ", length=1458)
+# # data
 # data = []
 # for i in range(9):
 #     single_qubit_data = []
@@ -255,6 +270,7 @@ def convolution_reupload_encoding(kernel_params, data):
 #     data.append(single_qubit_data)
 # conv_encode_circ = convolution_reupload_encoding(kernel_params_draw, data).decompose()
 # conv_encode_circ.draw(output='mpl', style='bw', filename="conv_encoding_9x9_feature_map.png", fold=-1)
+# exit(0)
 
 def entangling_after_encoding(params):
     """
@@ -293,8 +309,12 @@ def convolution_layer(params):
 
 def simple_conv_net_9x9_encoding_4_class(params, single_image_data):
     """
+    input image size is 28 by 28, through a 3 by 3 kernel with stride 3 and zero pading, the output feature map
+    would be 9 by 9 if we are doing classical convolution.
 
-    encoding has 9 parameters;
+    9 data pixels correspond to a single kernel encoding, which needs 18 parameters
+
+    encoding has 18 * 9 * 9 = 1458 parameters;
 
     entangling has 15*8 = 120 parameters;
 
@@ -310,11 +330,18 @@ def simple_conv_net_9x9_encoding_4_class(params, single_image_data):
 
     after the second pooling layer, a SU4 layer will be acting on the first two qubits. Total number of parameters: 15
 
-    total number of parameters is 9+120+12+60+6+15 = 222
+    total number of parameters is 1458+120+12+60+6+15 = 1671
     :param params:
     :param single_image_data:
     :return:
     """
+    NUM_ENCODING_PARAM = 18*9*9
+    NUM_ENTANGLE_PARAM = 15*8
+    NUM_FIRST_POOLING_PARAM = 4*3
+    NUM_FIRST_CONV_PARAM = 15*4
+    NUM_SECOND_POOLING_PARAM = 3*2
+    NUM_SECOND_CONV_PARAM = 15*1
+
     qreg = QuantumRegister(9)
     first_pooling_classical = ClassicalRegister(4, name='firstpooling')
     second_pooling_classical = ClassicalRegister(3, name='secondpooling')
@@ -323,27 +350,27 @@ def simple_conv_net_9x9_encoding_4_class(params, single_image_data):
     circ = QuantumCircuit(qreg,first_pooling_classical, second_pooling_classical, prob_meas)
 
     # data re-uploading layer
-    circ.compose(convolution_reupload_encoding(params[:9], single_image_data), qubits=qreg, inplace=True)
+    circ.compose(convolution_reupload_encoding(params[:NUM_ENCODING_PARAM], single_image_data), qubits=qreg, inplace=True)
     # entangling after encoding layer
-    circ.compose(entangling_after_encoding(params[9:9+15*8]), qubits=qreg, inplace=True)
+    circ.compose(entangling_after_encoding(params[NUM_ENCODING_PARAM:NUM_ENCODING_PARAM+NUM_ENTANGLE_PARAM]), qubits=qreg, inplace=True)
     # first pooling layer
     for i in range(4):
         circ.measure(qreg[i+5], first_pooling_classical[i])
-    first_pooling_params = params[9+15*8:9+15*8+12]
+    first_pooling_params = params[NUM_ENCODING_PARAM+NUM_ENTANGLE_PARAM : NUM_ENCODING_PARAM+NUM_ENTANGLE_PARAM+NUM_FIRST_POOLING_PARAM]
     for i in range(4):
         circ.u3(first_pooling_params[3*i], first_pooling_params[3*i+1], first_pooling_params[3*i+2], qreg[i]).c_if(first_pooling_classical[i], 1)
     # convolution layer
-    first_convolution_params = params[9+15*8+12:9+15*8+12+15*4]
+    first_convolution_params = params[NUM_ENCODING_PARAM+NUM_ENTANGLE_PARAM+NUM_FIRST_POOLING_PARAM : NUM_ENCODING_PARAM+NUM_ENTANGLE_PARAM+NUM_FIRST_POOLING_PARAM+NUM_FIRST_CONV_PARAM]
     for i in range(4):
         circ.compose(su4_circuit(first_convolution_params[15*i:15*i+15]), qubits=[qreg[i], qreg[i+1]], inplace=True)
     # second pooling layer
-    second_pooling_params = params[9+15*8+12+15*4:9+15*8+12+15*4+6]
+    second_pooling_params = params[NUM_ENCODING_PARAM+NUM_ENTANGLE_PARAM+NUM_FIRST_POOLING_PARAM+NUM_FIRST_CONV_PARAM:NUM_ENCODING_PARAM+NUM_ENTANGLE_PARAM+NUM_FIRST_POOLING_PARAM+NUM_FIRST_CONV_PARAM+NUM_SECOND_POOLING_PARAM]
     for i in range(2):
         circ.measure(qreg[i+2], second_pooling_classical[i])
     for i in range(2):
         circ.u3(second_pooling_params[3*i], second_pooling_params[3*i+1], second_pooling_params[3*i+2], qreg[i]).c_if(second_pooling_classical[i], 1)
     # second conv layer
-    second_conv_params = params[9+15*8+12+15*4+6:]
+    second_conv_params = params[NUM_ENCODING_PARAM+NUM_ENTANGLE_PARAM+NUM_FIRST_POOLING_PARAM+NUM_FIRST_CONV_PARAM+NUM_SECOND_POOLING_PARAM:]
     circ.compose(su4_circuit(second_conv_params), qubits=[qreg[0], qreg[1]], inplace=True)
 
 
@@ -501,7 +528,7 @@ if __name__ == '__main__':
         :return:
         """
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
-        params = np.random.random(1209)
+        params = np.random.random(1671)
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
         print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
