@@ -361,7 +361,6 @@ def three_qubit_conv(params):
 # kernel_circ = three_qubit_conv(kernel_param)
 # kernel_circ.draw(output='mpl', style='bw', filename="conv-3.png", fold=-1)
 
-
 def conv_layer_2(params):
     """
     each two-qubit block requires 15 parameters.
@@ -426,10 +425,14 @@ def full_circ(prepared_data, params):
     classification (4-class), which also needs 2 classical bits
     to reduce the number of qubits, we also adopt an asynchronized structure to process the 3x3 feature map.
     this part of the circuit requires 3 convolution-like operations
-    total qubits = 11 + 5 - 1 = 14 (last conv-3 can share one qubit with the top 11 qubits)
+    total qubits = 11 + 5 - 1 = 15 (last conv-3 can share one qubit with the top 11 qubits)
     :param prepared_data:
     :param params:
     :return:
     """
+    qreg = QuantumRegister(15)
+    pooling_measure = ClassicalRegister(2, name='pooling-measure')
+    classification_reg = ClassicalRegister(2, name='classification')
+
 
 
