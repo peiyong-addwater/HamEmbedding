@@ -28,6 +28,30 @@ class NpEncoder(json.JSONEncoder):
         else:
             return super(NpEncoder, self).default(obj)
 
+def load_fashion_mnist(path, kind='train'):
+    # from https://github.com/zalandoresearch/fashion-mnist/blob/master/utils/mnist_reader.py
+    import os
+    import gzip
+    import numpy as np
+
+    """Load MNIST data from `path`"""
+    labels_path = os.path.join(path,
+                               '%s-labels-idx1-ubyte.gz'
+                               % kind)
+    images_path = os.path.join(path,
+                               '%s-images-idx3-ubyte.gz'
+                               % kind)
+
+    with gzip.open(labels_path, 'rb') as lbpath:
+        labels = np.frombuffer(lbpath.read(), dtype=np.uint8,
+                               offset=8)
+
+    with gzip.open(images_path, 'rb') as imgpath:
+        images = np.frombuffer(imgpath.read(), dtype=np.uint8,
+                               offset=16).reshape(len(labels), 784)
+
+    return images, labels
+
 def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3, one_hot=True):
     """Return training and testing data of digits dataset."""
     data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
@@ -49,9 +73,11 @@ def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding
     )
 
     x_train, y_train = features[train_indices], labels[train_indices]
-    x_train = [prepare_data_28x28_9x9_3x3_kernel_3x3(x_train[i]) for i in range(num_train)]
+    x_train = [extract_convolution_data(x_train[i], kernel_size=(5, 5), stride=(5, 5), dilation=(1, 1),
+                                                 padding=(0, 0), encoding_gate_parameter_size=15) for i in range(num_train)]
     x_test, y_test = features[test_indices], labels[test_indices]
-    x_test = [prepare_data_28x28_9x9_3x3_kernel_3x3(x_test[i]) for i in range(num_test)]
+    x_test = [extract_convolution_data(x_test[i], kernel_size=(5, 5), stride=(5, 5), dilation=(1, 1),
+                                                 padding=(0, 0), encoding_gate_parameter_size=15) for i in range(num_test)]
     if one_hot:
         train_labels = np.zeros((len(y_train), 4))
         test_labels = np.zeros((len(y_test), 4))
@@ -214,6 +240,8 @@ def kernel_5x5(padded_data_in_kernel_view, conv_params, pooling_params):
     circ.reset(qreg[2])
     circ.reset(qreg[3])
 
+
+
     return circ
 
 # draw the kernel circuit
@@ -223,13 +251,89 @@ def kernel_5x5(padded_data_in_kernel_view, conv_params, pooling_params):
 # kernel_circ = kernel_5x5(data_in_kernel, kernel_param, pooling_param)
 # kernel_circ.draw(output='mpl', style='bw', filename="kernel-5x5.png", fold=-1)
 
-def conv_layer_1(data_for_first_row_of_5x5_feature_map, params):
+def conv_layer_1(data_for_one_row_of_5x5_feature_map, params):
     """
     8 qubits
     :param data_for_first_row_of_5x5_feature_map:
     :param params:
     :return:
     """
+    qreg = QuantumRegister(8, name='conv')
+    creg = ClassicalRegister(3, name="pooling-meas")
+    circ = QuantumCircuit(qreg, creg, name='conv-layer-1')
+    conv_kernel_param = params[:45]
+    pooling_param = params[45:]
+    for i in range(5):
+        conv_op = kernel_5x5(data_for_one_row_of_5x5_feature_map[i], conv_kernel_param, pooling_param)
+        circ.compose(conv_op, qubits=qreg[i:i + 4], clbits=creg, inplace=True)
+        circ.barrier(qreg)
+    return circ
 
+# draw the conv 1 layer
+# data = []
+# for i in range(5):
+#     single_qubit_data = []
+#     for j in range(5):
+#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=30))
+#     data.append(single_qubit_data)
+# parameter_conv_1 = ParameterVector("θ", length=45 + 18)
+# first_conv_layer = conv_layer_1(data[0], parameter_conv_1)
+# first_conv_layer.draw(output='mpl', filename='conv-5x5-1.png', style='bw', fold=-1)
 
+def conv_layer_2(params):
+    """
+    four two-qubit blocks on first 5 qubits of the 8 qubits
+    15*4 = 60 parameters
+    :param params:
+    :return:
+    """
+    qreg = QuantumRegister(8, name='conv')
+    circ = QuantumCircuit(qreg, name='conv-layer-2')
+    for i in range(4):
+        circ.compose(su4_circuit(params[15*i:15*(i+1)]), qubits=[qreg[i], qreg[i+1]], inplace=True)
+        circ.barrier(qreg)
+    # swap the data to the last qubit
+    circ.swap(qreg[4], qreg[5])
+    circ.swap(qreg[5], qreg[6])
+    circ.swap(qreg[6], qreg[7])
+    circ.barrier(qreg)
+    # reset all qubits except for the last one
+    for i in range(7):
+        circ.reset(qreg[i])
+    return circ
 
+def conv_1_and_2(data_for_one_row_of_5x5_feature_map, params):
+    """
+    conv 1 has 45 + 18 parameters
+    conv 2 has 15*4 = 60 parameters
+    :param data_for_first_row_of_5x5_feature_map:
+    :param params:
+    :return:
+    """
+    qreg = QuantumRegister(8, name='conv')
+    creg = ClassicalRegister(3, name="pooling-meas")
+    circ = QuantumCircuit(qreg, creg, name='conv-layer-1-2')
+    conv_1_params = params[:45 + 18]
+    conv_2_params = params[45 + 18:]
+    conv_1 = conv_layer_1(data_for_one_row_of_5x5_feature_map, conv_1_params)
+    circ.compose(conv_1, qubits=qreg, clbits=creg, inplace=True)
+    conv_2 = conv_layer_2(conv_2_params)
+    circ.compose(conv_2, qubits=qreg, inplace=True)
+    circ.barrier(qreg)
+    return circ
+
+# # draw the conv 1 and 2 layer
+# data = []
+# for i in range(5):
+#     single_qubit_data = []
+#     for j in range(5):
+#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=30))
+#     data.append(single_qubit_data)
+# parameter_conv_1_2 = ParameterVector("θ", length=45 + 18 + 15*4)
+# # data in view (for the second feature map)
+# rng = np.random.default_rng(seed=42)
+# data = load_data(10,10,rng)[0][0]
+# print(len(data))
+# # #
+# conv_layer = conv_1_and_2(data[0], parameter_conv_1_2)
+# conv_layer.draw(output='mpl', filename='conv-5x5_1_and_2_with_data.png', style='bw', fold=-1)
