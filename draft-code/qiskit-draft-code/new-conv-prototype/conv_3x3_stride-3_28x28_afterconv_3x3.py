@@ -240,7 +240,7 @@ def conv_layer_1(data_in_kernel_on_first_feature_map, params):
     """
     qreg = QuantumRegister(11, name='conv')
     creg = ClassicalRegister(2, name = "pooling-meas")
-    circ = QuantumCircuit(qreg, creg, name='conv_1')
+    circ = QuantumCircuit(qreg, creg, name='conv-layer-1')
     conv_kernel_param = params[:9]
     pooling_param = params[9:]
     for i in range(9):
@@ -249,22 +249,22 @@ def conv_layer_1(data_in_kernel_on_first_feature_map, params):
         circ.barrier(qreg)
     return circ
 
-# draw the conv 1 layer
-data = []
-for i in range(9):
-    single_qubit_data = []
-    for j in range(9):
-        single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
-    data.append(single_qubit_data)
-parameter_conv_1 = ParameterVector("θ", length=9+12)
-# data in view (for the second feature map)
-data_in_view = []
-for i in [0,1,2]:
-    for j in [0,1,2]:
-        data_in_view.append(data[i][j])
-
-first_conv_layer = conv_layer_1(data_in_view, parameter_conv_1)
-first_conv_layer.draw(output='mpl', filename='conv_1.png', style='bw', fold=-1)
+# # draw the conv 1 layer
+# data = []
+# for i in range(9):
+#     single_qubit_data = []
+#     for j in range(9):
+#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
+#     data.append(single_qubit_data)
+# parameter_conv_1 = ParameterVector("θ", length=9+12)
+# # data in view (for the second feature map)
+# data_in_view = []
+# for i in [0,1,2]:
+#     for j in [0,1,2]:
+#         data_in_view.append(data[i][j])
+#
+# first_conv_layer = conv_layer_1(data_in_view, parameter_conv_1)
+# first_conv_layer.draw(output='mpl', filename='conv_1.png', style='bw', fold=-1)
 
 def su4_circuit(params):
     su4 = QuantumCircuit(2, name='su4')
@@ -284,7 +284,7 @@ def su4_circuit(params):
     return su4
 
 def ising_u3(params):
-    circ = QuantumCircuit(2, name='ising-u3')
+    circ = QuantumCircuit(2, name='u3-ising-u3')
     circ.u(params[0], params[1], params[2], 0)
     circ.u(params[3], params[4], params[5], 1)
     circ.rxx(params[6], 0, 1)
@@ -294,5 +294,62 @@ def ising_u3(params):
     circ.u(params[12], params[13], params[14], 1)
     return circ
 
+def conv_layer_2(params):
+    """
+    each two-qubit block requires 15 parameters.
+    8 blocks in total, 8*15 = 120 parameters
+    :param params:
+    :return:
+    """
+    qreg = QuantumRegister(11, name='conv')
+    circ = QuantumCircuit(qreg, name='conv-layer-2')
+    for i in range(8):
+        circ.compose(ising_u3(params[i*15:15*(i+1)]), qubits=[qreg[i], qreg[i+1]], inplace=True)
+        circ.barrier(qreg)
+    # swap the data to the last qubit
+    circ.swap(qreg[8], qreg[9])
+    circ.swap(qreg[9], qreg[10])
+    circ.barrier(qreg)
+    # reset all qubits except for the last one
+    for i in range(10):
+        circ.reset(qreg[i])
+    return circ
+
+def conv(data_in_second_kernel_view, params):
+    """
+
+    :param data_in_second_kernel_view:
+    :param params:
+    :return:
+    """
+    qreg = QuantumRegister(11, name='conv')
+    creg = ClassicalRegister(2, name="pooling-meas")
+    circ = QuantumCircuit(qreg, creg, name='conv-layer-1-2')
+    conv_1_params = params[:21]
+    conv_2_params = params[21:]
+    conv_1 = conv_layer_1(data_in_second_kernel_view, conv_1_params)#.to_instruction()
+    circ.compose(conv_1, qubits=qreg, clbits=creg, inplace=True)
+    conv_2 = conv_layer_2(conv_2_params)
+    circ.compose(conv_2, qubits=qreg, inplace=True)
+    circ.barrier(qreg)
+    return circ
+
+
+# draw the conv 1 and 2 layer
+data = []
+for i in range(9):
+    single_qubit_data = []
+    for j in range(9):
+        single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
+    data.append(single_qubit_data)
+parameter_conv_1_2 = ParameterVector("θ", length=9+12+120)
+# data in view (for the second feature map)
+data_in_view = []
+for i in [0,1,2]:
+    for j in [0,1,2]:
+        data_in_view.append(data[i][j])
+
+conv_layer = conv(data_in_view, parameter_conv_1_2)
+conv_layer.draw(output='mpl', filename='conv_1_and_2.png', style='bw', fold=-1)
 
 
