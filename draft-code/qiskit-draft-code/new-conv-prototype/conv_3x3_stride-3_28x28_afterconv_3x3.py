@@ -19,6 +19,60 @@ PROVIDER = IBMProvider()
 
 # get IBM's simulator backend
 IBMQ_QASM_SIMULATOR = PROVIDER.get_backend('ibmq_qasm_simulator')
+for backend in PROVIDER.backends():
+    config = backend.configuration()
+    #suppoerted_instructions = config.supported_instructions
+    if 'reset' in config.basis_gates and 15<=config.num_qubits:
+        print(backend)
+        print(config.basis_gates)
+
+"""
+Devices support reset:
+<IBMBackend('ibmq_montreal')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_toronto')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_kolkata')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_mumbai')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_lima')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_belem')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_quito')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_guadalupe')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_jakarta')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_manila')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibm_hanoi')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibm_lagos')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibm_nairobi')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibm_cairo')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibm_auckland')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibm_perth')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibm_washington')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibm_oslo')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibm_geneva')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_santiago')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_bogota')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+<IBMBackend('ibmq_casablanca')>
+['id', 'rz', 'sx', 'x', 'cx', 'reset']
+"""
 
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -186,8 +240,6 @@ def prepare_data_28x28_9x9_3x3_kernel_3x3(img_matrix):
         for j in [6,7,8]:
             rearranged_data.append(extracted_conv_data[i][j])
     return rearranged_data
-
-
 
 
 def load_fashion_mnist(path, kind='train'):
@@ -528,7 +580,7 @@ def avg_softmax_cross_entropy_loss_with_one_hot_labels(y_target, y_prob):
     return -np.sum(y_target*np.log(y_prob))/len(y_target)
 
 def single_data_probs_sim(params, data, shots = 2048):
-    backend_sim = Aer.get_backend('aer_simulator')
+    backend_sim =Aer.get_backend('aer_simulator')
     convnet = transpile(full_circ(data, params), backend_sim)
     job = backend_sim.run(convnet, shots=shots)
     results = job.result()
@@ -544,3 +596,15 @@ def single_data_probs_sim(params, data, shots = 2048):
 # end = time.time()
 # print(probs)
 # print(end-start) # 2048 shots of a single circuit needs 120.5 seconds...
+
+def batch_avg_accuracy(probs, labels):
+    """
+    average accuracy with one-hot labels
+    :param probs:
+    :param labels:
+    :return:
+    """
+    preds = np.argmax(probs, axis=1)
+    targets = np.argmax(labels, axis=1)
+    return np.mean(np.array(preds == targets).astype(int))
+
