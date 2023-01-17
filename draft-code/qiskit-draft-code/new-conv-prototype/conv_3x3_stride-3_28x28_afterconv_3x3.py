@@ -420,9 +420,10 @@ def conv_1_and_2(data_in_second_kernel_view, params):
 def full_circ(prepared_data, params):
     """
     conv 1 & 2 need 9+12+120 = 141 parameters in total
-    conv 3 needs 15*2+12 parameters
-    final linear layer operates on 3 qubits (2 x 15-param two-qubit blocks), and the bottom 2 qubits will be used for
-    classification (4-class), which also needs 2 classical bits
+    conv 3 needs 15*2+12 = 42 parameters
+    final linear layer operates on 3 qubits (3 x 15-param two-qubit blocks, (1,2), (2,3) and (1,3)), and the bottom 2 qubits will be used for
+    classification (4-class), which also needs 2 classical bits -> 45 parameters
+    Total parameters: 141+42+45
     to reduce the number of qubits, we also adopt an asynchronized structure to process the 3x3 feature map.
     this part of the circuit requires 3 convolution-like operations
     total qubits = 11 + 5 - 1 = 15 (last conv-3 can share one qubit with the top 11 qubits)
@@ -433,6 +434,65 @@ def full_circ(prepared_data, params):
     qreg = QuantumRegister(15)
     pooling_measure = ClassicalRegister(2, name='pooling-measure')
     classification_reg = ClassicalRegister(2, name='classification')
+    conv_1_2_params = params[:141]
+    conv_3_params = params[141:141+42]
+    final_layer_params = params[141+42:]
+
+    circ = QuantumCircuit(qreg, pooling_measure,classification_reg)
+
+    # first 3 elements of the 3 x 3 feature map
+    for i in [0,1,2]:
+        circ.compose(conv_1_and_2(prepared_data[i*9:9*(i+1)], conv_1_2_params).to_instruction(), qubits=qreg[:11], clbits=pooling_measure, inplace=True)
+        circ.barrier(qreg)
+        circ.swap(qreg[10], qreg[15-i-1])
+        circ.barrier(qreg)
+        circ.reset(qreg[10:15-i-1])
+        circ.barrier(qreg)
+    circ.compose(three_qubit_conv(conv_3_params).to_instruction(), qubits = qreg[12:], clbits=pooling_measure, inplace=True)
+    circ.barrier(qreg)
+    # second 3 elements of the 3 x 3 feature map
+    for i in [3,4,5]:
+        circ.compose(conv_1_and_2(prepared_data[i*9:9*(i+1)], conv_1_2_params).to_instruction(), qubits=qreg[:11], clbits=pooling_measure, inplace=True)
+        circ.barrier(qreg)
+        circ.swap(qreg[10], qreg[15-i-1+2])
+        circ.barrier(qreg)
+        circ.reset(qreg[10:15-i-1+2])
+        circ.barrier(qreg)
+    circ.compose(three_qubit_conv(conv_3_params).to_instruction(), qubits=qreg[11:14], clbits=pooling_measure, inplace=True)
+    circ.barrier(qreg)
+    # last 3 elements of the 3 x 3 feature map
+    for i in [6,7]:
+        circ.compose(conv_1_and_2(prepared_data[i*9:9 * (i + 1)], conv_1_2_params).to_instruction(), qubits=qreg[:11],
+                     clbits=pooling_measure, inplace=True)
+        circ.barrier(qreg)
+        circ.swap(qreg[10], qreg[15 - i - 1 + 4])
+        circ.barrier(qreg)
+        circ.reset(qreg[10:15 - i - 1+4])
+        circ.barrier(qreg)
+    circ.compose(conv_1_and_2(prepared_data[8 * 9:9 * (8 + 1)], conv_1_2_params).to_instruction(), qubits=qreg[:11],
+                 clbits=pooling_measure, inplace=True)
+    circ.barrier(qreg)
+    circ.compose(three_qubit_conv(conv_3_params).to_instruction(), qubits=qreg[10:13], clbits=pooling_measure,
+                 inplace=True)
+    # at current point, the qubits with data are 12, 13, and 14 (bottom three).
+    # final layer
+    circ.compose(su4_circuit(final_layer_params[:15]), qubits=[qreg[12], qreg[13]], inplace=True)
+    circ.compose(su4_circuit(final_layer_params[15:15*2]), qubits=[qreg[13], qreg[14]], inplace=True)
+    circ.compose(su4_circuit(final_layer_params[15*2:15*3]), qubits=[qreg[12], qreg[14]], inplace=True)
+
+    # measure qubits 13 and 14 for classification
+    circ.measure(qreg[13], classification_reg[0])
+    circ.measure(qreg[14], classification_reg[1])
+
+
+    return circ
 
 
 
+
+
+rng = np.random.default_rng(seed=42)
+data = load_data(10,10,rng)[0][0]
+params = ParameterVector('w', length=141+42+45)
+full_conv_net = full_circ(data, params)
+full_conv_net.draw(output='mpl', filename='full-circ.png', style='bw', fold=-1)
