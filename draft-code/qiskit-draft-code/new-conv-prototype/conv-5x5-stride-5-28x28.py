@@ -194,12 +194,12 @@ def kernel_5x5(padded_data_in_kernel_view, conv_params, pooling_params):
 
     circ.h(qreg)
     # encode the pixel data
-    circ.compose(su4_circuit(padded_data_in_kernel_view[:15]).to_instruction(), qubits=qreg[:2], inplace=True)
-    circ.compose(su4_circuit(padded_data_in_kernel_view[15:]).to_instruction(), qubits=qreg[2:], inplace=True)
+    circ.compose(su4_circuit(padded_data_in_kernel_view[:15]), qubits=qreg[:2], inplace=True)
+    circ.compose(su4_circuit(padded_data_in_kernel_view[15:]), qubits=qreg[2:], inplace=True)
     # convolution parameters
-    circ.compose(su4_circuit(conv_params[:15]).to_instruction(), qubits=[qreg[1], qreg[2]], inplace=True)
-    circ.compose(su4_circuit(conv_params[15:30]).to_instruction(), qubits=[qreg[0], qreg[1]], inplace=True)
-    circ.compose(su4_circuit(conv_params[30:45]).to_instruction(), qubits=[qreg[2], qreg[3]], inplace=True)
+    circ.compose(su4_circuit(conv_params[:15]), qubits=[qreg[1], qreg[2]], inplace=True)
+    circ.compose(su4_circuit(conv_params[15:30]), qubits=[qreg[0], qreg[1]], inplace=True)
+    circ.compose(su4_circuit(conv_params[30:45]), qubits=[qreg[2], qreg[3]], inplace=True)
     # measurement and pooling
     circ.measure(qreg[1:], creg)
     circ.u(pooling_params[0], pooling_params[1], pooling_params[2], qubit=qreg[0]).c_if(creg[0], 1)
