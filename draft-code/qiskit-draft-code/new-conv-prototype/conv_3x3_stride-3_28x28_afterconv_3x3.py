@@ -220,8 +220,28 @@ def kernel_3x3(data_in_kernel_view, conv_params, pooling_params):
     return circ
 
 # draw the kernel circuit
-data_in_kernel = ParameterVector("x", length=9)
-kernel_param = ParameterVector("θ", length=9)
-pooling_param = ParameterVector("p", length=12)
-kernel_circ = kernel_3x3(data_in_kernel, kernel_param, pooling_param)
-kernel_circ.draw(output='mpl', style='bw', filename="kernel.png", fold=-1)
+# data_in_kernel = ParameterVector("x", length=9)
+# kernel_param = ParameterVector("θ", length=9)
+# pooling_param = ParameterVector("p", length=12)
+# kernel_circ = kernel_3x3(data_in_kernel, kernel_param, pooling_param)
+# kernel_circ.draw(output='mpl', style='bw', filename="kernel.png", fold=-1)
+
+def conv_layer_1(data_in_kernel_on_first_feature_map, params):
+    """
+
+    :param data_in_kernel_on_first_feature_map: should be a list of 9 lists which contains the data involved to produce
+    a 3 by 3 section of the 9 by 9 feature map
+    :param params: conv and pooling parameters, 9+12=21
+    :return:
+    """
+    qreg = QuantumRegister(11, name='conv')
+    creg = ClassicalRegister(2, name = "pooling-meas")
+    circ = QuantumCircuit(qreg, creg)
+    conv_kernel_param = params[:9]
+    pooling_param = params[9:]
+    for i in range(9):
+        conv_op = kernel_3x3(data_in_kernel_on_first_feature_map[i], conv_kernel_param, pooling_param)
+        circ.compose(conv_op, qubits=qreg[i:i+3], clbits=creg)
+    return circ
+
+# draw the conv 1 layer
