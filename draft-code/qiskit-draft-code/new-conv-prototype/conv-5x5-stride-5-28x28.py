@@ -181,6 +181,13 @@ def su4_circuit(params):
     return su4
 
 def kernel_5x5(padded_data_in_kernel_view, conv_params, pooling_params):
+    """
+    45 + 18 parameters
+    :param padded_data_in_kernel_view:
+    :param conv_params:
+    :param pooling_params:
+    :return:
+    """
     qreg = QuantumRegister(4, name="conv-pooling")
     creg = ClassicalRegister(3, name='pooling-meas')
     circ = QuantumCircuit(qreg, creg, name = "conv-encode-5x5")
@@ -210,13 +217,19 @@ def kernel_5x5(padded_data_in_kernel_view, conv_params, pooling_params):
     return circ
 
 # draw the kernel circuit
-data_in_kernel = ParameterVector("x", length=30)
-kernel_param = ParameterVector("θ", length=45)
-pooling_param = ParameterVector("p", length=18)
-kernel_circ = kernel_5x5(data_in_kernel, kernel_param, pooling_param)
-kernel_circ.draw(output='mpl', style='bw', filename="kernel-5x5.png", fold=-1)
+# data_in_kernel = ParameterVector("x", length=30)
+# kernel_param = ParameterVector("θ", length=45)
+# pooling_param = ParameterVector("p", length=18)
+# kernel_circ = kernel_5x5(data_in_kernel, kernel_param, pooling_param)
+# kernel_circ.draw(output='mpl', style='bw', filename="kernel-5x5.png", fold=-1)
 
-
+def conv_layer_1(data_for_first_row_of_5x5_feature_map, params):
+    """
+    8 qubits
+    :param data_for_first_row_of_5x5_feature_map:
+    :param params:
+    :return:
+    """
 
 
 
