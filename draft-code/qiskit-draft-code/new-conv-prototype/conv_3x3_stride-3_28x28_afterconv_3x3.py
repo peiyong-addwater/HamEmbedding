@@ -206,6 +206,9 @@ def kernel_3x3(data_in_kernel_view, conv_params, pooling_params):
     circ.u(conv_params[0], conv_params[1], conv_params[2], qubit=qreg[0])
     circ.u(conv_params[3], conv_params[4], conv_params[5], qubit=qreg[1])
     circ.u(conv_params[6], conv_params[7], conv_params[8], qubit=qreg[2])
+
+    circ.barrier(qreg)
+
     # measurement and pooling
     circ.measure(qreg[1], creg[0])
     circ.measure(qreg[2], creg[1])
@@ -214,6 +217,7 @@ def kernel_3x3(data_in_kernel_view, conv_params, pooling_params):
     circ.u(pooling_params[6], pooling_params[7], pooling_params[8], qubit=qreg[0]).c_if(creg[1], 1)
     circ.u(pooling_params[9], pooling_params[10], pooling_params[11], qubit=qreg[0]).c_if(creg[1], 0)
     # reset the last two qubits
+    circ.barrier(qreg)
     circ.reset(qreg[1])
     circ.reset(qreg[2])
 
@@ -241,7 +245,23 @@ def conv_layer_1(data_in_kernel_on_first_feature_map, params):
     pooling_param = params[9:]
     for i in range(9):
         conv_op = kernel_3x3(data_in_kernel_on_first_feature_map[i], conv_kernel_param, pooling_param)
-        circ.compose(conv_op, qubits=qreg[i:i+3], clbits=creg)
+        circ.compose(conv_op, qubits=qreg[i:i+3], clbits=creg, inplace=True)
+        circ.barrier(qreg)
     return circ
 
 # draw the conv 1 layer
+# data = []
+# for i in range(9):
+#     single_qubit_data = []
+#     for j in range(9):
+#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
+#     data.append(single_qubit_data)
+# parameter_conv_1 = ParameterVector("θ", length=9+12)
+# data in view (for the second feature map)
+# data_in_view = []
+# for i in [0,1,2]:
+#     for j in [0,1,2]:
+#         data_in_view.append(data[i][j])
+#
+# first_conv_layer = conv_layer_1(data_in_view, parameter_conv_1)
+# first_conv_layer.draw(output='mpl', filename='conv_1.png', style='bw', fold=-1)
