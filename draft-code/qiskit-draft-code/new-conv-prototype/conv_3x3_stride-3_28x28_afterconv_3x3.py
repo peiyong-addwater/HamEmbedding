@@ -487,18 +487,60 @@ def full_circ(prepared_data, params):
 
     return circ
 
-
-
-
-
-rng = np.random.default_rng(seed=42)
-data = load_data(10,10,rng)[0][0]
-params = ParameterVector('w', length=141+42+45)
+# rng = np.random.default_rng(seed=42)
+# data = load_data(10,10,rng)[0][0]
+# params = ParameterVector('w', length=141+42+45)
 #params = np.random.random(141+42+45)
-full_conv_net = full_circ(data, params)
-full_conv_net.draw(output='mpl', filename='full-circ.png', style='bw', fold=-1)
+# full_conv_net = full_circ(data, params)
+# full_conv_net.draw(output='mpl', filename='full-circ.png', style='bw', fold=-1)
 # backend_sim = Aer.get_backend('aer_simulator')
 # job = backend_sim.run(transpile(full_conv_net, backend_sim), shots = 4096)
 # results = job.result()
 # counts = results.get_counts()
 # print(counts)
+
+def get_probs_from_counts(counts, num_classes=4):
+    """
+    for count keys like '00 011 0010', where the first two digits are the class
+    :param counts:
+    :param num_classes:
+    :return:
+    """
+    probs = [0]*num_classes
+    for key in counts.keys():
+        classification = int(key.split(' ')[0], 2)
+        probs[classification] = probs[classification] + counts[key]
+    probs = [c / sum(probs) for c in probs]
+    return probs
+
+def avg_softmax_cross_entropy_loss_with_one_hot_labels(y_target, y_prob):
+    """
+    average cross entropy loss after softmax.
+    :param y:
+    :param y_pred:
+    :return:
+    """
+    # print(y_prob)
+    # print(np.sum(np.exp(y_prob), axis=1), 1)
+    y_prob = np.divide(np.exp(y_prob), np.sum(np.exp(y_prob), axis=1).reshape((-1,1)))
+    # print(y_prob)
+    # print("|||")
+    return -np.sum(y_target*np.log(y_prob))/len(y_target)
+
+def single_data_probs_sim(params, data, shots = 2048):
+    backend_sim = Aer.get_backend('aer_simulator')
+    convnet = transpile(full_circ(data, params), backend_sim)
+    job = backend_sim.run(convnet, shots=shots)
+    results = job.result()
+    counts = results.get_counts()
+    probs = get_probs_from_counts(counts, num_classes=4)
+    return probs
+
+# rng = np.random.default_rng(seed=42)
+# data = load_data(10,10,rng)[0][0]
+# params = np.random.random(141+42+45)
+# start = time.time()
+# probs = single_data_probs_sim(params, data)
+# end = time.time()
+# print(probs)
+# print(end-start) # 2048 shots of a single circuit needs 120.5 seconds...
