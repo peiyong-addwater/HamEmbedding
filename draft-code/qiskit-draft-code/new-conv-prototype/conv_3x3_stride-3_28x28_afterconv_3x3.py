@@ -185,3 +185,43 @@ def load_fashion_mnist(path, kind='train'):
 
     return images, labels
 
+def kernel_3x3(data_in_kernel_view, conv_params, pooling_params):
+    """
+    A three-qubit circuit that takes 9 data pixels, with 9 convolution parameters, and 12 parameters for pooling.
+    :param data_in_kernel_view:
+    :param conv_params:
+    :param pooling_params:
+    :return:
+    """
+    qreg = QuantumRegister(3, name='conv-pooling')
+    creg = ClassicalRegister(2, name="pooling-meas")
+    circ = QuantumCircuit(qreg, creg)
+
+    circ.h(qreg)
+    # encode the pixel data
+    circ.u(data_in_kernel_view[0], data_in_kernel_view[1], data_in_kernel_view[2], qubit=qreg[0])
+    circ.u(data_in_kernel_view[3], data_in_kernel_view[4], data_in_kernel_view[5], qubit=qreg[1])
+    circ.u(data_in_kernel_view[6], data_in_kernel_view[7], data_in_kernel_view[8], qubit=qreg[2])
+    # conv parameters
+    circ.u(conv_params[0], conv_params[1], conv_params[2], qubit=qreg[0])
+    circ.u(conv_params[3], conv_params[4], conv_params[5], qubit=qreg[1])
+    circ.u(conv_params[6], conv_params[7], conv_params[8], qubit=qreg[2])
+    # measurement and pooling
+    circ.measure(qreg[1], creg[0])
+    circ.measure(qreg[2], creg[1])
+    circ.u(pooling_params[0], pooling_params[1], pooling_params[2], qubit=qreg[0]).c_if(creg[0], 1)
+    circ.u(pooling_params[3], pooling_params[4], pooling_params[5], qubit=qreg[0]).c_if(creg[0], 0)
+    circ.u(pooling_params[6], pooling_params[7], pooling_params[8], qubit=qreg[0]).c_if(creg[1], 1)
+    circ.u(pooling_params[9], pooling_params[10], pooling_params[11], qubit=qreg[0]).c_if(creg[1], 0)
+    # reset the last two qubits
+    circ.reset(qreg[1])
+    circ.reset(qreg[2])
+
+    return circ
+
+# draw the kernel circuit
+data_in_kernel = ParameterVector("x", length=9)
+kernel_param = ParameterVector("θ", length=9)
+pooling_param = ParameterVector("p", length=12)
+kernel_circ = kernel_3x3(data_in_kernel, kernel_param, pooling_param)
+kernel_circ.draw(output='mpl', style='bw', filename="kernel.png", fold=-1)
