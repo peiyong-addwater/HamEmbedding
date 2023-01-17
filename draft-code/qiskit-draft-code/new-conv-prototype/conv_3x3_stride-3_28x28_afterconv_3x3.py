@@ -432,7 +432,7 @@ def full_circ(prepared_data, params):
     :return:
     """
     qreg = QuantumRegister(15)
-    pooling_measure = ClassicalRegister(2, name='pooling-measure')
+    pooling_measure = ClassicalRegister(4, name='pooling-measure')
     classification_reg = ClassicalRegister(2, name='classification')
     conv_1_2_params = params[:141]
     conv_3_params = params[141:141+42]
@@ -442,37 +442,37 @@ def full_circ(prepared_data, params):
 
     # first 3 elements of the 3 x 3 feature map
     for i in [0,1,2]:
-        circ.compose(conv_1_and_2(prepared_data[i*9:9*(i+1)], conv_1_2_params).to_instruction(), qubits=qreg[:11], clbits=pooling_measure, inplace=True)
+        circ.compose(conv_1_and_2(prepared_data[i*9:9*(i+1)], conv_1_2_params).to_instruction(), qubits=qreg[:11], clbits=pooling_measure[:2], inplace=True)
         circ.barrier(qreg)
         circ.swap(qreg[10], qreg[15-i-1])
         circ.barrier(qreg)
         circ.reset(qreg[10:15-i-1])
         circ.barrier(qreg)
-    circ.compose(three_qubit_conv(conv_3_params).to_instruction(), qubits = qreg[12:], clbits=pooling_measure, inplace=True)
+    circ.compose(three_qubit_conv(conv_3_params).to_instruction(), qubits = qreg[12:], clbits=pooling_measure[2:], inplace=True)
     circ.barrier(qreg)
     # second 3 elements of the 3 x 3 feature map
     for i in [3,4,5]:
-        circ.compose(conv_1_and_2(prepared_data[i*9:9*(i+1)], conv_1_2_params).to_instruction(), qubits=qreg[:11], clbits=pooling_measure, inplace=True)
+        circ.compose(conv_1_and_2(prepared_data[i*9:9*(i+1)], conv_1_2_params).to_instruction(), qubits=qreg[:11], clbits=pooling_measure[:2], inplace=True)
         circ.barrier(qreg)
         circ.swap(qreg[10], qreg[15-i-1+2])
         circ.barrier(qreg)
         circ.reset(qreg[10:15-i-1+2])
         circ.barrier(qreg)
-    circ.compose(three_qubit_conv(conv_3_params).to_instruction(), qubits=qreg[11:14], clbits=pooling_measure, inplace=True)
+    circ.compose(three_qubit_conv(conv_3_params).to_instruction(), qubits=qreg[11:14], clbits=pooling_measure[2:], inplace=True)
     circ.barrier(qreg)
     # last 3 elements of the 3 x 3 feature map
     for i in [6,7]:
         circ.compose(conv_1_and_2(prepared_data[i*9:9 * (i + 1)], conv_1_2_params).to_instruction(), qubits=qreg[:11],
-                     clbits=pooling_measure, inplace=True)
+                     clbits=pooling_measure[:2], inplace=True)
         circ.barrier(qreg)
         circ.swap(qreg[10], qreg[15 - i - 1 + 4])
         circ.barrier(qreg)
         circ.reset(qreg[10:15 - i - 1+4])
         circ.barrier(qreg)
     circ.compose(conv_1_and_2(prepared_data[8 * 9:9 * (8 + 1)], conv_1_2_params).to_instruction(), qubits=qreg[:11],
-                 clbits=pooling_measure, inplace=True)
+                 clbits=pooling_measure[:2], inplace=True)
     circ.barrier(qreg)
-    circ.compose(three_qubit_conv(conv_3_params).to_instruction(), qubits=qreg[10:13], clbits=pooling_measure,
+    circ.compose(three_qubit_conv(conv_3_params).to_instruction(), qubits=qreg[10:13], clbits=pooling_measure[2:],
                  inplace=True)
     # at current point, the qubits with data are 12, 13, and 14 (bottom three).
     # final layer
@@ -494,5 +494,11 @@ def full_circ(prepared_data, params):
 rng = np.random.default_rng(seed=42)
 data = load_data(10,10,rng)[0][0]
 params = ParameterVector('w', length=141+42+45)
+#params = np.random.random(141+42+45)
 full_conv_net = full_circ(data, params)
 full_conv_net.draw(output='mpl', filename='full-circ.png', style='bw', fold=-1)
+# backend_sim = Aer.get_backend('aer_simulator')
+# job = backend_sim.run(transpile(full_conv_net, backend_sim), shots = 4096)
+# results = job.result()
+# counts = results.get_counts()
+# print(counts)
