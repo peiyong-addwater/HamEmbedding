@@ -328,9 +328,40 @@ def three_qubit_conv(params):
     a convolution-pooling layer with 2 two-qubit blocks operating on three qubits.
     first two of the three qubits will be measured and u3 gates controlled by the measurement results
     this can be viewed as the third conv layer
+    this layer requires 15*2+12 = 42 parameters
     :param params:
     :return:
     """
+    qreg = QuantumRegister(3)
+    creg = ClassicalRegister(2)
+    circ = QuantumCircuit(qreg,creg, name='conv-3')
+
+    conv_params = params[:30]
+    pooling_params = params[30:]
+
+    circ.compose(ising_u3(conv_params[:15]).to_instruction(), qubits=[qreg[0], qreg[1]], inplace=True)
+    circ.compose(ising_u3(conv_params[15:]).to_instruction(), qubits=[qreg[1], qreg[2]], inplace=True)
+
+    # measurement and pooling
+    circ.measure(qreg[0], creg[0])
+    circ.measure(qreg[1], creg[1])
+    circ.u(pooling_params[0], pooling_params[1], pooling_params[2], qubit=qreg[2]).c_if(creg[0], 1)
+    circ.u(pooling_params[3], pooling_params[4], pooling_params[5], qubit=qreg[2]).c_if(creg[0], 0)
+    circ.u(pooling_params[6], pooling_params[7], pooling_params[8], qubit=qreg[2]).c_if(creg[1], 1)
+    circ.u(pooling_params[9], pooling_params[10], pooling_params[11], qubit=qreg[2]).c_if(creg[1], 0)
+    # reset
+    circ.barrier(qreg)
+    circ.reset(qreg[0])
+    circ.reset(qreg[1])
+
+    return circ
+
+# draw the 3rd conv circuit
+# kernel_param = ParameterVector("θ", length=15*2+12)
+# kernel_circ = three_qubit_conv(kernel_param)
+# kernel_circ.draw(output='mpl', style='bw', filename="conv-3.png", fold=-1)
+
+
 def conv_layer_2(params):
     """
     each two-qubit block requires 15 parameters.
@@ -382,6 +413,7 @@ def conv_1_and_2(data_in_second_kernel_view, params):
 # # data in view (for the second feature map)
 # rng = np.random.default_rng(seed=42)
 # data = load_data(10,10,rng)[0][0]
+# print(len(data))
 # #
 # conv_layer = conv_1_and_2(data[0:9], parameter_conv_1_2)
 # conv_layer.draw(output='mpl', filename='conv_1_and_2_with_data.png', style='bw', fold=-1)
@@ -389,10 +421,15 @@ def conv_1_and_2(data_in_second_kernel_view, params):
 def full_circ(prepared_data, params):
     """
     conv 1 & 2 need 9+12+120 = 141 parameters in total
+    conv 3 needs 15*2+12 parameters
+    final linear layer operates on 3 qubits (2 x 15-param two-qubit blocks), and the bottom 2 qubits will be used for
+    classification (4-class), which also needs 2 classical bits
     to reduce the number of qubits, we also adopt an asynchronized structure to process the 3x3 feature map.
     this part of the circuit requires 3 convolution-like operations
+    total qubits = 11 + 5 - 1 = 14 (last conv-3 can share one qubit with the top 11 qubits)
     :param prepared_data:
     :param params:
     :return:
     """
+
 
