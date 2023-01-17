@@ -337,3 +337,24 @@ def conv_1_and_2(data_for_one_row_of_5x5_feature_map, params):
 # # #
 # conv_layer = conv_1_and_2(data[0], parameter_conv_1_2)
 # conv_layer.draw(output='mpl', filename='conv-5x5_1_and_2_with_data.png', style='bw', fold=-1)
+
+def five_qubit_qcnn(params):
+    """
+    first conv layer: 15 params, 4 blocks share the same parameters
+
+    pooling, measure only the first qubit, and u3 on the rest 4 qubits controlled by the measurement results:
+    3*4*2 = 24 params
+
+    second conv layer 15 parameters, 3 blocks shared the same parameters
+
+    pooling, measure qubit 1 and 2 (out of the original 5 qubits, 0, 1, 2, 3, 4), and u3 on the rest 2 qubits
+    controlled by the measurement results: 3*2*2 = 12 parameters
+
+    final layer, 15 parameters on qubits 3 and 4
+    then measurement for classification
+    :param params:
+    :return:
+    """
+    qreg = QuantumRegister(5)
+    pooling = ClassicalRegister(3)
+    classification = ClassicalRegister(2)
