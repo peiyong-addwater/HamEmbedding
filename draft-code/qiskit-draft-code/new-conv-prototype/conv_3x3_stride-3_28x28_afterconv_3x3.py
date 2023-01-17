@@ -195,7 +195,7 @@ def kernel_3x3(data_in_kernel_view, conv_params, pooling_params):
     """
     qreg = QuantumRegister(3, name='conv-pooling')
     creg = ClassicalRegister(2, name="pooling-meas")
-    circ = QuantumCircuit(qreg, creg)
+    circ = QuantumCircuit(qreg, creg, name='conv-encode-3x3')
 
     circ.h(qreg)
     # encode the pixel data
@@ -240,7 +240,7 @@ def conv_layer_1(data_in_kernel_on_first_feature_map, params):
     """
     qreg = QuantumRegister(11, name='conv')
     creg = ClassicalRegister(2, name = "pooling-meas")
-    circ = QuantumCircuit(qreg, creg)
+    circ = QuantumCircuit(qreg, creg, name='conv_1')
     conv_kernel_param = params[:9]
     pooling_param = params[9:]
     for i in range(9):
@@ -250,18 +250,49 @@ def conv_layer_1(data_in_kernel_on_first_feature_map, params):
     return circ
 
 # draw the conv 1 layer
-# data = []
-# for i in range(9):
-#     single_qubit_data = []
-#     for j in range(9):
-#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
-#     data.append(single_qubit_data)
-# parameter_conv_1 = ParameterVector("θ", length=9+12)
+data = []
+for i in range(9):
+    single_qubit_data = []
+    for j in range(9):
+        single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
+    data.append(single_qubit_data)
+parameter_conv_1 = ParameterVector("θ", length=9+12)
 # data in view (for the second feature map)
-# data_in_view = []
-# for i in [0,1,2]:
-#     for j in [0,1,2]:
-#         data_in_view.append(data[i][j])
-#
-# first_conv_layer = conv_layer_1(data_in_view, parameter_conv_1)
-# first_conv_layer.draw(output='mpl', filename='conv_1.png', style='bw', fold=-1)
+data_in_view = []
+for i in [0,1,2]:
+    for j in [0,1,2]:
+        data_in_view.append(data[i][j])
+
+first_conv_layer = conv_layer_1(data_in_view, parameter_conv_1)
+first_conv_layer.draw(output='mpl', filename='conv_1.png', style='bw', fold=-1)
+
+def su4_circuit(params):
+    su4 = QuantumCircuit(2, name='su4')
+    su4.u(params[0], params[1], params[2], qubit=0)
+    su4.u(params[3], params[4], params[5], qubit=1)
+    su4.cx(0,1)
+    su4.ry(params[6], 0)
+    su4.rz(params[7], 1)
+    su4.cx(1, 0)
+    su4.ry(params[8], 0)
+    su4.cx(0, 1)
+    su4.u(params[9], params[10], params[11], 0)
+    su4.u(params[12], params[13], params[14], 1)
+    su4_inst = su4.to_instruction()
+    su4 = QuantumCircuit(2)
+    su4.append(su4_inst, list(range(2)))
+    return su4
+
+def ising_u3(params):
+    circ = QuantumCircuit(2, name='ising-u3')
+    circ.u(params[0], params[1], params[2], 0)
+    circ.u(params[3], params[4], params[5], 1)
+    circ.rxx(params[6], 0, 1)
+    circ.ryy(params[7], 0, 1)
+    circ.rzz(params[8], 0, 1)
+    circ.u(params[9], params[10], params[11], 0)
+    circ.u(params[12], params[13], params[14], 1)
+    return circ
+
+
+
