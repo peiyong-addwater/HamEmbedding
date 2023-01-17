@@ -53,9 +53,9 @@ def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding
     )
 
     x_train, y_train = features[train_indices], labels[train_indices]
-    x_train = [extract_convolution_data(x_train[i], stride=stride, kernel_size=kernel_size, encoding_gate_parameter_size=encoding_gate_parameter_size) for i in range(num_train)]
+    x_train = [prepare_data_28x28_9x9_3x3_kernel_3x3(x_train[i]) for i in range(num_train)]
     x_test, y_test = features[test_indices], labels[test_indices]
-    x_test = [extract_convolution_data(x_test[i], stride=stride, kernel_size=kernel_size, encoding_gate_parameter_size=encoding_gate_parameter_size) for i in range(num_test)]
+    x_test = [prepare_data_28x28_9x9_3x3_kernel_3x3(x_test[i]) for i in range(num_test)]
     if one_hot:
         train_labels = np.zeros((len(y_train), 4))
         test_labels = np.zeros((len(y_test), 4))
@@ -160,6 +160,35 @@ def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[flo
             row.append(padded_data)
         output.append(row)
     return output
+
+def prepare_data_28x28_9x9_3x3_kernel_3x3(img_matrix):
+    extracted_conv_data = extract_convolution_data(img_matrix, kernel_size=(3,3), stride=(3,3),dilation=(1,1), padding=(0,0), encoding_gate_parameter_size=3)
+    rearranged_data = []
+    for i in [0, 1, 2]:
+        for j in [0,1,2]:
+            rearranged_data.append(extracted_conv_data[i][j])
+        for j in [3,4,5]:
+            rearranged_data.append(extracted_conv_data[i][j])
+        for j in [6,7,8]:
+            rearranged_data.append(extracted_conv_data[i][j])
+    for i in [3,4,5]:
+        for j in [0,1,2]:
+            rearranged_data.append(extracted_conv_data[i][j])
+        for j in [3,4,5]:
+            rearranged_data.append(extracted_conv_data[i][j])
+        for j in [6,7,8]:
+            rearranged_data.append(extracted_conv_data[i][j])
+    for i in [6,7,8]:
+        for j in [0,1,2]:
+            rearranged_data.append(extracted_conv_data[i][j])
+        for j in [3,4,5]:
+            rearranged_data.append(extracted_conv_data[i][j])
+        for j in [6,7,8]:
+            rearranged_data.append(extracted_conv_data[i][j])
+    return rearranged_data
+
+
+
 
 def load_fashion_mnist(path, kind='train'):
     # from https://github.com/zalandoresearch/fashion-mnist/blob/master/utils/mnist_reader.py
@@ -294,6 +323,14 @@ def ising_u3(params):
     circ.u(params[12], params[13], params[14], 1)
     return circ
 
+def three_qubit_conv(params):
+    """
+    a convolution-pooling layer with 2 two-qubit blocks operating on three qubits.
+    first two of the three qubits will be measured and u3 gates controlled by the measurement results
+    this can be viewed as the third conv layer
+    :param params:
+    :return:
+    """
 def conv_layer_2(params):
     """
     each two-qubit block requires 15 parameters.
@@ -315,7 +352,7 @@ def conv_layer_2(params):
         circ.reset(qreg[i])
     return circ
 
-def conv(data_in_second_kernel_view, params):
+def conv_1_and_2(data_in_second_kernel_view, params):
     """
 
     :param data_in_second_kernel_view:
@@ -334,22 +371,28 @@ def conv(data_in_second_kernel_view, params):
     circ.barrier(qreg)
     return circ
 
+# # draw the conv 1 and 2 layer
+# data = []
+# for i in range(9):
+#     single_qubit_data = []
+#     for j in range(9):
+#         single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
+#     data.append(single_qubit_data)
+# parameter_conv_1_2 = ParameterVector("θ", length=9+12+120)
+# # data in view (for the second feature map)
+# rng = np.random.default_rng(seed=42)
+# data = load_data(10,10,rng)[0][0]
+# #
+# conv_layer = conv_1_and_2(data[0:9], parameter_conv_1_2)
+# conv_layer.draw(output='mpl', filename='conv_1_and_2_with_data.png', style='bw', fold=-1)
 
-# draw the conv 1 and 2 layer
-data = []
-for i in range(9):
-    single_qubit_data = []
-    for j in range(9):
-        single_qubit_data.append(ParameterVector(f"x_{i}{j}", length=9))
-    data.append(single_qubit_data)
-parameter_conv_1_2 = ParameterVector("θ", length=9+12+120)
-# data in view (for the second feature map)
-data_in_view = []
-for i in [0,1,2]:
-    for j in [0,1,2]:
-        data_in_view.append(data[i][j])
-
-conv_layer = conv(data_in_view, parameter_conv_1_2)
-conv_layer.draw(output='mpl', filename='conv_1_and_2.png', style='bw', fold=-1)
-
+def full_circ(prepared_data, params):
+    """
+    conv 1 & 2 need 9+12+120 = 141 parameters in total
+    to reduce the number of qubits, we also adopt an asynchronized structure to process the 3x3 feature map.
+    this part of the circuit requires 3 convolution-like operations
+    :param prepared_data:
+    :param params:
+    :return:
+    """
 
