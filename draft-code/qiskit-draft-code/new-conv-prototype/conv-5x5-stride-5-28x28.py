@@ -447,6 +447,16 @@ data = load_data(10,10,rng)[0][0]
 params = ParameterVector('w', length=15*4+45+18+ 15+3*8+15+3*4*2 + 15)
 full_conv_net = full_circ(data, params)
 full_conv_net.draw(output='mpl', filename='full-circ-5x5.png', style='bw', fold=-1)
+params = np.random.random(15*4+45+18+ 15+3*8+15+3*4*2 + 15)
+full_conv_net = full_circ(data, params)
+backend_sim = Aer.get_backend('aer_simulator')
+start = time.time()
+job = backend_sim.run(transpile(full_conv_net, backend_sim), shots = 2048)
+results = job.result()
+counts = results.get_counts()
+end =  time.time()
+print(counts)
+print(end-start) # 15 seconds for 2048 shots
 
 
 
