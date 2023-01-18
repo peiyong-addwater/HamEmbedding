@@ -456,7 +456,7 @@ results = job.result()
 counts = results.get_counts()
 end =  time.time()
 print(counts)
-print(end-start) # 15 seconds for 2048 shots
+print(end-start) # 15.84 seconds for 2048 shots
 
 
 
