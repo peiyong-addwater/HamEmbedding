@@ -338,6 +338,16 @@ def conv_1_and_2(data_for_one_row_of_5x5_feature_map, params):
 # conv_layer = conv_1_and_2(data[0], parameter_conv_1_2)
 # conv_layer.draw(output='mpl', filename='conv-5x5_1_and_2_with_data.png', style='bw', fold=-1)
 
+def full_circ(prepared_data, params):
+    """
+    conv-1&2 requires 15*4+45+18 parameters
+    qcnn on five qubits 15+3*8+15+3*4+15 parameters
+    :param prepared_data:
+    :param params:
+    :return:
+    """
+
+
 def five_qubit_qcnn(params):
     """
     first conv layer: 15 params, 4 blocks share the same parameters
