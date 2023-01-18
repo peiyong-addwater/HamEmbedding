@@ -316,9 +316,9 @@ def conv_1_and_2(data_for_one_row_of_5x5_feature_map, params):
     conv_1_params = params[:45 + 18]
     conv_2_params = params[45 + 18:]
     conv_1 = conv_layer_1(data_for_one_row_of_5x5_feature_map, conv_1_params)
-    circ.compose(conv_1, qubits=qreg, clbits=creg, inplace=True)
+    circ.compose(conv_1.to_instruction(), qubits=qreg, clbits=creg, inplace=True)
     conv_2 = conv_layer_2(conv_2_params)
-    circ.compose(conv_2, qubits=qreg, inplace=True)
+    circ.compose(conv_2.to_instruction(), qubits=qreg, inplace=True)
     circ.barrier(qreg)
     return circ
 
@@ -341,15 +341,9 @@ def conv_1_and_2(data_for_one_row_of_5x5_feature_map, params):
 def full_circ(prepared_data, params):
     """
     conv-1&2 requires 15*4+45+18 parameters
-    qcnn on five qubits 15+3*8+15+3*4+15 parameters
-    :param prepared_data:
-    :param params:
-    :return:
-    """
 
-
-def five_qubit_qcnn(params):
-    """
+    qcnn on five qubits 15+3*8+15+3*4*2+15 parameters
+    for the qcnn:
     first conv layer: 15 params, 4 blocks share the same parameters
 
     pooling, measure only the first qubit, and u3 on the rest 4 qubits controlled by the measurement results:
@@ -358,13 +352,102 @@ def five_qubit_qcnn(params):
     second conv layer 15 parameters, 3 blocks shared the same parameters
 
     pooling, measure qubit 1 and 2 (out of the original 5 qubits, 0, 1, 2, 3, 4), and u3 on the rest 2 qubits
-    controlled by the measurement results: 3*2*2 = 12 parameters
+    controlled by the measurement results: 3*4*2 = 24 parameters
 
     final layer, 15 parameters on qubits 3 and 4
     then measurement for classification
+
+    total number of qubits 8+5-1 = 12
+    pooling & measurement need 3 classical bits
+    :param prepared_data:
     :param params:
     :return:
     """
-    qreg = QuantumRegister(5)
-    pooling = ClassicalRegister(3)
-    classification = ClassicalRegister(2)
+    qreg = QuantumRegister(12)
+    pooling_measure = ClassicalRegister(3, name='pooling-measure')
+    classification_reg = ClassicalRegister(2, name='classification')
+    conv_1_2_params = params[:15*4+45+18]
+    qcnn_params = params[15*4+45+18:]
+    qcnn_first_conv = qcnn_params[:15]
+    qcnn_first_pooling = qcnn_params[15:15+3*8]
+    qcnn_second_conv = qcnn_params[15+3*8:15+3*8+15]
+    qcnn_second_pooling = qcnn_params[15+3*8+15:15+3*8+15+3*4*2]
+    qcnn_final_layer = qcnn_params[15+3*8+15+3*4*2:]
+
+    circ = QuantumCircuit(qreg, pooling_measure, classification_reg)
+    # Convolutional layers
+    for i in range(5):
+        """
+        swaping schedule:
+        i    swap    reset (if on real device?)
+        0    7, 11   7, 8, 9, 10
+        1    7, 10   7, 8, 9
+        2    7, 9    7, 8
+        3    7, 8    7
+        4    -       -
+        """
+        circ.compose(conv_1_and_2(prepared_data[i], conv_1_2_params).to_instruction(), qubits=qreg[:8], clbits=pooling_measure, inplace=True)
+        if i <4:
+            circ.swap(qreg[7], qreg[11-i])
+            circ.reset(qreg[7])
+        circ.barrier(qreg)
+    # "qcnn" layers operates on qubits 7, 8, 9, 10, 11
+    # first qconv layer
+    circ.compose(su4_circuit(qcnn_first_conv), qubits=[qreg[7], qreg[8]], inplace=True)
+    circ.compose(su4_circuit(qcnn_first_conv), qubits=[qreg[9], qreg[10]], inplace=True)
+    circ.compose(su4_circuit(qcnn_first_conv), qubits=[qreg[8], qreg[9]], inplace=True)
+    circ.compose(su4_circuit(qcnn_first_conv), qubits=[qreg[10], qreg[11]], inplace=True)
+    circ.barrier(qreg[7:])
+
+    # first pooling layer
+    circ.measure(qreg[7], pooling_measure[0])
+    circ.u(*qcnn_first_pooling[:3], qreg[8]).c_if(pooling_measure[0], 0)
+    circ.u(*qcnn_first_pooling[3:6], qreg[9]).c_if(pooling_measure[0], 0)
+    circ.u(*qcnn_first_pooling[6:9], qreg[10]).c_if(pooling_measure[0], 0)
+    circ.u(*qcnn_first_pooling[9:12], qreg[11]).c_if(pooling_measure[0], 0)
+
+    circ.u(*qcnn_first_pooling[12:15], qreg[8]).c_if(pooling_measure[0], 1)
+    circ.u(*qcnn_first_pooling[15:18], qreg[9]).c_if(pooling_measure[0], 1)
+    circ.u(*qcnn_first_pooling[18:21], qreg[10]).c_if(pooling_measure[0], 1)
+    circ.u(*qcnn_first_pooling[21:], qreg[11]).c_if(pooling_measure[0], 1)
+
+    circ.barrier(qreg[8:])
+
+    # second qconv layer
+    circ.compose(su4_circuit(qcnn_second_conv), qubits=[qreg[8], qreg[9]], inplace=True)
+    circ.compose(su4_circuit(qcnn_second_conv), qubits=[qreg[10], qreg[11]], inplace=True)
+    circ.compose(su4_circuit(qcnn_second_conv), qubits=[qreg[9], qreg[10]], inplace=True)
+    circ.barrier(qreg[8:])
+
+    # second pooling layer
+    circ.measure(qreg[8], pooling_measure[1])
+    circ.measure(qreg[9], pooling_measure[2])
+    circ.u(*qcnn_second_pooling[:3], qreg[10]).c_if(pooling_measure[1], 0)
+    circ.u(*qcnn_second_pooling[3:6], qreg[11]).c_if(pooling_measure[1], 0)
+    circ.u(*qcnn_second_pooling[6:9], qreg[10]).c_if(pooling_measure[2], 0)
+    circ.u(*qcnn_second_pooling[9:12], qreg[11]).c_if(pooling_measure[2], 0)
+
+    circ.u(*qcnn_second_pooling[12:15], qreg[10]).c_if(pooling_measure[1], 1)
+    circ.u(*qcnn_second_pooling[15:18], qreg[11]).c_if(pooling_measure[1], 1)
+    circ.u(*qcnn_second_pooling[18:21], qreg[10]).c_if(pooling_measure[2], 1)
+    circ.u(*qcnn_second_pooling[21:24], qreg[11]).c_if(pooling_measure[2], 1)
+
+    circ.barrier(qreg[10:])
+
+    # final layer
+    circ.compose(su4_circuit(qcnn_final_layer), qubits=[qreg[10], qreg[11]], inplace=True)
+    circ.barrier(qreg[10:])
+    # measure for classification
+    circ.measure(qreg[10:], classification_reg)
+
+    return circ
+
+rng = np.random.default_rng(seed=42)
+data = load_data(10,10,rng)[0][0]
+params = ParameterVector('w', length=15*4+45+18+ 15+3*8+15+3*4*2 + 15)
+full_conv_net = full_circ(data, params)
+full_conv_net.draw(output='mpl', filename='full-circ-5x5.png', style='bw', fold=-1)
+
+
+
+
