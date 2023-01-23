@@ -619,8 +619,8 @@ if __name__ == '__main__':
 
         bounds = [(0, 2 * np.pi)] * (15*4+45+18+ 15+3*8+15+3*4*2 + 15)
 
-        opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
-        # opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
+        # opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
+        opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
         res = opt.minimize(
             cost,
             x0 = params,
