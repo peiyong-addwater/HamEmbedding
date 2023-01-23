@@ -52,7 +52,7 @@ def load_fashion_mnist(path, kind='train'):
 
     return images, labels
 
-def load_data(num_train, num_test, rng, stride=(3,3), kernel_size=(3,3),encoding_gate_parameter_size:int=3, one_hot=True):
+def load_data(num_train, num_test, rng, one_hot=True):
     """Return training and testing data of digits dataset."""
     data_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/fashion"
     features, labels = load_fashion_mnist(data_folder)
@@ -442,6 +442,54 @@ def full_circ(prepared_data, params):
 
     return circ
 
+def get_probs_from_counts(counts, num_classes=4):
+    """
+    for count keys like '00 011 0010', where the first two digits are the class
+    :param counts:
+    :param num_classes:
+    :return:
+    """
+    probs = [0]*num_classes
+    for key in counts.keys():
+        classification = int(key.split(' ')[0], 2)
+        probs[classification] = probs[classification] + counts[key]
+    probs = [c / sum(probs) for c in probs]
+    return probs
+
+def avg_softmax_cross_entropy_loss_with_one_hot_labels(y_target, y_prob):
+    """
+    average cross entropy loss after softmax.
+    :param y:
+    :param y_pred:
+    :return:
+    """
+    # print(y_prob)
+    # print(np.sum(np.exp(y_prob), axis=1), 1)
+    y_prob = np.divide(np.exp(y_prob), np.sum(np.exp(y_prob), axis=1).reshape((-1,1)))
+    # print(y_prob)
+    # print("|||")
+    return -np.sum(y_target*np.log(y_prob))/len(y_target)
+
+def single_data_probs_sim(params, data, shots = 2048):
+    backend_sim = Aer.get_backend('aer_simulator')
+    convnet = transpile(full_circ(data, params), backend_sim)
+    job = backend_sim.run(convnet, shots=shots)
+    results = job.result()
+    counts = results.get_counts()
+    probs = get_probs_from_counts(counts, num_classes=4)
+    return probs
+
+def batch_avg_accuracy(probs, labels):
+    """
+    average accuracy with one-hot labels
+    :param probs:
+    :param labels:
+    :return:
+    """
+    preds = np.argmax(probs, axis=1)
+    targets = np.argmax(labels, axis=1)
+    return np.mean(np.array(preds == targets).astype(int))
+
 # rng = np.random.default_rng(seed=42)
 # data = load_data(10,10,rng)[0][0]
 # params = ParameterVector('w', length=15*4+45+18+ 15+3*8+15+3*4*2 + 15)
@@ -454,9 +502,211 @@ def full_circ(prepared_data, params):
 # job = backend_sim.run(transpile(full_conv_net, backend_sim), shots = 2048)
 # results = job.result()
 # counts = results.get_counts()
+# prob = single_data_probs_sim(params, data)
 # end =  time.time()
 # print(counts)
+# print(prob)
+# print(sum(prob))
 # print(end-start) # 15.84 seconds for 2048 shots
+
+if __name__ == '__main__':
+    import matplotlib as mpl
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    NUM_SHOTS = 512
+    N_WORKERS = 8
+    MAX_JOB_SIZE = 10
+
+    BACKEND_SIM = Aer.get_backend('aer_simulator')
+    EXC = ThreadPoolExecutor(max_workers=N_WORKERS)  # 125 secs/iteration for 20 train 20 test
+    # EXC = Client(address=LocalCluster(n_workers=N_WORKERS, processes=True)) # 150 secs/iteration for 20 train 20 test
+    BACKEND_SIM.set_options(executor=EXC)
+    BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
+    BACKEND_SIM.set_options(max_parallel_experiments=0)
+
+    seed = 42
+    rng = np.random.default_rng(seed=seed)
+    KERNEL_SIZE = (5, 5)
+    STRIDE = (5, 5)
+    n_test = 20
+    n_epochs = 100
+    n_reps = 3
+    train_sizes = [20, 200, 500]
+
+    def batch_data_probs_sim(params, data_list):
+        """
+
+        :param params:
+        :param data_list:
+        :param shots:
+        :param n_workers:
+        :param max_job_size:
+        :return:
+        """
+        circs = [full_circ(data, params) for data in data_list]
+        results = BACKEND_SIM.run(transpile(circs, BACKEND_SIM), shots=NUM_SHOTS).result()
+        counts = results.get_counts()
+        probs = [get_probs_from_counts(count, num_classes=4) for count in counts]
+        return np.array(probs)
+
+    def batch_data_loss_avg(params, data_list, labels):
+        probs = batch_data_probs_sim(params, data_list)
+        return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
+
+    def train_model(n_train, n_test, n_epochs, rep, rng):
+        """
+
+        :param n_train:
+        :param n_test:
+        :param n_epochs:
+        :param rep:
+        :return:
+        """
+        x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
+        params = np.random.random(15*4+45+18+ 15+3*8+15+3*4*2 + 15)
+        train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
+        print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
+        cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
+        start = time.time()
+
+        # For the callback function for SPSA in qiskit
+        # 5 arguments needed: number of function evaluations, parameters, loss, stepsize, accepted
+        def callback_fn(xk):
+            train_prob = batch_data_probs_sim(xk, x_train)
+            train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_train, train_prob)
+            train_cost_epochs.append(train_cost)
+            test_prob = batch_data_probs_sim(xk, x_test)
+            test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test, test_prob)
+            test_cost_epochs.append(test_cost)
+            train_acc = batch_avg_accuracy(train_prob, y_train)
+            test_acc = batch_avg_accuracy(test_prob, y_test)
+            train_acc_epochs.append(train_acc)
+            test_acc_epochs.append(test_acc)
+            iteration_num = len(train_cost_epochs)
+            time_till_now = time.time() - start
+            avg_epoch_time = time_till_now / iteration_num
+            if iteration_num % 1 == 0:
+                print(
+                    f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc "
+                    f"{np.round(train_acc, 4)}, "
+                    f"train cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test cost "
+                    f"{np.round(test_cost, 4)}, avg epoch time "
+                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
+
+        def callback_fn_qiskit_spsa(n_func_eval, xk, next_loss, stepsize, accepted):
+            train_prob = batch_data_probs_sim(xk, x_train)
+            #train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_train, train_prob)
+            train_cost_epochs.append(next_loss)
+            test_prob = batch_data_probs_sim(xk, x_test)
+            test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test, test_prob)
+            test_cost_epochs.append(test_cost)
+            train_acc = batch_avg_accuracy(train_prob, y_train)
+            test_acc = batch_avg_accuracy(test_prob, y_test)
+            train_acc_epochs.append(train_acc)
+            test_acc_epochs.append(test_acc)
+            iteration_num = len(train_cost_epochs)
+            time_till_now = time.time() - start
+            avg_epoch_time = time_till_now / iteration_num
+            if iteration_num % 1 == 0:
+                print(
+                    f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc "
+                    f"{np.round(train_acc, 4)}, "
+                    f"train cost {np.round(next_loss, 4)}, test acc {np.round(test_acc, 4)}, test cost "
+                    f"{np.round(test_cost, 4)}, avg epoch time "
+                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
+
+        bounds = [(0, 2 * np.pi)] * (15*4+45+18+ 15+3*8+15+3*4*2 + 15)
+        # COBYLA single iteration around 97 seconds, SPSA (noisyopt) is 150 seconds at the same condition.
+        # opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
+        opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
+        res = opt.minimize(
+            cost,
+            x0 = params,
+            bounds=bounds
+        )
+        # according to Spall, IEEE, 1998, 34, 817-823,
+        # one typically finds that in a high-noise setting (Le., poor quality measurements of L(theta))
+        # it is necessary to pick a smaller a and larger c than in a low-noise setting.
+        # res = minimizeSPSA(
+        #     cost,
+        #     x0=params,
+        #     niter=n_epochs,
+        #     paired=False,
+        #     bounds=bounds,
+        #     c=1,
+        #     a=0.05,
+        #     callback=callback_fn
+        # )
+        optimized_params = res.x
+        return dict(
+            n_train=[n_train] * (n_epochs+1),
+            step=np.arange(1, n_epochs + 1 +1, dtype=int),
+            train_cost=train_cost_epochs,
+            train_acc=train_acc_epochs,
+            test_cost=test_cost_epochs,
+            test_acc=test_acc_epochs,
+        ), optimized_params
+
+    def run_iterations(n_train, rng):
+        results_df = pd.DataFrame(
+            columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
+        )
+        for rep in range(n_reps):
+            results, _ = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng)
+            results_df = pd.concat(
+                [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
+            )
+        return results_df
+
+    results_df = run_iterations(n_train=train_sizes[0], rng =rng)
+    for n_train in train_sizes[1:]:
+        results_df = pd.concat([results_df, run_iterations(n_train=n_train, rng=rng)])
+    # aggregate dataframe
+    df_agg = results_df.groupby(["n_train", "step"]).agg(["mean", "std"])
+    df_agg = df_agg.reset_index()
+
+    sns.set_style('whitegrid')
+    colors = sns.color_palette()
+    fig, axes = plt.subplots(ncols=2, figsize=(16.5, 5))
+
+    # plot losses and accuracies
+    for i, n_train in enumerate(train_sizes):
+        df = df_agg[df_agg.n_train == n_train]
+
+        dfs = [df.train_cost["mean"], df.test_cost["mean"], df.train_acc["mean"], df.test_acc["mean"]]
+        lines = ["o-", "x--", "o-", "x--"]
+        labels = [fr"$N={n_train}$", None, fr"$N={n_train}$", None]
+        axs = [0, 0, 2, 2]
+
+        for k in range(4):
+            ax = axes[axs[k]]
+            ax.plot(df.step, dfs[k], lines[k], label=labels[k], markevery=10, color=colors[i], alpha=0.8)
+
+    # format loss plot
+    ax = axes[0]
+    ax.set_title('Train and Test Losses', fontsize=14)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+
+    # format loss plot
+    ax = axes[1]
+    ax.set_title('Train and Test Accuracies', fontsize=14)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Accuracy')
+    ax.set_ylim(0., 1.05)
+
+    legend_elements = [
+                          mpl.lines.Line2D([0], [0], label=f'N={n}', color=colors[i]) for i, n in enumerate(train_sizes)
+                      ] + [
+                          mpl.lines.Line2D([0], [0], marker='o', ls='-', label='Train', color='Black'),
+                          mpl.lines.Line2D([0], [0], marker='x', ls='--', label='Test', color='Black')
+                      ]
+
+    axes[0].legend(handles=legend_elements, ncol=3)
+    axes[1].legend(handles=legend_elements, ncol=3)
+    plt.savefig(f"qiskit-fashion-mnist-5x5-conv-multiclass-results-{n_test}-test-{n_reps}-reps.pdf")
 
 
 
