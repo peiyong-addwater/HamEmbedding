@@ -366,7 +366,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import pandas as pd
 
-    NUM_SHOTS = 1024
+    NUM_SHOTS = 512
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
 
