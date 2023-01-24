@@ -244,23 +244,25 @@ def conv_layer_1(data_for_entire_2x2_feature_map, params):
     circ = QuantumCircuit(qreg, creg, name='conv-layer-1')
     conv_kernel_param = params[:45]
     pooling_param = params[45:]
+    qubit_counter = 0
     for i in range(2):
         for j in range(2):
             conv_op = kernel_5x5(data_for_entire_2x2_feature_map[i][j], conv_kernel_param, pooling_param)
-            circ.compose(conv_op, qubits=qreg[i:i + 4], clbits=creg, inplace=True)
+            circ.compose(conv_op, qubits=qreg[qubit_counter:qubit_counter + 4], clbits=creg, inplace=True)
             circ.barrier(qreg)
+            qubit_counter+=1
     return circ
 
 # draw the conv 1 layer
-# data = []
-# for i in range(2):
-#     row = []
-#     for j in range(2):
-#         row.append(ParameterVector(f"x_{i}{j}", length=30))
-#     data.append(row)
-# parameter_conv_1 = ParameterVector("θ", length=45 + 18)
-# first_conv_layer = conv_layer_1(data, parameter_conv_1)
-# first_conv_layer.draw(output='mpl', filename='conv-5x5-1.png', style='bw', fold=-1)
+data = []
+for i in range(2):
+    row = []
+    for j in range(2):
+        row.append(ParameterVector(f"x_{i}{j}", length=30))
+    data.append(row)
+parameter_conv_1 = ParameterVector("θ", length=45 + 18)
+first_conv_layer = conv_layer_1(data, parameter_conv_1)
+first_conv_layer.draw(output='mpl', filename='conv-5x5-1.png', style='bw', fold=-1)
 
 def full_circ(prepared_data, params):
     """
@@ -349,22 +351,22 @@ def batch_avg_accuracy(probs, labels):
 # full_conv_net = full_circ(data, params)
 # backend_sim = Aer.get_backend('aer_simulator')
 # start = time.time()
-#job = backend_sim.run(transpile(full_conv_net, backend_sim), shots = 2048)
-#results = job.result()
-#counts = results.get_counts()
+# job = backend_sim.run(transpile(full_conv_net, backend_sim), shots = 2048)
+# results = job.result()
+# counts = results.get_counts()
 # prob = single_data_probs_sim(params, data)
 # end =  time.time()
-#print(counts)
+# print(counts)
 # print(prob)
 # print(sum(prob))
-# print(end-start) # 0.730126142501831 seconds for 2048 shots, sometimes can be as fast as 0.45 seconds
+# print(end-start) # 0.730126142501831 seconds for 2048 shots
 if __name__ == '__main__':
     import matplotlib as mpl
     import seaborn as sns
     import matplotlib.pyplot as plt
     import pandas as pd
 
-    NUM_SHOTS = 512
+    NUM_SHOTS = 1024
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
 
@@ -379,7 +381,7 @@ if __name__ == '__main__':
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
     n_test = 20
-    n_epochs = 100
+    n_epochs = 500
     n_reps = 3
     train_sizes = [20, 200, 500]
 
@@ -467,8 +469,8 @@ if __name__ == '__main__':
 
         bounds = [(0, 2 * np.pi)] * (108)
 
-        opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
-        #opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
+        #opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
+        opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
         res = opt.minimize(
             cost,
             x0 = params,
