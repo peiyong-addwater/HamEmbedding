@@ -534,7 +534,7 @@ if __name__ == '__main__':
     n_test = 20
     n_generations = 50
     n_reps = 1
-    train_sizes = [20, 200, 500]
+    train_sizes = [8, 200, 500]
     init_pop = 100
 
     def batch_data_probs_sim(params, data_list):
