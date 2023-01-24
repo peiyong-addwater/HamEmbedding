@@ -492,7 +492,7 @@ if __name__ == '__main__':
         optimized_params = res.x
         return dict(
             n_train=[n_train] * (n_epochs+1),
-            step=np.arange(1, n_epochs + 1 +1, dtype=int),
+            step=np.arange(1, n_epochs + 1, dtype=int),
             train_cost=train_cost_epochs,
             train_acc=train_acc_epochs,
             test_cost=test_cost_epochs,
