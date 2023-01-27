@@ -1,4 +1,5 @@
 # based on https://github.com/hsjeong5/MNIST-for-Numpy/blob/master/mnist.py
+# download data from https://archive.ics.uci.edu/ml/datasets/optical+recognition+of+handwritten+digits
 import numpy as np
 from urllib import request
 import gzip
