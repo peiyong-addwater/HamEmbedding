@@ -380,9 +380,9 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
-    n_test = 20
-    n_epochs = 200
-    n_reps = 3
+    n_test = 100
+    n_epochs = 500
+    n_reps = 2
     train_sizes = [20, 200, 500]
 
     def batch_data_probs_sim(params, data_list):
@@ -519,7 +519,7 @@ if __name__ == '__main__':
 
     sns.set_style('whitegrid')
     colors = sns.color_palette()
-    fig, axes = plt.subplots(ncols=2, figsize=(16.5, 5))
+    fig, axes = plt.subplots(ncols=3, figsize=(16.5, 5))
 
     # plot losses and accuracies
     for i, n_train in enumerate(train_sizes):
