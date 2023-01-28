@@ -365,6 +365,7 @@ if __name__ == '__main__':
     import seaborn as sns
     import matplotlib.pyplot as plt
     import pandas as pd
+    import json
 
     NUM_SHOTS = 512
     N_WORKERS = 8
@@ -513,6 +514,12 @@ if __name__ == '__main__':
     results_df = run_iterations(n_train=train_sizes[0], rng =rng)
     for n_train in train_sizes[1:]:
         results_df = pd.concat([results_df, run_iterations(n_train=n_train, rng=rng)])
+
+    #save results data
+    res_dict = results_df.to_dict()
+    with open(f"qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps.json", 'w') as f:
+        json.dump(res_dict, f, indent=4, cls=NpEncoder)
+
     # aggregate dataframe
     df_agg = results_df.groupby(["n_train", "step"]).agg(["mean", "std"])
     df_agg = df_agg.reset_index()
@@ -520,6 +527,8 @@ if __name__ == '__main__':
     sns.set_style('whitegrid')
     colors = sns.color_palette()
     fig, axes = plt.subplots(ncols=3, figsize=(16.5, 5))
+
+    generalization_errors = []
 
     # plot losses and accuracies
     for i, n_train in enumerate(train_sizes):
@@ -534,18 +543,31 @@ if __name__ == '__main__':
             ax = axes[axs[k]]
             ax.plot(df.step, dfs[k], lines[k], label=labels[k], markevery=10, color=colors[i], alpha=0.8)
 
+        # plot final loss difference
+        dif = df[df.step == 100].test_cost["mean"] - df[df.step == 100].train_cost["mean"]
+        generalization_errors.append(dif)
+
     # format loss plot
     ax = axes[0]
     ax.set_title('Train and Test Losses', fontsize=14)
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Loss')
 
-    # format loss plot
+    # format generalization error plot
     ax = axes[1]
+    ax.plot(train_sizes, generalization_errors, "o-", label=r"$gen(\alpha)$")
+    ax.set_xscale('log')
+    ax.set_xticks(train_sizes)
+    ax.set_xticklabels(train_sizes)
+    ax.set_title(r'Generalization Error $gen(\alpha) = R(\alpha) - \hat{R}_N(\alpha)$', fontsize=14)
+    ax.set_xlabel('Training Set Size')
+
+    # format loss plot
+    ax = axes[2]
     ax.set_title('Train and Test Accuracies', fontsize=14)
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Accuracy')
-    ax.set_ylim(0., 1.05)
+    ax.set_ylim(0.5, 1.05)
 
     legend_elements = [
                           mpl.lines.Line2D([0], [0], label=f'N={n}', color=colors[i]) for i, n in enumerate(train_sizes)
@@ -555,5 +577,7 @@ if __name__ == '__main__':
                       ]
 
     axes[0].legend(handles=legend_elements, ncol=3)
-    axes[1].legend(handles=legend_elements, ncol=3)
+    axes[2].legend(handles=legend_elements, ncol=3)
+
+    axes[1].set_yscale('log', base=2)
     plt.savefig(f"qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps.pdf")
