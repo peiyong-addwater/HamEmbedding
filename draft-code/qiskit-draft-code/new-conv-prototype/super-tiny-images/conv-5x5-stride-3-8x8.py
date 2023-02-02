@@ -567,7 +567,7 @@ if __name__ == '__main__':
     ax.set_title('Train and Test Accuracies', fontsize=14)
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Accuracy')
-    ax.set_ylim(0.5, 1.05)
+    ax.set_ylim(0.0, 1.05)
 
     legend_elements = [
                           mpl.lines.Line2D([0], [0], label=f'N={n}', color=colors[i]) for i, n in enumerate(train_sizes)
