@@ -5,6 +5,8 @@ from typing import List, Tuple, Union
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit.circuit import ParameterVector
 from qiskit import Aer
+from qiskit_aer.noise import NoiseModel
+from qiskit_aer import AerSimulator
 from dask.distributed import LocalCluster, Client
 from concurrent.futures import ThreadPoolExecutor
 from noisyopt import minimizeSPSA
@@ -13,12 +15,11 @@ import json
 import time
 import shutup
 import pickle
-
-
-shutup.please()
-
 from qiskit_ibm_provider import IBMProvider
 PROVIDER = IBMProvider()
+noisy_backend = PROVIDER.get_backend('ibm_perth')
+
+shutup.please()
 
 def add_padding(matrix: np.ndarray,
                 padding: Tuple[int, int]) -> np.ndarray:
@@ -172,11 +173,6 @@ def load_data(num_train, num_test, rng, one_hot=True):
         y_test,
     )
 
-# img_matrix = np.random.randn(8,8)
-# extracted_conv_data = extract_convolution_data(img_matrix, kernel_size=(5, 5), stride=(3, 3), dilation=(1, 1),
-#                                                  padding=(0, 0), encoding_gate_parameter_size=15)
-# print(np.array(extracted_conv_data).shape) # (2,2,30)
-
 def su4_circuit(params):
     su4 = QuantumCircuit(2, name='su4')
     su4.u(params[0], params[1], params[2], qubit=0)
@@ -252,17 +248,6 @@ def conv_layer_1(data_for_entire_2x2_feature_map, params):
             circ.barrier(qreg)
             qubit_counter+=1
     return circ
-
-# draw the conv 1 layer
-# data = []
-# for i in range(2):
-#     row = []
-#     for j in range(2):
-#         row.append(ParameterVector(f"x_{i}{j}", length=30))
-#     data.append(row)
-# parameter_conv_1 = ParameterVector("θ", length=45 + 18)
-# first_conv_layer = conv_layer_1(data, parameter_conv_1)
-# first_conv_layer.draw(output='mpl', filename='conv-5x5-1.png', style='bw', fold=-1)
 
 def full_circ(prepared_data, params):
     """
@@ -342,24 +327,6 @@ def batch_avg_accuracy(probs, labels):
     targets = np.argmax(labels, axis=1)
     return np.mean(np.array(preds == targets).astype(int))
 
-# rng = np.random.default_rng(seed=42)
-# data = load_data(10,10,rng)[0][0]
-# params = ParameterVector('w', length=108)
-# full_conv_net = full_circ(data, params)
-# full_conv_net.draw(output='mpl', filename='full-circ-5x5.png', style='bw', fold=-1)
-# params = np.random.random(108)
-# full_conv_net = full_circ(data, params)
-# backend_sim = Aer.get_backend('aer_simulator')
-# start = time.time()
-# job = backend_sim.run(transpile(full_conv_net, backend_sim), shots = 2048)
-# results = job.result()
-# counts = results.get_counts()
-# prob = single_data_probs_sim(params, data)
-# end =  time.time()
-# print(counts)
-# print(prob)
-# print(sum(prob))
-# print(end-start) # 0.730126142501831 seconds for 2048 shots
 if __name__ == '__main__':
     import matplotlib as mpl
     import seaborn as sns
@@ -370,8 +337,7 @@ if __name__ == '__main__':
     NUM_SHOTS = 512
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
-
-    BACKEND_SIM = Aer.get_backend('aer_simulator')
+    BACKEND_SIM = AerSimulator.from_backend(noisy_backend)
     EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
     BACKEND_SIM.set_options(executor=EXC)
     BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
@@ -382,8 +348,8 @@ if __name__ == '__main__':
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
     n_test = 100
-    n_epochs = 500
-    n_reps = 2
+    n_epochs = 100
+    n_reps = 3
     train_sizes = [20, 200, 500]
 
     def batch_data_probs_sim(params, data_list):
@@ -406,7 +372,7 @@ if __name__ == '__main__':
         probs = batch_data_probs_sim(params, data_list)
         return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
 
-    def train_model(n_train, n_test, n_epochs, rep, rng):
+    def train_model(n_train, n_test, n_epochs,params, rep, rng):
         """
 
         :param n_train:
@@ -416,7 +382,6 @@ if __name__ == '__main__':
         :return:
         """
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
-        params = np.random.random(108)
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
         print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
@@ -500,12 +465,12 @@ if __name__ == '__main__':
             test_acc=test_acc_epochs,
         ), optimized_params
 
-    def run_iterations(n_train, rng):
+    def run_iterations(n_train, rng, params):
         results_df = pd.DataFrame(
             columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
         )
         for rep in range(n_reps):
-            results, _ = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng)
+            results, optimized_params = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng, params=params)
             results_df = pd.concat(
                 [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
             )
@@ -517,7 +482,7 @@ if __name__ == '__main__':
 
     #save results data
     res_dict = results_df.to_dict()
-    with open(f"qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps.json", 'w') as f:
+    with open(f"noisy-qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps.json", 'w') as f:
         json.dump(res_dict, f, indent=4, cls=NpEncoder)
 
     # aggregate dataframe
@@ -580,4 +545,4 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig(f"qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps.pdf")
+    plt.savefig(f"noisy-qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps.pdf")
