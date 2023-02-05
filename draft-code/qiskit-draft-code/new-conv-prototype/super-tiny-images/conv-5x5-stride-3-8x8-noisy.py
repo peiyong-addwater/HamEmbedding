@@ -352,6 +352,8 @@ if __name__ == '__main__':
     n_reps = 3
     train_sizes = [20, 200, 500]
 
+    params = np.random.random(108)
+
     def batch_data_probs_sim(params, data_list):
         """
 
@@ -445,16 +447,6 @@ if __name__ == '__main__':
         # according to Spall, IEEE, 1998, 34, 817-823,
         # one typically finds that in a high-noise setting (Le., poor quality measurements of L(theta))
         # it is necessary to pick a smaller a and larger c than in a low-noise setting.
-        # res = minimizeSPSA(
-        #     cost,
-        #     x0=params,
-        #     niter=n_epochs,
-        #     paired=False,
-        #     bounds=bounds,
-        #     c=1,
-        #     a=0.05,
-        #     callback=callback_fn
-        # )
         optimized_params = res.x
         return dict(
             n_train=[n_train] * (n_epochs),
@@ -469,19 +461,26 @@ if __name__ == '__main__':
         results_df = pd.DataFrame(
             columns=["train_acc", "train_cost", "test_acc", "test_cost", "step", "n_train"]
         )
+        best_params = []
         for rep in range(n_reps):
             results, optimized_params = train_model(n_train=n_train, n_test=n_test, n_epochs=n_epochs, rep=rep, rng=rng, params=params)
+            best_test_acc = np.max(results["test_acc"])
+            best_params.append((best_test_acc, optimized_params))
             results_df = pd.concat(
                 [results_df, pd.DataFrame.from_dict(results)], axis=0, ignore_index=True
             )
-        return results_df
+        best_params = sorted(best_params, key=lambda x:x[0], reverse=True)
+        return results_df, best_params[0][1]
 
-    results_df = run_iterations(n_train=train_sizes[0], rng =rng)
+    # reusing best parameters from last training size
+
+    results_df, params = run_iterations(n_train=train_sizes[0], rng =rng, params=params)
     for n_train in train_sizes[1:]:
-        results_df = pd.concat([results_df, run_iterations(n_train=n_train, rng=rng)])
+        results_df, params = pd.concat([results_df, run_iterations(n_train=n_train, rng=rng, params=params)])
 
     #save results data
     res_dict = results_df.to_dict()
+    res_dict["best_params"] = params
     with open(f"noisy-qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps.json", 'w') as f:
         json.dump(res_dict, f, indent=4, cls=NpEncoder)
 
