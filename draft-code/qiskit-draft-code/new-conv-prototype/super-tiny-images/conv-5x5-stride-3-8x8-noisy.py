@@ -473,12 +473,12 @@ if __name__ == '__main__':
         return results_df, best_params[0][1]
 
     # reusing best parameters from last training size
-
     results_df, params = run_iterations(n_train=train_sizes[0], rng =rng, params=params)
     for n_train in train_sizes[1:]:
         temp = run_iterations(n_train=n_train, rng=rng, params=params)
         params = temp[1]
         results_df = pd.concat([results_df, temp[0]])
+        print("New parameters:\n", params)
 
     #save results data
     res_dict = results_df.to_dict()
