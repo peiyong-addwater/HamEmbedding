@@ -476,7 +476,9 @@ if __name__ == '__main__':
 
     results_df, params = run_iterations(n_train=train_sizes[0], rng =rng, params=params)
     for n_train in train_sizes[1:]:
-        results_df, params = pd.concat([results_df, run_iterations(n_train=n_train, rng=rng, params=params)])
+        temp = run_iterations(n_train=n_train, rng=rng, params=params)
+        params = temp[1]
+        results_df = pd.concat([results_df, temp[0]])
 
     #save results data
     res_dict = results_df.to_dict()
