@@ -472,7 +472,7 @@ if __name__ == '__main__':
         best_params = sorted(best_params, key=lambda x:x[0], reverse=True)
         return results_df, best_params[0][1]
 
-    # reusing best parameters from last training size
+    # same starting point.
     results_df, _ = run_iterations(n_train=train_sizes[0], rng =rng, params=params)
     for n_train in train_sizes[1:]:
         temp = run_iterations(n_train=n_train, rng=rng, params=params)
