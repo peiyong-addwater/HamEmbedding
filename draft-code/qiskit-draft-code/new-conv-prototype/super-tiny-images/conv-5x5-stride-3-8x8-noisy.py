@@ -3,14 +3,10 @@ import os.path
 import numpy as np
 from typing import List, Tuple, Union
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
-from qiskit.circuit import ParameterVector
 from qiskit import Aer
-from qiskit_aer.noise import NoiseModel
 from qiskit_aer import AerSimulator
-from dask.distributed import LocalCluster, Client
 from concurrent.futures import ThreadPoolExecutor
-from noisyopt import minimizeSPSA
-from qiskit.algorithms.optimizers import COBYLA, SPSA, GradientDescent
+from qiskit.algorithms.optimizers import SPSA
 import json
 import time
 import shutup
@@ -129,7 +125,7 @@ def load_tiny_digits(path, kind="train"):
     else:
         import tinyhandwrittendigits
         tinyhandwrittendigits.init()
-        with open("tiny-handwritten.pkl", 'rb') as f:
+        with open("../../../../data/mini-digits/tiny-handwritten.pkl", 'rb') as f:
             mnist = pickle.load(f)
     if kind == 'train':
         return mnist["training_images"], mnist["training_labels"]
@@ -137,7 +133,7 @@ def load_tiny_digits(path, kind="train"):
         return mnist["test_images"], mnist["test_labels"]
 
 def load_data(num_train, num_test, rng, one_hot=True):
-    data_path = "tiny-handwritten.pkl"
+    data_path = "../../../../data/mini-digits/tiny-handwritten.pkl"
     features, labels = load_tiny_digits(data_path)
     features = np.array(features)
     labels = np.array(labels)

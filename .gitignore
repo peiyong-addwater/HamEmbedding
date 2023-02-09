@@ -1,4 +1,8 @@
-/data/
+/data/cifar-10
+/data/cifar-100
+/data/fashion
+/data/cifar-100-python.tar.gz
+/data/cifar-10-python.tar.gz
 .idea
 .idea/deployment.xml
 .idea/QML-ImageClassification.iml
