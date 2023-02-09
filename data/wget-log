@@ -1,0 +1,12 @@
+--2022-11-21 14:56:01--  http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-images-idx3-ubyte.gz
+Resolving fashion-mnist.s3-website.eu-central-1.amazonaws.com (fashion-mnist.s3-website.eu-central-1.amazonaws.com)... 52.219.75.44
+Connecting to fashion-mnist.s3-website.eu-central-1.amazonaws.com (fashion-mnist.s3-website.eu-central-1.amazonaws.com)|52.219.75.44|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 4422102 (4.2M) [binary/octet-stream]
+Saving to: 't10k-images-idx3-ubyte.gz.1'
+
+t10k-images-idx3-ubyte.gz.1                          86%[==================================================================================================>                ]   3.64M  50.9 B/s    eta 3h 18m t10k-images-idx3-ubyte.gz.1                         100%[==================================================================================================================>]   4.22M  58.9 B/s    in 20h 50m 
+
+utime(t10k-images-idx3-ubyte.gz.1): No such file or directory
+2022-11-22 11:46:39 (58.9 B/s) - 't10k-images-idx3-ubyte.gz.1' saved [4422102/4422102]
+
