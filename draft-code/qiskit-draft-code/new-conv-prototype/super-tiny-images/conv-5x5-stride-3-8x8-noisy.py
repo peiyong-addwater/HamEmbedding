@@ -17,6 +17,8 @@ noisy_backend = PROVIDER.get_backend('ibm_perth')
 
 shutup.please()
 
+DATA_PATH = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/tiny-handwritten.pkl"
+
 def add_padding(matrix: np.ndarray,
                 padding: Tuple[int, int]) -> np.ndarray:
     """Adds padding to the matrix.
@@ -118,14 +120,8 @@ class NpEncoder(json.JSONEncoder):
         else:
             return super(NpEncoder, self).default(obj)
 
-def load_tiny_digits(path, kind="train"):
-    if os.path.isfile(path):
-        with open(path,'rb') as f:
-            mnist = pickle.load(f)
-    else:
-        import tinyhandwrittendigits
-        tinyhandwrittendigits.init()
-        with open("../../../../data/mini-digits/tiny-handwritten.pkl", 'rb') as f:
+def load_tiny_digits(path = DATA_PATH, kind="train"):
+    with open(path,'rb') as f:
             mnist = pickle.load(f)
     if kind == 'train':
         return mnist["training_images"], mnist["training_labels"]
@@ -133,7 +129,7 @@ def load_tiny_digits(path, kind="train"):
         return mnist["test_images"], mnist["test_labels"]
 
 def load_data(num_train, num_test, rng, one_hot=True):
-    data_path = "../../../../data/mini-digits/tiny-handwritten.pkl"
+    data_path = DATA_PATH
     features, labels = load_tiny_digits(data_path)
     features = np.array(features)
     labels = np.array(labels)
