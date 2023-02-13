@@ -1,10 +1,10 @@
 #!/bin/bash --login
 #SBATCH --job-name=noisy8x8
 #SBATCH --nodes=1
-#SBATCH --time=03:30:00
+#SBATCH --time=12:00:00
 #SBATCH --account=pawsey0419
 #SBATCH --export=NONE
-#SBATCH --mem=16G
+#SBATCH --mem=128G
 
 module load hpc-python-collection/2022.11-py3.9.15
 
