@@ -140,6 +140,8 @@ def load_data(num_train, num_test, rng, one_hot=True):
     features = features[np.where((labels == 0) | (labels == 1) | (labels == 2) | (labels == 3))]
     labels = labels[np.where((labels == 0) | (labels == 1) | (labels == 2) | (labels == 3))]
 
+    print(features, labels)
+
     # subsample train and test split
     train_indices = rng.choice(len(labels), num_train, replace=False)
     test_indices = rng.choice(
