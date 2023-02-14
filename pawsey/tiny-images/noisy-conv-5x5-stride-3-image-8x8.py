@@ -15,9 +15,15 @@ import pickle
 
 shutup.please()
 
+# For desktop
+# WKDIR = "/home/peiyongw/Desktop/Research/QML-ImageClassification/pawsey/tiny-images"
+# DATA_PATH = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/tiny-handwritten.pkl"
+# NOISE_MODEL_PATH = "/home/peiyongw/Desktop/Research/QML-ImageClassification/pawsey/tiny-images/ibm_perth-20230213-161111.noise_model"
+# For server
 WKDIR = "/scratch/pawsey0419/peiyongw/QML-ImageClassification/pawsey/tiny-images"
 DATA_PATH = "/scratch/pawsey0419/peiyongw/QML-ImageClassification/data/mini-digits/tiny-handwritten.pkl"
 NOISE_MODEL_PATH = "/scratch/pawsey0419/peiyongw/QML-ImageClassification/pawsey/tiny-images/ibm_perth-20230213-161111.noise_model"
+
 
 with open(NOISE_MODEL_PATH, 'rb') as f:
     ibm_perth_noise_model = pickle.load(f)
@@ -339,7 +345,7 @@ if __name__ == '__main__':
 
     NUM_SHOTS = 512
     N_WORKERS = N_CPUS
-    MAX_JOB_SIZE = 100
+    MAX_JOB_SIZE = 1
     BACKEND_SIM = Aer.get_backend('aer_simulator')
     EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
     BACKEND_SIM.set_options(executor=EXC)
@@ -354,8 +360,8 @@ if __name__ == '__main__':
     STRIDE = (3, 3)
     n_test = 100
     n_epochs = 5
-    n_reps = 2
-    n_train = 500
+    n_reps = 1
+    n_train = 200
 
     params = np.random.random(108)
 

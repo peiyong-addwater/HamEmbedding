@@ -6,7 +6,7 @@
 #SBATCH --export=NONE
 #SBATCH --mem=128G
 
-export OMP_NUM_THREADS=2
+export OMP_NUM_THREADS=256
 
 module load hpc-python-collection/2022.11-py3.9.15
 
