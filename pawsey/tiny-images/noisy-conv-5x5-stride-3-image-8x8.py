@@ -339,7 +339,7 @@ if __name__ == '__main__':
 
     NUM_SHOTS = 2048
     N_WORKERS = N_CPUS
-    MAX_JOB_SIZE = 1
+    MAX_JOB_SIZE = 100
     BACKEND_SIM = Aer.get_backend('aer_simulator')
     EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
     BACKEND_SIM.set_options(executor=EXC)
