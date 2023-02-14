@@ -140,7 +140,7 @@ def load_data(num_train, num_test, rng, one_hot=True):
     features = features[np.where((labels == 0) | (labels == 1) | (labels == 2) | (labels == 3))]
     labels = labels[np.where((labels == 0) | (labels == 1) | (labels == 2) | (labels == 3))]
 
-    print(features, labels)
+    # print(features, labels)
 
     # subsample train and test split
     train_indices = rng.choice(len(labels), num_train, replace=False)
@@ -337,7 +337,7 @@ if __name__ == '__main__':
     N_CPUS = os.cpu_count()
     print(N_CPUS)
 
-    NUM_SHOTS = 2048
+    NUM_SHOTS = 512
     N_WORKERS = N_CPUS
     MAX_JOB_SIZE = 100
     BACKEND_SIM = Aer.get_backend('aer_simulator')
