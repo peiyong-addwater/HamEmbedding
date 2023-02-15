@@ -14,4 +14,4 @@ export OMP_PROC_BIND=close  #To bind (fix) threads (allocating them as close as 
 
 module load hpc-python-collection/2022.11-py3.9.15
 
-srun -N $SLURM_JOB_NUM_NODES -n $SLURM_NTASKS -c $OMP_NUM_THREADS python noisy-conv-5x5-stride-3-image-8x8.py
+srun -N $SLURM_JOB_NUM_NODES -n $SLURM_NTASKS -c $OMP_NUM_THREADS /software/setonix/2022.11/custom/software/zen3/gcc/12.1.0/hpc-python-collection/bin/python noisy-conv-5x5-stride-3-image-8x8.py
