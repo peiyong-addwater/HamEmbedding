@@ -2,7 +2,7 @@
 #SBATCH --job-name=noisy8x8
 #SBATCH --partition=highmem
 #SBATCH --nodes=1
-#SBATCH --time=3:00:00
+#SBATCH --time=6:00:00
 #SBATCH --account=pawsey0419
 #SBATCH --export=NONE
 #SBATCH --mem=512G
