@@ -334,10 +334,6 @@ def batch_avg_accuracy(probs, labels):
 
 
 if __name__ == '__main__':
-    import matplotlib as mpl
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    import pandas as pd
     import json
 
     N_CPUS = os.cpu_count()
