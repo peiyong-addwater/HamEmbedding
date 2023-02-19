@@ -1,11 +1,11 @@
 #!/bin/bash --login
 #SBATCH --job-name=noisy8x8
 #SBATCH --partition=highmem
-#SBATCH --nodes=1
-#SBATCH --time=6:00:00
+#SBATCH --nodes=2
+#SBATCH --time=24:00:00
 #SBATCH --account=pawsey0419
 #SBATCH --export=NONE
-#SBATCH --mem=512G
+#SBATCH --mem=1024G
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export OMP_PLACES=cores     #To bind threads to cores
@@ -16,4 +16,4 @@ module load hpc-python-collection/2022.11-py3.9.15
 
 echo $OMP_NUM_THREADS
 
-srun -N 1 -n 1 python noisy-conv-5x5-stride-3-image-8x8.py
+srun -N 2 -n 1 python noisy-conv-5x5-stride-3-image-8x8.py
