@@ -1,6 +1,6 @@
 #!/bin/bash --login
 #SBATCH --job-name=noisy8x8
-#SBATCH --partition=hugemem
+#SBATCH --partition=highmem
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --time=24:00:00
