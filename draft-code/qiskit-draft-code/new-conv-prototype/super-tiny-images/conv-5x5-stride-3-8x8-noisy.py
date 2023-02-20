@@ -440,9 +440,12 @@ if __name__ == '__main__':
         # one typically finds that in a high-noise setting (Le., poor quality measurements of L(theta))
         # it is necessary to pick a smaller a and larger c than in a low-noise setting.
         optimized_params = res.x
+
+        n_iter = len(train_cost_epochs) # sometimes the real number of epochs is one more that the specified number of epochs.
+
         return dict(
-            n_train=[n_train] * (n_epochs),
-            step=np.arange(1, n_epochs + 1, dtype=int),
+            n_train=[n_train] * (n_iter),
+            step=np.arange(1, n_iter + 1, dtype=int),
             train_cost=train_cost_epochs,
             train_acc=train_acc_epochs,
             test_cost=test_cost_epochs,
