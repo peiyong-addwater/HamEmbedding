@@ -1,11 +1,11 @@
 #!/bin/bash --login
 #SBATCH --job-name=noisy8x8
 #SBATCH --partition=highmem
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --time=24:00:00
 #SBATCH --account=pawsey0419
 #SBATCH --export=NONE
-#SBATCH --mem=512G
+#SBATCH --mem=1800G
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export OMP_PLACES=cores     #To bind threads to cores
