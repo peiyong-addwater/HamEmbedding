@@ -6,7 +6,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit import Aer
 from qiskit_aer import AerSimulator
 from concurrent.futures import ThreadPoolExecutor
-from qiskit.algorithms.optimizers import SPSA
+from qiskit.algorithms.optimizers import SPSA, COBYLA
 import json
 import time
 import shutup
@@ -326,7 +326,7 @@ if __name__ == '__main__':
     import pandas as pd
     import json
 
-    NUM_SHOTS = 512
+    NUM_SHOTS = 1024
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
     BACKEND_SIM = AerSimulator.from_backend(noisy_backend)
@@ -380,6 +380,28 @@ if __name__ == '__main__':
         print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
         start = time.time()
+        # The callback function for cobyla
+        def callback_fn(xk):
+            train_prob = batch_data_probs_sim(xk, x_train)
+            train_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_train, train_prob)
+            train_cost_epochs.append(train_cost)
+            test_prob = batch_data_probs_sim(xk, x_test)
+            test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test, test_prob)
+            test_cost_epochs.append(test_cost)
+            train_acc = batch_avg_accuracy(train_prob, y_train)
+            test_acc = batch_avg_accuracy(test_prob, y_test)
+            train_acc_epochs.append(train_acc)
+            test_acc_epochs.append(test_acc)
+            iteration_num = len(train_cost_epochs)
+            time_till_now = time.time() - start
+            avg_epoch_time = time_till_now / iteration_num
+            if iteration_num % 1 == 0:
+                print(
+                    f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc "
+                    f"{np.round(train_acc, 4)}, "
+                    f"train cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test cost "
+                    f"{np.round(test_cost, 4)}, avg epoch time "
+                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
 
         # For the callback function for SPSA in qiskit
         # 5 arguments needed: number of function evaluations, parameters, loss, stepsize, accepted
@@ -407,8 +429,8 @@ if __name__ == '__main__':
 
         bounds = [(0, 2 * np.pi)] * (108)
 
-        opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
-        # opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
+        # opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
+        opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
         res = opt.minimize(
             cost,
             x0 = params,
@@ -453,7 +475,7 @@ if __name__ == '__main__':
     #save results data
     res_dict = results_df.to_dict()
     # res_dict["best_params"] = params
-    with open(f"noisy-qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps.json", 'w') as f:
+    with open(f"noisy-qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps-COBYLA.json", 'w') as f:
         json.dump(res_dict, f, indent=4, cls=NpEncoder)
 
     # aggregate dataframe
@@ -516,4 +538,4 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig(f"noisy-qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps.pdf")
+    plt.savefig(f"noisy-qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps-COBYLA.pdf")
