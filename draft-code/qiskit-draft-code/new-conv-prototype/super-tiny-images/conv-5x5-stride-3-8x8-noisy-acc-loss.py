@@ -400,7 +400,7 @@ if __name__ == '__main__':
                 print(
                     f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc "
                     f"{np.round(train_acc, 4)}, "
-                    f"train cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test cost "
+                    f"train ce cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test ce cost "
                     f"{np.round(test_cost, 4)}, avg epoch time "
                     f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
 
