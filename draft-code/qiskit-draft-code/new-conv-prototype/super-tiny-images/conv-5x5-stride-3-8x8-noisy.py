@@ -341,8 +341,8 @@ if __name__ == '__main__':
     STRIDE = (3, 3)
     n_test = 100
     n_epochs = 200
-    n_reps = 3
-    train_sizes = [20, 200, 500]
+    n_reps = 2
+    train_sizes = [200, 500]
 
     params = np.random.random(108)
 
