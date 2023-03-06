@@ -374,8 +374,8 @@ if __name__ == '__main__':
     import json
 
     NUM_SHOTS = 512
-    N_WORKERS = 11
-    MAX_JOB_SIZE = 1
+    N_WORKERS = 10
+    MAX_JOB_SIZE = 10
     N_PARAMS = 45 + 18
 
     BACKEND_SIM = Aer.get_backend('aer_simulator')
@@ -387,8 +387,8 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
-    n_epochs = 500
-    n_img_per_label = 2
+    n_epochs = 200
+    n_img_per_label = 3
 
     params = np.random.random(N_PARAMS)
 
