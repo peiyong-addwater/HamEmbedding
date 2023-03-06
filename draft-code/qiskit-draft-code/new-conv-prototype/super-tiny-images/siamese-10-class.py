@@ -376,17 +376,21 @@ if __name__ == '__main__':
     NUM_SHOTS = 2048
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
+    N_PARAMS = 45 + 18
 
     BACKEND_SIM = Aer.get_backend('aer_simulator')
     EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
     BACKEND_SIM.set_options(executor=EXC)
     BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
     BACKEND_SIM.set_options(max_parallel_experiments=0)
-    seed = 42
+    seed = 1701
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
     n_epochs = 500
+    n_img_per_label = 3
+
+    params = np.random.random(N_PARAMS)
 
     def batch_data_overlap_sim(params, data_pair_list):
         circs = [full_circ(data, params) for data in data_pair_list]
@@ -395,12 +399,46 @@ if __name__ == '__main__':
         overlap = [get_state_overlap_from_counts(count) for count in counts]
         return overlap
 
-    def batch_data_loss(params, data_pair_list, margin = 1):
+    def batch_data_loss_avg(params, data_pair_list, margin = 1):
         overlap = batch_data_overlap_sim(params, data_pair_list)
         Y = [1-int(data0[1]==data1[1]) for (data0, data1) in data_pair_list]
         loss =[(1-y)*(1/2)*(d**2)+y*(1/2)*(max(0., margin-d)**2) for y, d in zip(Y, overlap)]
-        return np.mean(loss)
+        return sum(loss)/len(loss)
 
+    def train_model(n_img_per_label, n_epochs, starting_point,rng):
+        train_cost_epochs = []
+        data_pair_list, _ = select_data(num_data_per_label_train=n_img_per_label, rng=rng)
+        n_train = len(data_pair_list)
+        print(f"Training with {n_train} data pairs, for {n_epochs} epochs...")
+        cost = lambda xk: batch_data_loss_avg(xk, data_pair_list)
+        start = time.time()
+        def callback_fn(xk):
+            train_cost = batch_data_loss_avg(xk, data_pair_list)
+            train_cost_epochs.append(train_cost)
+            iteration_num = len(train_cost_epochs)
+            time_till_now = time.time() - start
+            avg_epoch_time = time_till_now / iteration_num
+            if iteration_num % 1 == 0:
+                print(
+                    f"Training with {n_train} data pairs, Training at Epoch {iteration_num},"
+                    f"train cost {np.round(train_cost, 4)}"
+                    f"avg epoch time "
+                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
 
+        bounds = [(0, 2 * np.pi)] * (N_PARAMS)
+        opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
+        res = opt.minimize(
+            cost,
+            x0=starting_point,
+            bounds=bounds
+        )
+        optimized_params = res.x
+        return dict(
+            losses = train_cost_epochs,
+            params = optimized_params
+        )
 
+    res = train_model(n_img_per_label=n_img_per_label, n_epochs=n_epochs, starting_point=params, rng=rng)
 
+    with open(f"siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json", 'w') as f:
+        json.dump(res, f, indent=4, cls=NpEncoder)
