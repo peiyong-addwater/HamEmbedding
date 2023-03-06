@@ -318,20 +318,76 @@ def full_circ(prepared_data_twin, params):
     return circ
 
 # draw the conv 1 layer
-data0 = []
-for i in range(2):
-    row = []
-    for j in range(2):
-        row.append(ParameterVector(f"x0_{i}{j}", length=30))
-    data0.append(row)
+# data0 = []
+# for i in range(2):
+#     row = []
+#     for j in range(2):
+#         row.append(ParameterVector(f"x0_{i}{j}", length=30))
+#     data0.append(row)
+#
+# data1 = []
+# for i in range(2):
+#     row = []
+#     for j in range(2):
+#         row.append(ParameterVector(f"x1_{i}{j}", length=30))
+#     data1.append(row)
+# parameter_conv_1 = ParameterVector("θ", length=45 + 18)
+# data = ((data0,0), (data1,1))
+# siamese_circ = full_circ(data, parameter_conv_1)
+# siamese_circ.draw(output='mpl', filename='siamese-conv-5x5.png', style='bw', fold=-1, scale=0.5)
+# params = np.random.random(45+18)
+# extracted_data = select_data()
+# one_data = extracted_data[0][0]
+# siamese_full = full_circ(one_data, params)
+# backend_sim = Aer.get_backend('aer_simulator')
+# convnet = transpile(siamese_full, backend_sim)
+# job = backend_sim.run(convnet, shots=2048)
+# results = job.result()
+# counts = results.get_counts()
+# print(counts)
+# swap_test_counts = {"0":0, "1":0}
+# for key in counts.keys():
+#     swap_test_meas = key.split(' ')[0]
+#     swap_test_counts[swap_test_meas] += counts[key]
+# print(swap_test_counts)
+def get_state_overlap_from_counts(counts:dict):
+    swap_test_counts = {"0": 0, "1": 0}
+    for key in counts.keys():
+        swap_test_meas = key.split(' ')[0]
+        swap_test_counts[swap_test_meas] += counts[key]
+    prob_0 = swap_test_counts['0']/sum(swap_test_counts.values())
+    return 2*prob_0-1
 
-data1 = []
-for i in range(2):
-    row = []
-    for j in range(2):
-        row.append(ParameterVector(f"x1_{i}{j}", length=30))
-    data1.append(row)
-parameter_conv_1 = ParameterVector("θ", length=45 + 18)
-data = ((data0,0), (data1,1))
-siamese_circ = full_circ(data, parameter_conv_1)
-siamese_circ.draw(output='mpl', filename='siamese-conv-5x5.png', style='bw', fold=-1, scale=0.5)
+def single_data_pair_overlap_sim(params, data, shots = 2048):
+    backend_sim = Aer.get_backend('aer_simulator')
+    convnet = transpile(full_circ(data, params), backend_sim)
+    job = backend_sim.run(convnet, shots=shots)
+    results = job.result()
+    counts = results.get_counts()
+    return get_state_overlap_from_counts(counts)
+
+if __name__ == '__main__':
+    import matplotlib as mpl
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import json
+
+    NUM_SHOTS = 2048
+    N_WORKERS = 8
+    MAX_JOB_SIZE = 10
+
+    BACKEND_SIM = Aer.get_backend('aer_simulator')
+    EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
+    BACKEND_SIM.set_options(executor=EXC)
+    BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
+    BACKEND_SIM.set_options(max_parallel_experiments=0)
+    seed = 42
+    rng = np.random.default_rng(seed=seed)
+    KERNEL_SIZE = (5, 5)
+    STRIDE = (3, 3)
+    n_epochs = 500
+
+
+
+
