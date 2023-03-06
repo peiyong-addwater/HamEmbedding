@@ -373,7 +373,7 @@ if __name__ == '__main__':
     import pandas as pd
     import json
 
-    NUM_SHOTS = 2048
+    NUM_SHOTS = 512
     N_WORKERS = 11
     MAX_JOB_SIZE = 1
     N_PARAMS = 45 + 18
@@ -388,7 +388,7 @@ if __name__ == '__main__':
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
     n_epochs = 500
-    n_img_per_label = 3
+    n_img_per_label = 2
 
     params = np.random.random(N_PARAMS)
 
