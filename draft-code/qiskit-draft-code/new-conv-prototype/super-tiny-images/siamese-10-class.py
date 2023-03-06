@@ -420,7 +420,7 @@ if __name__ == '__main__':
             avg_epoch_time = time_till_now / iteration_num
             if iteration_num % 1 == 0:
                 print(
-                    f"Training with {n_train} data pairs, Training at Epoch {iteration_num},"
+                    f"Training with {n_train} data pairs, at Epoch {iteration_num}, "
                     f"train cost {np.round(train_cost, 4)}, "
                     f"avg epoch time "
                     f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
