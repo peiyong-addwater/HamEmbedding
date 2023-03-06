@@ -8,12 +8,22 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import json
 import pickle
+import os.path
 
-import jax
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
+from qiskit import Aer
+from qiskit_aer import AerSimulator
+from concurrent.futures import ThreadPoolExecutor
+from qiskit.algorithms.optimizers import SPSA, COBYLA
+from qiskit.circuit import ParameterVector
+import json
+import time
+import shutup
+import pickle
 
-import jax.numpy as jnp
+shutup.please()
 
-import optax  # optimization using jax
+DATA_PATH = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/tiny-handwritten.pkl"
 
 def add_padding(matrix: np.ndarray,
                 padding: Tuple[int, int]) -> np.ndarray:
@@ -167,16 +177,161 @@ def load_data(num_train, num_test, rng, one_hot=True):
         y_test,
     )
 
-def select_data(labels=[0,1,2,3,4,5,6,7,8,9], num_data_per_label_train = 5, num_test_per_label=1, rng=None):
+def select_data(labels=[0,1,2,3,4,5,6,7,8,9], num_data_per_label_train = 3, num_test_per_label=1, rng=np.random.default_rng(seed=42)):
     data_path = "../../../../data/mini-digits/tiny-handwritten.pkl"
     features, all_labels = load_tiny_digits(data_path)
-    selected_train_images = {}
+    features = np.array(features)
+    all_labels = np.array(all_labels)
+    selected_train_images = []
     test_images= {}
+    test_images['data'] = []
+    test_images['labels'] = []
     for label in labels:
-        data_for_label = features[np.where(labels == label)]
+        data_for_label = features[np.where(all_labels == label)]
         # sample some data
         train_indices = rng.choice(len(data_for_label), num_data_per_label_train, replace=False)
         test_indices = rng.choice(
-        np.setdiff1d(range(len(data_for_label)), train_indices), num_test_per_label, replace=False
-    )
+        np.setdiff1d(range(len(data_for_label)), train_indices), num_test_per_label, replace=False)
+        extracted_data = [extract_convolution_data(data_for_label[train_indices][i], kernel_size=(5, 5), stride=(3, 3), dilation=(1, 1),
+                                        padding=(0, 0), encoding_gate_parameter_size=15) for i in range(num_data_per_label_train)]
+        for i in range(num_data_per_label_train):
+            selected_train_images.append((extracted_data[i], label))
+        test_images['data'].append(extract_convolution_data(data_for_label[test_indices][0], kernel_size=(5, 5), stride=(3, 3), dilation=(1, 1),
+                                        padding=(0, 0), encoding_gate_parameter_size=15))
+        test_images['labels'].append(label)
 
+    # pair the training data
+    paired_extracted_data = []
+    for i in range(len(selected_train_images)):
+        for j in range(len(selected_train_images)):
+            if i!=j:
+                paired_extracted_data.append((selected_train_images[i], selected_train_images[j]))
+
+    return paired_extracted_data, test_images
+
+
+def su4_circuit(params):
+    su4 = QuantumCircuit(2, name='su4')
+    su4.u(params[0], params[1], params[2], qubit=0)
+    su4.u(params[3], params[4], params[5], qubit=1)
+    su4.cx(0,1)
+    su4.ry(params[6], 0)
+    su4.rz(params[7], 1)
+    su4.cx(1, 0)
+    su4.ry(params[8], 0)
+    su4.cx(0, 1)
+    su4.u(params[9], params[10], params[11], 0)
+    su4.u(params[12], params[13], params[14], 1)
+    su4_inst = su4.to_instruction()
+    su4 = QuantumCircuit(2)
+    su4.append(su4_inst, list(range(2)))
+    return su4
+
+def kernel_5x5(padded_data_in_kernel_view, conv_params, pooling_params):
+    """
+    45 + 18 parameters
+    :param padded_data_in_kernel_view:
+    :param conv_params:
+    :param pooling_params:
+    :return:
+    """
+    qreg = QuantumRegister(4, name="conv-pooling")
+    creg = ClassicalRegister(3, name='pooling-meas')
+    circ = QuantumCircuit(qreg, creg, name = "conv-encode-5x5")
+
+    circ.h(qreg)
+    # encode the pixel data
+    circ.compose(su4_circuit(padded_data_in_kernel_view[:15]), qubits=qreg[:2], inplace=True)
+    circ.compose(su4_circuit(padded_data_in_kernel_view[15:]), qubits=qreg[2:], inplace=True)
+    # convolution parameters
+    circ.compose(su4_circuit(conv_params[:15]), qubits=[qreg[1], qreg[2]], inplace=True)
+    circ.compose(su4_circuit(conv_params[15:30]), qubits=[qreg[0], qreg[1]], inplace=True)
+    circ.compose(su4_circuit(conv_params[30:45]), qubits=[qreg[2], qreg[3]], inplace=True)
+    # measurement and pooling
+    circ.measure(qreg[1:], creg)
+    circ.u(pooling_params[0], pooling_params[1], pooling_params[2], qubit=qreg[0]).c_if(creg[0], 1)
+    circ.u(pooling_params[3], pooling_params[4], pooling_params[5], qubit=qreg[0]).c_if(creg[0], 0)
+    circ.u(pooling_params[6], pooling_params[7], pooling_params[8], qubit=qreg[0]).c_if(creg[1], 1)
+    circ.u(pooling_params[9], pooling_params[10], pooling_params[11], qubit=qreg[0]).c_if(creg[1], 0)
+    circ.u(pooling_params[12], pooling_params[13], pooling_params[14], qubit=qreg[0]).c_if(creg[2], 1)
+    circ.u(pooling_params[15], pooling_params[16], pooling_params[17], qubit=qreg[0]).c_if(creg[2], 0)
+    # reset the last three qubits
+    circ.barrier(qreg)
+    circ.reset(qreg[1])
+    circ.reset(qreg[2])
+    circ.reset(qreg[3])
+
+
+
+    return circ
+
+def conv_layer_1(data_for_entire_2x2_feature_map, params):
+    """
+    conv-1 requires 45 + 18 parameters
+    8 qubits
+    :param data_for_first_row_of_5x5_feature_map:
+    :param params:
+    :return:
+    """
+    qreg = QuantumRegister(7, name='conv')
+    creg = ClassicalRegister(3, name="pooling-meas")
+    circ = QuantumCircuit(qreg, creg, name='conv-layer-1')
+    conv_kernel_param = params[:45]
+    pooling_param = params[45:]
+    qubit_counter = 0
+    for i in range(2):
+        for j in range(2):
+            conv_op = kernel_5x5(data_for_entire_2x2_feature_map[i][j], conv_kernel_param, pooling_param)#.to_instruction(label="Conv5x5")
+            circ.compose(conv_op, qubits=qreg[qubit_counter:qubit_counter + 4], clbits=creg, inplace=True)
+            circ.barrier(qreg)
+            qubit_counter+=1
+    return circ
+
+def full_circ(prepared_data_twin, params):
+    """
+    45 + 18 parameters
+    :param prepared_data_twin:
+    :param params:
+    :return:
+    """
+    network_qreg = QuantumRegister(4+7, name="network-qreg")
+    pooling_measure = ClassicalRegister(3, name='pooling-measure')
+    swap_test_creg = ClassicalRegister(1, name="swap-test-meas")
+    circ = QuantumCircuit(network_qreg, pooling_measure, swap_test_creg)
+
+    img0, label0 = prepared_data_twin[0]
+    img1, label1 = prepared_data_twin[1]
+
+    # network for image 0
+    circ.compose(conv_layer_1(img0, params), qubits=network_qreg[:7], clbits=pooling_measure, inplace=True)
+    circ.barrier(network_qreg)
+    # network for image 1
+    circ.compose(conv_layer_1(img1, params), qubits=network_qreg[4:], clbits=pooling_measure,inplace=True)
+    circ.barrier(network_qreg)
+    # swap test
+    circ.h(network_qreg[-1])
+    for i in range(4):
+        circ.cswap(control_qubit=network_qreg[-1], target_qubit1=network_qreg[i], target_qubit2=network_qreg[i+4])
+    circ.h(network_qreg[-1])
+    circ.measure(network_qreg[-1], swap_test_creg)
+
+    return circ
+
+# draw the conv 1 layer
+data0 = []
+for i in range(2):
+    row = []
+    for j in range(2):
+        row.append(ParameterVector(f"x0_{i}{j}", length=30))
+    data0.append(row)
+
+data1 = []
+for i in range(2):
+    row = []
+    for j in range(2):
+        row.append(ParameterVector(f"x1_{i}{j}", length=30))
+    data1.append(row)
+parameter_conv_1 = ParameterVector("θ", length=45 + 18)
+data = ((data0,0), (data1,1))
+siamese_circ = full_circ(data, parameter_conv_1)
+siamese_circ.draw(output='mpl', filename='siamese-conv-5x5.png', style='bw', fold=-1, scale=0.5)
