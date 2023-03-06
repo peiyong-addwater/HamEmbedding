@@ -388,6 +388,19 @@ if __name__ == '__main__':
     STRIDE = (3, 3)
     n_epochs = 500
 
+    def batch_data_overlap_sim(params, data_pair_list):
+        circs = [full_circ(data, params) for data in data_pair_list]
+        results = BACKEND_SIM.run(transpile(circs, BACKEND_SIM), shots=NUM_SHOTS).result()
+        counts = results.get_counts()
+        overlap = [get_state_overlap_from_counts(count) for count in counts]
+        return overlap
+
+    def batch_data_loss(params, data_pair_list, margin = 1):
+        overlap = batch_data_overlap_sim(params, data_pair_list)
+        Y = [1-int(data0[1]==data1[1]) for (data0, data1) in data_pair_list]
+        loss =[(1-y)*(1/2)*(d**2)+y*(1/2)*(max(0., margin-d)**2) for y, d in zip(Y, overlap)]
+        return np.mean(loss)
+
 
 
 
