@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     40595,       1303]
+NotebookDataLength[     40598,       1303]
 NotebookOptionsPosition[     39203,       1271]
-NotebookOutlinePosition[     39637,       1288]
-CellTagsIndexPosition[     39594,       1285]
+NotebookOutlinePosition[     39640,       1288]
+CellTagsIndexPosition[     39597,       1285]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -1270,7 +1270,7 @@ Cell[BoxData[
 }, Open  ]]
 },
 WindowSize->{1085, 972},
-WindowMargins->{{Automatic, 4}, {Automatic, 0}},
+WindowMargins->{{361, Automatic}, {Automatic, 14}},
 TaggingRules-><|"TryRealOnly" -> False|>,
 FrontEndVersion->"13.1 for Mac OS X ARM (64-bit) (June 16, 2022)",
 StyleDefinitions->"Default.nb",
@@ -1308,4 +1308,6 @@ Cell[31260, 1019, 7927, 249, 377, "Output",ExpressionUUID->"7261f137-7b29-4cee-9
 }
 ]
 *)
+
+(* End of internal cache information *)
 
