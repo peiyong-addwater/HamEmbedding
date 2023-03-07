@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     40598,       1303]
-NotebookOptionsPosition[     39203,       1271]
-NotebookOutlinePosition[     39640,       1288]
-CellTagsIndexPosition[     39597,       1285]
+NotebookDataLength[     40619,       1303]
+NotebookOptionsPosition[     39225,       1271]
+NotebookOutlinePosition[     39661,       1288]
+CellTagsIndexPosition[     39618,       1285]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -1015,7 +1015,7 @@ Cell[BoxData[{
  CellChangeTimes->{{3.8871610201854353`*^9, 3.887161105539158*^9}, {
   3.8871612344123096`*^9, 3.887161320743497*^9}, {3.887161362316876*^9, 
   3.887161422908731*^9}},
- CellLabel->"In[32]:=",ExpressionUUID->"8ace629e-5c59-4cd3-9e56-287a423137a9"],
+ CellLabel->"In[35]:=",ExpressionUUID->"8ace629e-5c59-4cd3-9e56-287a423137a9"],
 
 Cell[BoxData[
  RowBox[{
@@ -1265,12 +1265,12 @@ Cell[BoxData[
    RowBox[{"Sin", "[", 
     FractionBox[
      SubscriptBox["\[Theta]", "39"], "2"], "]"}]}]}]], "Output",
- CellChangeTimes->{3.8871614234406147`*^9},
- CellLabel->"Out[34]=",ExpressionUUID->"7261f137-7b29-4cee-98b7-9ce0b5da8502"]
+ CellChangeTimes->{3.8871614234406147`*^9, 3.887161698140101*^9},
+ CellLabel->"Out[37]=",ExpressionUUID->"af562053-c8ef-40e8-921c-95fa6fd1af18"]
 }, Open  ]]
 },
 WindowSize->{1085, 972},
-WindowMargins->{{361, Automatic}, {Automatic, 14}},
+WindowMargins->{{Automatic, 349}, {Automatic, 6}},
 TaggingRules-><|"TryRealOnly" -> False|>,
 FrontEndVersion->"13.1 for Mac OS X ARM (64-bit) (June 16, 2022)",
 StyleDefinitions->"Default.nb",
@@ -1303,11 +1303,9 @@ Cell[22074, 720, 7378, 242, 374, "Output",ExpressionUUID->"7020e0b7-6dfa-4f6d-8d
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[29489, 967, 1768, 50, 142, "Input",ExpressionUUID->"8ace629e-5c59-4cd3-9e56-287a423137a9"],
-Cell[31260, 1019, 7927, 249, 377, "Output",ExpressionUUID->"7261f137-7b29-4cee-98b7-9ce0b5da8502"]
+Cell[31260, 1019, 7949, 249, 397, "Output",ExpressionUUID->"af562053-c8ef-40e8-921c-95fa6fd1af18"]
 }, Open  ]]
 }
 ]
 *)
-
-(* End of internal cache information *)
 
