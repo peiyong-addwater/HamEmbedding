@@ -345,7 +345,7 @@ if __name__ == '__main__':
 
     NUM_SHOTS = 1024
     N_WORKERS = 11
-    MAX_JOB_SIZE = 1
+    MAX_JOB_SIZE = 100
     N_PARAMS = 45 + 18
 
     BACKEND_SIM = Aer.get_backend('aer_simulator')
