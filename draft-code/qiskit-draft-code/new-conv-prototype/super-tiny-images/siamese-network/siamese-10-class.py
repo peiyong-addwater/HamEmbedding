@@ -359,7 +359,7 @@ if __name__ == '__main__':
 
     save_filename = nowtime()+"_"+f"siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
 
-    checkpointfile = "draft-code/qiskit-draft-code/new-conv-prototype/super-tiny-images/siamese-network/siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-3-img_per_class-COBYLA.json"
+    checkpointfile = "siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-3-img_per_class-COBYLA.json"
     with open(checkpointfile, 'r') as f:
         checkpoint = json.load(f)
     params = checkpoint['params']
