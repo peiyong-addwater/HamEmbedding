@@ -362,6 +362,7 @@ if __name__ == '__main__':
     checkpointfile = "siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-3-img_per_class-COBYLA.json"
     with open(checkpointfile, 'r') as f:
         checkpoint = json.load(f)
+        print("Loaded checkpoint file: " + checkpointfile)
     params = checkpoint['params']
     #params = np.random.random(N_PARAMS)
 
