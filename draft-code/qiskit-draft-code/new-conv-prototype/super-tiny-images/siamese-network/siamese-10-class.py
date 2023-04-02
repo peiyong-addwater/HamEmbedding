@@ -318,13 +318,14 @@ def full_circ(prepared_data_twin, params):
 # print(swap_test_counts)
 def get_state_overlap_from_counts(counts:dict):
     swap_test_counts = {"0": 0, "1": 0}
-    print(counts)
+    # print(counts)
     for key in counts.keys():
         swap_test_meas = key.split(' ')[0]
         swap_test_counts[swap_test_meas] += counts[key]
     prob_0 = swap_test_counts['0']/sum(swap_test_counts.values())
-    overlap_squared = 2*prob_0-1
-    print(overlap_squared)
+    overlap_squared = 2*prob_0-1 # sometimes there is negative values
+    overlap_squared = np.sqrt(overlap_squared**2)
+    # print(overlap_squared)
     return np.sqrt(overlap_squared)
 
 def single_data_pair_overlap_sim(params, data, shots = 2048):
@@ -342,7 +343,7 @@ if __name__ == '__main__':
     import pandas as pd
     import json
 
-    NUM_SHOTS = 512
+    NUM_SHOTS = 1024
     N_WORKERS = 10
     MAX_JOB_SIZE = 10
     N_PARAMS = 45 + 18
