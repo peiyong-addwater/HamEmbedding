@@ -318,11 +318,13 @@ def full_circ(prepared_data_twin, params):
 # print(swap_test_counts)
 def get_state_overlap_from_counts(counts:dict):
     swap_test_counts = {"0": 0, "1": 0}
+    print(counts)
     for key in counts.keys():
         swap_test_meas = key.split(' ')[0]
         swap_test_counts[swap_test_meas] += counts[key]
     prob_0 = swap_test_counts['0']/sum(swap_test_counts.values())
     overlap_squared = 2*prob_0-1
+    print(overlap_squared)
     return np.sqrt(overlap_squared)
 
 def single_data_pair_overlap_sim(params, data, shots = 2048):
