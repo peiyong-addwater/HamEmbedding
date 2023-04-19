@@ -25,6 +25,9 @@ shutup.please()
 
 DATA_PATH = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/tiny-handwritten.pkl"
 
+def nowtime():
+    return str(time.strftime("%Y%m%d-%H%M%S", time.localtime()))
+
 def add_padding(matrix: np.ndarray,
                 padding: Tuple[int, int]) -> np.ndarray:
     """Adds padding to the matrix.
@@ -140,47 +143,10 @@ def load_tiny_digits(path, kind="train"):
     else:
         return mnist["test_images"], mnist["test_labels"]
 
-def load_data(num_train, num_test, rng, one_hot=True):
-    data_path = "../../../../../data/mini-digits/tiny-handwritten.pkl"
-    features, labels = load_tiny_digits(data_path)
-    features = np.array(features)
-    labels = np.array(labels)
-    # only use first four classes
-    features = features[np.where((labels == 0) | (labels == 1) | (labels == 2) | (labels == 3))]
-    labels = labels[np.where((labels == 0) | (labels == 1) | (labels == 2) | (labels == 3))]
-
-    # subsample train and test split
-    train_indices = rng.choice(len(labels), num_train, replace=False)
-    test_indices = rng.choice(
-        np.setdiff1d(range(len(labels)), train_indices), num_test, replace=False
-    )
-
-    x_train, y_train = features[train_indices], labels[train_indices]
-    x_train = [extract_convolution_data(x_train[i], kernel_size=(5, 5), stride=(3, 3), dilation=(1, 1),
-                                        padding=(0, 0), encoding_gate_parameter_size=15) for i in range(num_train)]
-    x_test, y_test = features[test_indices], labels[test_indices]
-    x_test = [extract_convolution_data(x_test[i], kernel_size=(5, 5), stride=(3, 3), dilation=(1, 1),
-                                       padding=(0, 0), encoding_gate_parameter_size=15) for i in range(num_test)]
-    if one_hot:
-        train_labels = np.zeros((len(y_train), 4))
-        test_labels = np.zeros((len(y_test), 4))
-        train_labels[np.arange(len(y_train)), y_train] = 1
-        test_labels[np.arange(len(y_test)), y_test] = 1
-
-        y_train = train_labels
-        y_test = test_labels
-
-    return (
-        x_train,
-        y_train,
-        x_test,
-        y_test,
-    )
-
 def select_data(labels=[0,1,2,3,4,5,6,7,8,9], num_data_per_label_train = 3, num_test_per_label=1, rng=np.random.default_rng(seed=42)):
     data_path = "../../../../../data/mini-digits/tiny-handwritten.pkl"
     features, all_labels = load_tiny_digits(data_path)
-    features = np.array(features)
+    features = np.array(features) * (2*np.pi) # in the dataset, we converted the range of values to [0,1]
     all_labels = np.array(all_labels)
     selected_train_images = []
     test_images= {}
@@ -352,11 +318,15 @@ def full_circ(prepared_data_twin, params):
 # print(swap_test_counts)
 def get_state_overlap_from_counts(counts:dict):
     swap_test_counts = {"0": 0, "1": 0}
+    # print(counts)
     for key in counts.keys():
         swap_test_meas = key.split(' ')[0]
         swap_test_counts[swap_test_meas] += counts[key]
     prob_0 = swap_test_counts['0']/sum(swap_test_counts.values())
-    return 2*prob_0-1
+    overlap_squared = 2*prob_0-1 # sometimes there is negative values
+    overlap_squared = np.sqrt(overlap_squared**2)
+    # print(overlap_squared)
+    return np.sqrt(overlap_squared)
 
 def single_data_pair_overlap_sim(params, data, shots = 2048):
     backend_sim = Aer.get_backend('aer_simulator')
@@ -373,9 +343,9 @@ if __name__ == '__main__':
     import pandas as pd
     import json
 
-    NUM_SHOTS = 512
-    N_WORKERS = 10
-    MAX_JOB_SIZE = 10
+    NUM_SHOTS = 1024
+    N_WORKERS = 11
+    MAX_JOB_SIZE = 100
     N_PARAMS = 45 + 18
 
     BACKEND_SIM = Aer.get_backend('aer_simulator')
@@ -390,7 +360,15 @@ if __name__ == '__main__':
     n_epochs = 200
     n_img_per_label = 3
 
-    params = np.random.random(N_PARAMS)
+    save_filename = nowtime()+"_"+f"siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
+
+    checkpointfile = "siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-3-img_per_class-COBYLA.json"
+    with open(checkpointfile, 'r') as f:
+        checkpoint = json.load(f)
+        print("Loaded checkpoint file: " + checkpointfile)
+    params = checkpoint['params']
+    #params = np.random.random(N_PARAMS)
+
 
     def batch_data_overlap_sim(params, data_pair_list):
         circs = [full_circ(data, params) for data in data_pair_list]
@@ -440,5 +418,5 @@ if __name__ == '__main__':
 
     res = train_model(n_img_per_label=n_img_per_label, n_epochs=n_epochs, starting_point=params, rng=rng)
 
-    with open(f"siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json", 'w') as f:
+    with open(save_filename, 'w') as f:
         json.dump(res, f, indent=4, cls=NpEncoder)
