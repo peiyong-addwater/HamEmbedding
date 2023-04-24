@@ -127,7 +127,7 @@ def load_tiny_digits(path, kind="train"):
     else:
         import tinyhandwrittendigits
         tinyhandwrittendigits.init()
-        with open("../../../../data/mini-digits/tiny-handwritten.pkl", 'rb') as f:
+        with open("/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/tiny-handwritten.pkl", 'rb') as f:
             mnist = pickle.load(f)
     if kind == 'train':
         return mnist["training_images"], mnist["training_labels"]
@@ -135,7 +135,7 @@ def load_tiny_digits(path, kind="train"):
         return mnist["test_images"], mnist["test_labels"]
 
 def load_data(num_train, num_test, rng, one_hot=True):
-    data_path = "../../../../data/mini-digits/tiny-handwritten.pkl"
+    data_path = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/tiny-handwritten.pkl"
     features, labels = load_tiny_digits(data_path)
     features = np.array(features)
     labels = np.array(labels)
@@ -348,6 +348,8 @@ if __name__ == '__main__':
     n_reps = 2
     train_sizes = [20, 200, 500]
 
+    params = np.random.uniform(low=-np.pi, high=np.pi, size=45)
+
     def batch_data_probs_sim(params, data_list):
         """
 
@@ -368,7 +370,7 @@ if __name__ == '__main__':
         probs = batch_data_probs_sim(params, data_list)
         return avg_softmax_cross_entropy_loss_with_one_hot_labels(labels, probs)
 
-    def train_model(n_train, n_test, n_epochs, rep, rng):
+    def train_model(n_train, n_test, n_epochs, rep, rng, params):
         """
 
         :param n_train:
@@ -378,7 +380,6 @@ if __name__ == '__main__':
         :return:
         """
         x_train, y_train, x_test, y_test = load_data(n_train, n_test, rng)
-        params = np.random.random(45)
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
         print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
