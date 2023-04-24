@@ -383,6 +383,8 @@ if __name__ == '__main__':
     n_reps = 2
     train_sizes = [20, 200, 500]
 
+    params = np.random.random(45)
+
     def batch_data_probs_sim(params, data_list):
         """
 
