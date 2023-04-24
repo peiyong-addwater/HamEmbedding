@@ -3,7 +3,7 @@
 /data/fashion
 /data/cifar-100-python.tar.gz
 /data/cifar-10-python.tar.gz
-.idea
+.idea/*
 .idea/deployment.xml
 .idea/QML-ImageClassification.iml
 /draft-code/Old/qiskit/fashion-mnist-single-qubit-conv/qiskit-prototype-pybobyqa.log
