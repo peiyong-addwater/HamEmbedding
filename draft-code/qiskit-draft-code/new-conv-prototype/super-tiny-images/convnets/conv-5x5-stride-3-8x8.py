@@ -125,7 +125,7 @@ def load_tiny_digits(path, kind="train"):
     else:
         import tinyhandwrittendigits
         tinyhandwrittendigits.init()
-        with open("../../../../data/mini-digits/tiny-handwritten.pkl", 'rb') as f:
+        with open("../../../../../data/mini-digits/tiny-handwritten.pkl", 'rb') as f:
             mnist = pickle.load(f)
     if kind == 'train':
         return mnist["training_images"], mnist["training_labels"]
@@ -133,7 +133,7 @@ def load_tiny_digits(path, kind="train"):
         return mnist["test_images"], mnist["test_labels"]
 
 def load_data(num_train, num_test, rng, one_hot=True):
-    data_path = "../../../../data/mini-digits/tiny-handwritten.pkl"
+    data_path = "../../../../../data/mini-digits/tiny-handwritten.pkl"
     features, labels = load_tiny_digits(data_path)
     features = np.array(features)
     labels = np.array(labels)
