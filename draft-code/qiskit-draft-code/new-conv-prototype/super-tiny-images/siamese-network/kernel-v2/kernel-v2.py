@@ -190,15 +190,14 @@ def su4_circuit(params):
 def kernel_5x5_v2(padded_data_in_kernel_view, conv_params, pooling_params):
     """
 
-    :param padded_data_in_kernel_view:
-    :param conv_params:
-    :param pooling_params:
+    :param padded_data_in_kernel_view: 25+ padding 5
+    :param conv_params: 105 parameters
+    :param pooling_params: 18 parameters
     :return:
     """
     qreg = QuantumRegister(4, name="conv-pooling")
-    creg = ClassicalRegister(3, name='pooling-meas')
-    temp_creg = ClassicalRegister(2, name='temp')
-    circ = QuantumCircuit(qreg, creg, temp_creg, name="conv-encode-5x5")
+    creg = ClassicalRegister(5, name='pooling-meas')
+    circ = QuantumCircuit(qreg, creg, name="conv-encode-5x5")
     circ.h(qreg)
     # encode the pixel data
     circ.compose(su4_circuit(padded_data_in_kernel_view[:15]), qubits=qreg[:2], inplace=True)
@@ -209,18 +208,18 @@ def kernel_5x5_v2(padded_data_in_kernel_view, conv_params, pooling_params):
     circ.compose(su4_circuit(conv_params[30:45]), qubits=[qreg[2], qreg[3]], inplace=True)
     # collapse two of the four qubits
     # the measured qubits will remain in the measured state (sometimes with a phase)
-    circ.measure(qreg[0], temp_creg[0])
-    circ.measure(qreg[2], temp_creg[1])
+    circ.measure(qreg[0], creg[3])
+    circ.measure(qreg[2], creg[4])
     circ.barrier()
     circ.compose(su4_circuit(conv_params[45:60]), qubits=[qreg[0], qreg[1]], inplace=True)
     circ.compose(su4_circuit(conv_params[60:75]), qubits=[qreg[2], qreg[3]], inplace=True)
-    circ.measure(qreg[1], temp_creg[0])
-    circ.measure(qreg[3], temp_creg[1])
+    circ.measure(qreg[1], creg[3])
+    circ.measure(qreg[3], creg[4])
     circ.barrier()
     circ.compose(su4_circuit(conv_params[75:90]), qubits=[qreg[0], qreg[1]], inplace=True)
     circ.compose(su4_circuit(conv_params[90:105]), qubits=[qreg[2], qreg[3]], inplace=True)
     # measurement and pooling
-    circ.measure(qreg[1:], creg)
+    circ.measure(qreg[1:], creg[:3])
     circ.u(pooling_params[0], pooling_params[1], pooling_params[2], qubit=qreg[0]).c_if(creg[0], 1)
     circ.u(pooling_params[3], pooling_params[4], pooling_params[5], qubit=qreg[0]).c_if(creg[0], 0)
     circ.u(pooling_params[6], pooling_params[7], pooling_params[8], qubit=qreg[0]).c_if(creg[1], 1)
