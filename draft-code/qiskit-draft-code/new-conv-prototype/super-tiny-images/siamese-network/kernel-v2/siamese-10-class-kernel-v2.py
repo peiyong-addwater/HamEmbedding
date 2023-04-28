@@ -348,16 +348,23 @@ siamese_circ.draw(output='mpl', filename='siamese-v2-conv-5x5.png', style='bw', 
 print("siamese circuit picture saved...")
 
 def get_state_overlap_from_counts(counts:dict):
+    """
+    prob_0 = 1/2(1+inner_product^2)
+    prob_1 = 1/2(1-inner_product^2)
+    inner_product = 2*prob_0-1 = 1-2*prob_1
+    :param counts:
+    :return:
+    """
     swap_test_counts = {"0": 0, "1": 0}
     # print(counts)
     for key in counts.keys():
         swap_test_meas = key.split(' ')[0]
         swap_test_counts[swap_test_meas] += counts[key]
-    prob_0 = swap_test_counts['0']/sum(swap_test_counts.values())
-    overlap_squared = 2*prob_0-1 # sometimes there is negative values
+    prob_1 = swap_test_counts['1']/sum(swap_test_counts.values())
+    overlap_squared = -2*prob_1+1 # sometimes there is negative values
     overlap_squared = np.sqrt(overlap_squared**2)
     # print(overlap_squared)
-    return np.sqrt(overlap_squared)
+    return overlap_squared
 
 def single_data_pair_overlap_sim(params, data, shots = 2048):
     backend_sim = Aer.get_backend('aer_simulator')
@@ -376,7 +383,7 @@ if __name__ == '__main__':
 
     NUM_SHOTS = 1024
     N_WORKERS = 11
-    MAX_JOB_SIZE = 100
+    MAX_JOB_SIZE = 1
     N_PARAMS = 228
     BACKEND_SIM = Aer.get_backend('aer_simulator')
     EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
@@ -387,8 +394,8 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
-    n_epochs = 100
-    n_img_per_label = 3
+    n_epochs = 50
+    n_img_per_label = 2
 
     save_filename = nowtime() + "_" + f"siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
     checkpointfile = None
@@ -410,7 +417,7 @@ if __name__ == '__main__':
     def batch_data_loss_avg(params, data_pair_list, margin = 1):
         overlap = batch_data_overlap_sim(params, data_pair_list)
         Y = [1-int(data0[1]==data1[1]) for (data0, data1) in data_pair_list]
-        loss =[(1-y)*(1/2)*(d**2)+y*(1/2)*(max(0., margin-d)**2) for y, d in zip(Y, overlap)]
+        loss =[(1-y)*(1/2)*(d)+y*(1/2)*(max(0., margin-d)) for y, d in zip(Y, overlap)]
         return sum(loss)/len(loss)
 
     def train_model(n_img_per_label, n_epochs, starting_point,rng):
