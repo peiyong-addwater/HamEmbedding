@@ -17,7 +17,8 @@ shutup.please()
 from qiskit_ibm_provider import IBMProvider
 PROVIDER = IBMProvider()
 
-
+def nowtime():
+    return str(time.strftime("%Y%m%d-%H%M%S", time.localtime()))
 
 def add_padding(matrix: np.ndarray,
                 padding: Tuple[int, int]) -> np.ndarray:
@@ -545,4 +546,4 @@ if __name__ == '__main__':
     axes[2].legend(handles=legend_elements, ncol=3)
 
     axes[1].set_yscale('log', base=2)
-    plt.savefig(f"qiskit-fashion-mnist-5x5-conv-4-class-tiny-image-pretrained-weights-{n_test}-test-{n_reps}-reps-COBYLA.pdf")
+    plt.savefig(f"{nowtime()}-qiskit-fashion-mnist-5x5-conv-4-class-tiny-image-pretrained-weights-{n_test}-test-{n_reps}-reps-COBYLA.pdf")
