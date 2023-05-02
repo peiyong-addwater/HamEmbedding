@@ -439,9 +439,22 @@ if __name__ == '__main__':
                     f"train cost {np.round(train_cost, 4)}, "
                     f"avg epoch time "
                     f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
+        def callback_fn_qiskit_spsa(n_func_eval, xk, next_loss, stepsize, accepted):
+            train_cost = next_loss
+            train_cost_epochs.append(train_cost)
+            iteration_num = len(train_cost_epochs)
+            time_till_now = time.time() - start
+            avg_epoch_time = time_till_now / iteration_num
+            if iteration_num % 1 == 0:
+                print(
+                    f"Training with {n_train} data pairs, at Epoch {iteration_num}, "
+                    f"train cost {np.round(train_cost, 4)}, "
+                    f"avg epoch time "
+                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
 
         bounds = [(0, 2 * np.pi)] * (N_PARAMS)
-        opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
+        # opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
+        opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
         res = opt.minimize(
             cost,
             x0=starting_point,
