@@ -6,5 +6,6 @@ import os
 import csv
 import numpy as np
 from qiskit.utils import algorithm_globals
-from qiskit.algorithms.optimizer import Optimizer, OptimizerSupportLevel
+from qiskit.algorithms.optimizer import OptimizerSupportLevel
+from Optimiser import OptimizerSPSAGrad
 

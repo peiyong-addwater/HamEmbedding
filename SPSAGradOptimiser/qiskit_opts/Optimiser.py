@@ -11,8 +11,8 @@ from typing import Any, Union, Protocol
 import numpy as np
 import scipy
 
-from qiskit.algorithms.algorithm_result import AlgorithmResult
-from qiskit.algorithms.optimizers import OptimizerSupportLevel
+
+from qiskit.algorithms.optimizers import OptimizerSupportLevel, OptimizerResult
 
 logger = logging.getLogger(__name__)
 
@@ -55,60 +55,30 @@ class OptimizerSPSAGrad(ABC):
             self._options[name] = value
         logger.debug("options: %s", self._options)
 
-    # pylint: disable=invalid-name
+
     @staticmethod
-    def gradient_num_diff(x_center, f, epsilon, max_evals_grouped=None):
-        """
-        We compute the gradient with the numeric differentiation in the parallel way,
-        around the point x_center.
+    def gradient_spsa(x_center, f, k, c=0.2, alpha=0.602, gamma=0.101, A=None, a=None, maxiter=None):
+        if not maxiter and not A:
+            raise TypeError("One of the parameters maxiter or A must be provided.")
+        if not A:
+            A = maxiter*0.1
+        if not a:
+            a = 0.05*(A+1)**alpha
+        ck = c/k**gamma
+        delta = []
+        thetaplus = np.array(x_center)
+        thetaminus = np.array(x_center)
+        di = np.random.choice([-1, 1], size=x_center.shape)
+        multiplier = ck * di
+        # the output of the cost function should be a scalar
+        yplus = f(thetaplus)
+        yminus = f(thetaminus)
 
-        Args:
-            x_center (ndarray): point around which we compute the gradient
-            f (func): the function of which the gradient is to be computed.
-            epsilon (float): the epsilon used in the numeric differentiation.
-            max_evals_grouped (int): max evals grouped, defaults to 1 (i.e. no batching).
-        Returns:
-            grad: the gradient computed
-
-        """
-        if max_evals_grouped is None:  # no batching by default
-            max_evals_grouped = 1
-
-        forig = f(*((x_center,)))
-        grad = []
-        ei = np.zeros((len(x_center),), float)
-        todos = []
-        for k in range(len(x_center)):
-            ei[k] = 1.0
-            d = epsilon * ei
-            todos.append(x_center + d)
-            ei[k] = 0.0
-
-        counter = 0
-        chunk = []
-        chunks = []
-        length = len(todos)
-        # split all points to chunks, where each chunk has batch_size points
-        for i in range(length):
-            x = todos[i]
-            chunk.append(x)
-            counter += 1
-            # the last one does not have to reach batch_size
-            if counter == max_evals_grouped or i == length - 1:
-                chunks.append(chunk)
-                chunk = []
-                counter = 0
-
-        for chunk in chunks:  # eval the chunks in order
-            parallel_parameters = np.concatenate(chunk)
-            todos_results = f(parallel_parameters)  # eval the points in a chunk (order preserved)
-            if isinstance(todos_results, float):
-                grad.append((todos_results - forig) / epsilon)
-            else:
-                for todor in todos_results:
-                    grad.append((todor - forig) / epsilon)
+        grad = [(yplus - yminus) / (2 * ck * di) for di in delta]
 
         return np.array(grad)
+
+
 
     @staticmethod
     def wrap_function(function, args):
