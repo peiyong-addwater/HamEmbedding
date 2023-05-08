@@ -20,6 +20,7 @@ import json
 import time
 import shutup
 import pickle
+from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 
 shutup.please()
 
@@ -380,6 +381,9 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import pandas as pd
     import json
+    import os
+
+    print(os.getcwd())
 
     NUM_SHOTS = 1024
     N_WORKERS = 11
@@ -454,13 +458,23 @@ if __name__ == '__main__':
 
         bounds = [(0, 2 * np.pi)] * (N_PARAMS)
         # opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
-        opt = SPSA(maxiter=n_epochs, callback=callback_fn_qiskit_spsa)
+        opt = ADAMSPSA(maxiter=n_epochs, amsgrad=True)
+        """
         res = opt.minimize(
             cost,
             x0=starting_point,
             bounds=bounds
         )
-        optimized_params = res.x
+        """
+        #optimized_params = res.x
+        res = opt.optimize(
+            num_vars=N_PARAMS,
+            objective_function=cost,
+            gradient_function=None,
+            variable_bounds=bounds,
+            initial_point=starting_point
+        )
+        optimized_params = res[0]
         return dict(
             losses = train_cost_epochs,
             params = optimized_params

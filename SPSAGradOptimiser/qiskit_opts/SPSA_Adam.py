@@ -7,7 +7,7 @@ import csv
 import numpy as np
 from qiskit.utils import algorithm_globals
 from qiskit.algorithms.optimizers import OptimizerSupportLevel, OptimizerResult
-from Optimiser import OptimizerSPSAGrad as Optimizer
+from .Optimiser import OptimizerSPSAGrad as Optimizer
 
 class ADAMSPSA(Optimizer):
     """Adam and AMSGRAD optimizers, with SPSA gradient."""
