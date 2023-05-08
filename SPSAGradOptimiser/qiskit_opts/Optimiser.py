@@ -57,7 +57,7 @@ class OptimizerSPSAGrad(ABC):
 
 
     @staticmethod
-    def gradient_spsa(x_center, f, k, c=0.2, alpha=0.602, gamma=0.101, A=None, a=None, maxiter=None):
+    def gradient_spsa(x_center,k, f, c=0.2, alpha=0.602, gamma=0.101, A=None, a=None, maxiter=None):
         if not maxiter and not A:
             raise TypeError("One of the parameters maxiter or A must be provided.")
         if not A:
@@ -78,7 +78,70 @@ class OptimizerSPSAGrad(ABC):
 
         return np.array(grad)
 
+    @abstractmethod
+    def optimize(
+            self,
+            num_vars,
+            objective_function,
+            gradient_function=None,
+            variable_bounds=None,
+            initial_point=None,
+    ):
+        """
+        Perform optimization.
 
+        Args:
+            num_vars (int) : Number of parameters to be optimized.
+            objective_function (callable) : A function that
+                computes the objective function.
+            gradient_function (callable) : A function that
+                computes the gradient of the objective function, or
+                None if not available.
+            variable_bounds (list[(float, float)]) : List of variable
+                bounds, given as pairs (lower, upper). None means
+                unbounded.
+            initial_point (numpy.ndarray[float]) : Initial point.
+
+        Returns:
+            point, value, nfev
+               point: is a 1D numpy.ndarray[float] containing the solution
+               value: is a float with the objective function value
+               nfev: number of objective function calls made if available or None
+        Raises:
+            ValueError: invalid input
+        """
+        if initial_point is not None and len(initial_point) != num_vars:
+            raise ValueError("Initial point does not match dimension")
+        if variable_bounds is not None and len(variable_bounds) != num_vars:
+            raise ValueError("Variable bounds not match dimension")
+
+        has_bounds = False
+        if variable_bounds is not None:
+            # If *any* value is *equal* in bounds array to None then the does *not* have bounds
+            has_bounds = not np.any(np.equal(variable_bounds, None))
+
+        if gradient_function is None and self.is_gradient_required:
+            raise ValueError("Gradient is required but None given")
+        if not has_bounds and self.is_bounds_required:
+            raise ValueError("Variable bounds is required but None given")
+        if initial_point is None and self.is_initial_point_required:
+            raise ValueError("Initial point is required but None given")
+
+        if gradient_function is not None and self.is_gradient_ignored:
+            logger.debug(
+                "WARNING: %s does not support gradient function. It will be ignored.",
+                self.__class__.__name__,
+            )
+        if has_bounds and self.is_bounds_ignored:
+            logger.debug(
+                "WARNING: %s does not support bounds. It will be ignored.", self.__class__.__name__
+            )
+        if initial_point is not None and self.is_initial_point_ignored:
+            logger.debug(
+                "WARNING: %s does not support initial point. It will be ignored.",
+                self.__class__.__name__,
+            )
+        pass
 
     @staticmethod
     def wrap_function(function, args):
