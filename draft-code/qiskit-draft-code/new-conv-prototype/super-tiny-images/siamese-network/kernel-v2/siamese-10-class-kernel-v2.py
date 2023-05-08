@@ -20,6 +20,9 @@ import json
 import time
 import shutup
 import pickle
+import sys
+sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
+
 from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 
 shutup.please()
