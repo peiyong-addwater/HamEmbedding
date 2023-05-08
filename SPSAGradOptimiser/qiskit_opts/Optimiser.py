@@ -7,7 +7,7 @@ from collections.abc import Callable
 from enum import IntEnum
 import logging
 from typing import Any, Union, Protocol
-
+from typing import Any, Optional, Callable, Dict, Tuple, List
 import numpy as np
 import scipy
 
@@ -86,30 +86,8 @@ class OptimizerSPSAGrad(ABC):
             gradient_function=None,
             variable_bounds=None,
             initial_point=None,
+            verbose: bool = False,
     ):
-        """
-        Perform optimization.
-
-        Args:
-            num_vars (int) : Number of parameters to be optimized.
-            objective_function (callable) : A function that
-                computes the objective function.
-            gradient_function (callable) : A function that
-                computes the gradient of the objective function, or
-                None if not available.
-            variable_bounds (list[(float, float)]) : List of variable
-                bounds, given as pairs (lower, upper). None means
-                unbounded.
-            initial_point (numpy.ndarray[float]) : Initial point.
-
-        Returns:
-            point, value, nfev
-               point: is a 1D numpy.ndarray[float] containing the solution
-               value: is a float with the objective function value
-               nfev: number of objective function calls made if available or None
-        Raises:
-            ValueError: invalid input
-        """
         if initial_point is not None and len(initial_point) != num_vars:
             raise ValueError("Initial point does not match dimension")
         if variable_bounds is not None and len(variable_bounds) != num_vars:
@@ -191,23 +169,12 @@ class OptimizerSPSAGrad(ABC):
     @abstractmethod
     def minimize(
         self,
-        fun: Callable[[POINT], float],
-        x0: POINT,
-        jac: Callable[[POINT], POINT] | None = None,
-        bounds: list[tuple[float, float]] | None = None,
-    ) -> OptimizerResult:
-        """Minimize the scalar function.
+        objective_function: Callable[[np.ndarray], float],
+        initial_point: np.ndarray,
+        gradient_function: Callable[[np.ndarray, int], float],
+        verbose: bool = False,
+    ) -> Tuple[np.ndarray, float, int]:
 
-        Args:
-            fun: The scalar function to minimize.
-            x0: The initial point for the minimization.
-            jac: The gradient of the scalar function ``fun``.
-            bounds: Bounds for the variables of ``fun``. This argument might be ignored if the
-                optimizer does not support bounds.
-
-        Returns:
-            The result of the optimization, containing e.g. the result as attribute ``x``.
-        """
         raise NotImplementedError()
 
     @property

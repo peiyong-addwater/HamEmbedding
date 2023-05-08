@@ -8,6 +8,7 @@ import numpy as np
 from qiskit.utils import algorithm_globals
 from qiskit.algorithms.optimizers import OptimizerSupportLevel, OptimizerResult
 from .Optimiser import OptimizerSPSAGrad as Optimizer
+import time
 
 class ADAMSPSA(Optimizer):
     """Adam and AMSGRAD optimizers, with SPSA gradient."""
@@ -22,6 +23,11 @@ class ADAMSPSA(Optimizer):
         "eps",
         "amsgrad",
         "snapshot_dir",
+        "c",
+        "alpha",
+        "gamma",
+        "A",
+        "a"
     ]
 
     def __init__(
@@ -95,6 +101,11 @@ class ADAMSPSA(Optimizer):
             "eps": self._eps,
             "amsgrad": self._amsgrad,
             "snapshot_dir": self._snapshot_dir,
+            "c":self._c,
+            "alpha":self._alpha,
+            "gamma":self._gamma,
+            "A":self._A,
+            "a":self._a
         }
 
     def get_support_level(self):
@@ -161,7 +172,10 @@ class ADAMSPSA(Optimizer):
             objective_function: Callable[[np.ndarray], float],
             initial_point: np.ndarray,
             gradient_function: Callable[[np.ndarray, int], float],
-    ) -> Tuple[np.ndarray, float, int]:
+            verbose: bool = False,
+    ) -> Tuple[np.ndarray, float, int, list[float]]:
+        start = time.time()
+        self._loss_list = []
         self._t = 1
         derivative = gradient_function(initial_point, self._t)
         self._m = np.zeros(np.shape(derivative))
@@ -170,6 +184,8 @@ class ADAMSPSA(Optimizer):
             self._v_eff = np.zeros(np.shape(derivative))
         params = params_new = initial_point
         while self._t <= self._maxiter:
+            self._current_obj = objective_function(params)
+            self._loss_list.append(self._current_obj)
             if self._t > 0:
                 derivative = gradient_function(params, self._t)
             self._t+=1
@@ -188,12 +204,15 @@ class ADAMSPSA(Optimizer):
 
             if self._snapshot_dir:
                 self.save_params(self._snapshot_dir)
+            if verbose:
+                current_time_lapse = time.time()-start
+                epoch_time = current_time_lapse/(self._t-1)
+                print(f"Training at {self._t-1}/{self._maxiter}, Objective = {np.round(self._current_obj, 4)}, Avg Iter Time = {np.round(epoch_time, 4)}, Total Time = {np.round(current_time_lapse, 4)}")
             if np.linalg.norm(params - params_new) < self._tol:
                 return params_new, objective_function(params_new), self._t
             else:
                 params = params_new
-
-        return params_new, objective_function(params_new), self._t
+        return params_new, objective_function(params_new), self._t, self._loss_list
 
     def optimize(
             self,
@@ -202,7 +221,8 @@ class ADAMSPSA(Optimizer):
             gradient_function: Callable[[np.ndarray, int], float],
             variable_bounds: Optional[List[Tuple[float, float]]] = None,
             initial_point: Optional[np.ndarray] = None,
-                 )->Tuple[np.ndarray, float, int]:
+            verbose: bool = False,
+                 )->Tuple[np.ndarray, float, int, list[float]]:
         super().optimize(
             num_vars,objective_function, gradient_function, variable_bounds, initial_point
         )
@@ -213,8 +233,8 @@ class ADAMSPSA(Optimizer):
                 Optimizer.gradient_spsa, (objective_function, self._c, self._alpha, self._gamma, self._A, self._a, self._maxiter)
             )
 
-        point, value, nfev = self.minimize(objective_function, initial_point, gradient_function)
-        return point, value, nfev
+        point, value, nfev, losses = self.minimize(objective_function, initial_point, gradient_function)
+        return point, value, nfev, losses
 
 
 

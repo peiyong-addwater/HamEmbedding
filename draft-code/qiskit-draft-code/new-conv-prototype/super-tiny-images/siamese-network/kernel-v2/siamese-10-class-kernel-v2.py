@@ -400,8 +400,8 @@ if __name__ == '__main__':
     STRIDE = (3, 3)
     n_epochs = 50
     n_img_per_label = 2
-
-    save_filename = nowtime() + "_" + f"siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
+    curr_t = nowtime()
+    save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
     checkpointfile = None
     if checkpointfile is not None:
         with open(checkpointfile, 'r') as f:
@@ -472,9 +472,11 @@ if __name__ == '__main__':
             objective_function=cost,
             gradient_function=None,
             variable_bounds=bounds,
-            initial_point=starting_point
+            initial_point=starting_point,
+            verbose=True
         )
         optimized_params = res[0]
+        train_cost_epochs = res[3]
         return dict(
             losses = train_cost_epochs,
             params = optimized_params
