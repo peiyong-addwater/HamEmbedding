@@ -402,7 +402,7 @@ if __name__ == '__main__':
     n_epochs = 50
     n_img_per_label = 2
     curr_t = nowtime()
-    save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
+    save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
     checkpointfile = None
     if checkpointfile is not None:
         with open(checkpointfile, 'r') as f:
@@ -411,3 +411,6 @@ if __name__ == '__main__':
         params = checkpoint['params']
     else:
         params = np.random.uniform(low=-np.pi, high=np.pi, size= N_PARAMS)
+
+
+
