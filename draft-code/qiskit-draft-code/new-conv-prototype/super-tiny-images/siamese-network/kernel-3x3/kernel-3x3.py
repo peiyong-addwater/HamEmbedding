@@ -206,3 +206,56 @@ param_9 = ParameterVector('θ', 9)
 su4_9p = su4_9_params(param_9)
 su4_9p.decompose().draw(output='mpl', filename='su4_9p.png', style='bw')
 
+
+def kernel_3x3x1(padded_data_in_kernel, conv_pooling_params):
+    """
+
+    :param padded_data_in_kernel: 3x3 = 9
+    :param conv_pooling_params: 9+9+4+9+4 = 35
+    :return:
+    """
+    qreg = QuantumRegister(3, name="conv-pooling")
+    circ = QuantumCircuit(qreg, name="conv-encode-3x3")
+    circ.h(qreg)
+    circ.barrier()
+    # encode the pixel data into the rotation parameter of U3 gates
+    circ.u(padded_data_in_kernel[0], padded_data_in_kernel[1], padded_data_in_kernel[2], qreg[0])
+    circ.u(padded_data_in_kernel[3], padded_data_in_kernel[4], padded_data_in_kernel[5], qreg[1])
+    circ.u(padded_data_in_kernel[6], padded_data_in_kernel[7], padded_data_in_kernel[8], qreg[2])
+    circ.barrier()
+    # convolution kernel with two 9-param su4 gates
+    circ.compose(su4_9_params(conv_pooling_params[0:9]), [qreg[0], qreg[1]], inplace=True)
+    circ.compose(su4_9_params(conv_pooling_params[9:18]), [qreg[1], qreg[2]], inplace=True)
+    circ.barrier()
+    # pooling with cu gates
+    circ.cu(conv_pooling_params[18], conv_pooling_params[19], conv_pooling_params[20], conv_pooling_params[21], qreg[2], qreg[1])
+    circ.barrier()
+    # 9-param su4 on the first two qubits
+    circ.compose(su4_9_params(conv_pooling_params[22:31]), [qreg[0], qreg[1]], inplace=True)
+    circ.barrier()
+    # pooling with cu gates
+    circ.cu(conv_pooling_params[31], conv_pooling_params[32], conv_pooling_params[33], conv_pooling_params[34], qreg[1], qreg[0])
+    circ.barrier()
+    # reset qubits 1 and 2
+    circ.reset(qreg[1])
+    circ.reset(qreg[2])
+
+    circ_inst = circ.to_instruction()
+    circ = QuantumCircuit(3)
+    circ.append(circ_inst, list(range(3)))
+
+    return circ
+
+# draw the 3x3x1 kernel circuit
+data_single_kernel = ParameterVector('x', 9)
+conv_pooling_params = ParameterVector('θ', 35)
+kernel_3x3x1(data_single_kernel, conv_pooling_params).decompose().draw(output='mpl', filename='kernel_3x3x1.png', style='bw', fold=-1)
+
+def backbone_net(data_for_3x3_feature_map, params):
+    """
+    35 params for the kernel
+    :param data_for_3x3_feature_map:
+    :param params:
+    :return:
+    """
+    qreg = QuantumRegister()
