@@ -420,7 +420,7 @@ if __name__ == '__main__':
             gradient_function=None,
             variable_bounds=bounds,
             initial_point=params,
-            verbose=True,
+            verbose=False,
             callback=callback_SPSA_ADAM,
         )
         n_iter = len(
