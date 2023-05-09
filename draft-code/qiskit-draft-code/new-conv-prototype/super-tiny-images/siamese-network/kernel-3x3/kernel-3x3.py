@@ -14,8 +14,6 @@ import pickle
 from qiskit.circuit import ParameterVector
 
 shutup.please()
-import sys
-sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 from qiskit_ibm_provider import IBMProvider
@@ -170,3 +168,41 @@ def select_data(labels=[0,1,2,3,4,5,6,7,8,9], num_data_per_label_train = 3, num_
                 paired_extracted_data.append((selected_train_images[i], selected_train_images[j]))
 
     return paired_extracted_data, test_images
+
+def su4_circuit(params):
+    su4 = QuantumCircuit(2, name='su4')
+    su4.u(params[0], params[1], params[2], qubit=0)
+    su4.u(params[3], params[4], params[5], qubit=1)
+    su4.cx(0,1)
+    su4.ry(params[6], 0)
+    su4.rz(params[7], 1)
+    su4.cx(1, 0)
+    su4.ry(params[8], 0)
+    su4.cx(0, 1)
+    su4.u(params[9], params[10], params[11], 0)
+    su4.u(params[12], params[13], params[14], 1)
+    su4_inst = su4.to_instruction()
+    su4 = QuantumCircuit(2)
+    su4.append(su4_inst, list(range(2)))
+    return su4
+
+def su4_9_params(params):
+    su4 = QuantumCircuit(2, name='su4-9-params')
+    su4.cx(0, 1)
+    su4.ry(params[0], 0)
+    su4.rz(params[1], 1)
+    su4.cx(1, 0)
+    su4.ry(params[2], 0)
+    su4.cx(0, 1)
+    su4.u(params[3], params[4], params[6], 0)
+    su4.u(params[6], params[7], params[8], 1)
+    su4_inst = su4.to_instruction()
+    su4 = QuantumCircuit(2)
+    su4.append(su4_inst, list(range(2)))
+    return su4
+
+# draw the 9-param version of su4
+param_9 = ParameterVector('θ', 9)
+su4_9p = su4_9_params(param_9)
+su4_9p.decompose().draw(output='mpl', filename='su4_9p.png', style='bw')
+
