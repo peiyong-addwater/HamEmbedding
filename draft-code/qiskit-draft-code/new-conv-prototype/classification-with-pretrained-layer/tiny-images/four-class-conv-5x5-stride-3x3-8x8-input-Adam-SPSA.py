@@ -333,7 +333,7 @@ if __name__ == '__main__':
         circ.measure(qreg[:2], classification_reg)
         return circ
 
-    NUM_SHOTS = 512
+    NUM_SHOTS = 1024
     N_WORKERS = 8
     MAX_JOB_SIZE = 10
 
@@ -348,7 +348,7 @@ if __name__ == '__main__':
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
     n_test = 100
-    n_epochs = 1000
+    n_epochs = 500
     n_reps = 2
     train_sizes = [20, 200, 500]
 
