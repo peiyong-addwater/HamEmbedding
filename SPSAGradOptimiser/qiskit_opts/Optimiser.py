@@ -90,6 +90,7 @@ class OptimizerSPSAGrad(ABC):
             variable_bounds=None,
             initial_point=None,
             verbose: bool = False,
+            callback: Optional[Callable[[int, np.ndarray, float], None]] = None,
     ):
         if initial_point is not None and len(initial_point) != num_vars:
             raise ValueError("Initial point does not match dimension")
@@ -176,6 +177,7 @@ class OptimizerSPSAGrad(ABC):
         initial_point: np.ndarray,
         gradient_function: Callable[[np.ndarray, int], float],
         verbose: bool = False,
+        callback: Optional[Callable[[int, np.ndarray, float, np.ndarray], None]] = None,
     ) -> Tuple[np.ndarray, float, int]:
 
         raise NotImplementedError()

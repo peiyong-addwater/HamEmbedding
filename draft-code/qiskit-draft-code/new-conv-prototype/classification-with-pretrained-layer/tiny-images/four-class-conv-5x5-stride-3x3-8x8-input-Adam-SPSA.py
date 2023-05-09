@@ -387,6 +387,29 @@ if __name__ == '__main__':
         train_cost_epochs, test_cost_epochs, train_acc_epochs, test_acc_epochs = [], [], [], []
         print(f"Training with {n_train} data, testing with {n_test} data, for {n_epochs} epochs...")
         cost = lambda xk: batch_data_loss_avg(xk, x_train, y_train)
+        start = time.time()
+
+        def callback_SPSA_ADAM(t, old_param, new_loss, xk):
+            train_prob = batch_data_probs_sim(xk, x_train)
+            train_cost = new_loss
+            train_cost_epochs.append(train_cost)
+            test_prob = batch_data_probs_sim(xk, x_test)
+            test_cost = avg_softmax_cross_entropy_loss_with_one_hot_labels(y_test, test_prob)
+            test_cost_epochs.append(test_cost)
+            train_acc = batch_avg_accuracy(train_prob, y_train)
+            test_acc = batch_avg_accuracy(test_prob, y_test)
+            train_acc_epochs.append(train_acc)
+            test_acc_epochs.append(test_acc)
+            iteration_num = len(train_cost_epochs)
+            time_till_now = time.time() - start
+            avg_epoch_time = time_till_now / iteration_num
+            if iteration_num % 1 == 0:
+                print(
+                    f"Rep {rep}, Training with {n_train} data, Training at Epoch {iteration_num}, train acc "
+                    f"{np.round(train_acc, 4)}, "
+                    f"train cost {np.round(train_cost, 4)}, test acc {np.round(test_acc, 4)}, test cost "
+                    f"{np.round(test_cost, 4)}, avg epoch time "
+                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
 
         bounds = [(0, 2 * np.pi)] * 45
         #optimized_params = res.x
@@ -397,14 +420,14 @@ if __name__ == '__main__':
             gradient_function=None,
             variable_bounds=bounds,
             initial_point=params,
-            verbose=True
+            verbose=True,
+            callback=callback_SPSA_ADAM,
         )
         n_iter = len(
             train_cost_epochs)  # sometimes the real number of epochs is one more that the specified number of epochs.
         optimized_params = res[0]
-        train_cost_epochs = res[3]
         return dict(
-            n_train=[n_train] * (n_iter),
+            n_train=[n_train] * n_iter,
             step=np.arange(1, n_iter + 1, dtype=int),
             train_cost=train_cost_epochs,
             train_acc=train_acc_epochs,
@@ -438,7 +461,7 @@ if __name__ == '__main__':
     #save results data
     res_dict = results_df.to_dict()
     # res_dict["best_params"] = params
-    with open(f"noisy-qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps-COBYLA.json", 'w') as f:
+    with open(f"noisy-qiskit-fashion-mnist-5x5-conv-multiclass-tiny-image-results-{n_test}-test-{n_reps}-reps-Adam-SPSA.json", 'w') as f:
         json.dump(res_dict, f, indent=4, cls=NpEncoder)
 
     # aggregate dataframe

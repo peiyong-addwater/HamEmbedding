@@ -173,6 +173,7 @@ class ADAMSPSA(Optimizer):
             initial_point: np.ndarray,
             gradient_function: Callable[[np.ndarray, int], float],
             verbose: bool = True,
+            callback: Optional[Callable[[int, np.ndarray, float, np.ndarray], None]] = None,
     ) -> Tuple[np.ndarray, float, int, list[float]]:
         start = time.time()
         self._loss_list = []
@@ -185,8 +186,6 @@ class ADAMSPSA(Optimizer):
             self._v_eff = np.zeros(np.shape(initial_point))
         params = params_new = initial_point
         while self._t <= self._maxiter:
-            self._current_obj = objective_function(params)
-            self._loss_list.append(self._current_obj)
             derivative = gradient_function(params, self._t)
             self._t+=1
             self._m = self._beta_1 * self._m + (1 - self._beta_1) * derivative
@@ -199,13 +198,16 @@ class ADAMSPSA(Optimizer):
             else:
                 self._v_eff = np.maximum(self._v_eff, self._v)
                 params_new = params - lr_eff * self._m.flatten() / (np.sqrt(self._v_eff.flatten()) + self._noise_factor)
-
+            self._current_obj = objective_function(params)
+            self._loss_list.append(self._current_obj)
             if self._snapshot_dir:
                 self.save_params(self._snapshot_dir)
             if verbose:
                 current_time_lapse = time.time()-start
                 epoch_time = current_time_lapse/(self._t-1)
                 print(f"Training at {self._t-1}/{self._maxiter}, Objective = {np.round(self._current_obj, 4)}, Avg Iter Time = {np.round(epoch_time, 4)}, Total Time = {np.round(current_time_lapse, 4)}")
+            if callback is not None:
+                callback(self._t-1, params, self._current_obj, params_new)
             if np.linalg.norm(params - params_new) < self._tol:
                 return params_new, objective_function(params_new), self._t, self._loss_list
             else:
@@ -220,9 +222,10 @@ class ADAMSPSA(Optimizer):
             variable_bounds: Optional[List[Tuple[float, float]]] = None,
             initial_point: Optional[np.ndarray] = None,
             verbose: bool = False,
+            callback: Optional[Callable[[int, np.ndarray, float, np.ndarray], None]] = None,
     )->Tuple[np.ndarray, float, int, list[float]]:
         super().optimize(
-            num_vars,objective_function, gradient_function, variable_bounds, initial_point, verbose
+            num_vars,objective_function, gradient_function, variable_bounds, initial_point, verbose, callback
         )
         if initial_point is None:
             initial_point = algorithm_globals.random.random(num_vars)
@@ -231,7 +234,7 @@ class ADAMSPSA(Optimizer):
                 Optimizer.gradient_spsa, (objective_function, self._c, self._alpha, self._gamma, self._A, self._a, self._maxiter)
             )
 
-        point, value, nfev, losses = self.minimize(objective_function, initial_point, gradient_function, verbose)
+        point, value, nfev, losses = self.minimize(objective_function, initial_point, gradient_function, verbose, callback)
         return point, value, nfev, losses
 
 
