@@ -65,11 +65,14 @@ class OptimizerSPSAGrad(ABC):
         if not a:
             a = 0.05*(A+1)**alpha
         ck = c/k**gamma
-        delta = []
-        thetaplus = np.array(x_center)
-        thetaminus = np.array(x_center)
-        di = np.random.choice([-1, 1], size=x_center.shape)
-        multiplier = ck * di
+        delta = np.random.choice([-1, 1], size=x_center.shape)
+        #print(delta)
+        multiplier = ck * delta
+        #print(multiplier)
+        thetaplus = np.array(x_center)+multiplier
+        thetaminus = np.array(x_center)-multiplier
+        #print(thetaplus)
+        #print(thetaminus)
         # the output of the cost function should be a scalar
         yplus = f(thetaplus)
         yminus = f(thetaminus)
