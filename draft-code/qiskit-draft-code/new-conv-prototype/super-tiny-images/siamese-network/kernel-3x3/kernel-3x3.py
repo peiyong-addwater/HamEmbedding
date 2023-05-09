@@ -1,5 +1,5 @@
 import os.path
-
+import math
 import numpy as np
 from typing import List, Tuple, Union
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
@@ -102,7 +102,7 @@ def extract_convolution_data(matrix: Union[List[List[float]], List[List[List[flo
             indices_y = [center_y + l * dilation[1] for l in range(-b[1], b[1] + 1)]
             submatrix = matrix[indices_x, :][:, indices_y]
             unpadded_data = submatrix.flatten().tolist()
-            num_data_gates = len(unpadded_data)//encoding_gate_parameter_size + 1
+            num_data_gates = math.ceil(len(unpadded_data)//encoding_gate_parameter_size)
             data_pad_size = encoding_gate_parameter_size * num_data_gates - len(unpadded_data)
             padded_data = submatrix.flatten().tolist()
             for _ in range(data_pad_size):
@@ -352,7 +352,25 @@ def backbone_qnn(data_for_complete_feature_map, params):
 # draw the backbone QNN
 parameter_qnn = ParameterVector('θ', 168)
 backbone_qnn(data, parameter_qnn).draw(output='mpl', filename='backbone_qnn.png', style='bw')
+"""
+# sample some data
+sample_data = select_data()
+print(sample_data[0])
+"""
 
+def get_prob_vec_from_count_dict(counts:dict):
+    """
 
+    :param counts:
+    :return:
+    """
+    keys = list(counts.keys())
+    shots = sum(counts.values())
+    prob_vec = np.zeros(len(keys))
+    for key in keys:
+        index = int(key, 2)
+        prob_vec[index] = counts[key] / shots
+
+    return prob_vec
 
 
