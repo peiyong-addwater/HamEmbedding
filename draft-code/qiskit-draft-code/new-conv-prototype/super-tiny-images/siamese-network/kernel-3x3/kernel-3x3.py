@@ -152,22 +152,22 @@ def select_data(labels=[0,1,2,3,4,5,6,7,8,9], num_data_per_label_train = 3, num_
         train_indices = rng.choice(len(data_for_label), num_data_per_label_train, replace=False)
         test_indices = rng.choice(
         np.setdiff1d(range(len(data_for_label)), train_indices), num_test_per_label, replace=False)
-        extracted_data = [extract_convolution_data(data_for_label[train_indices][i], kernel_size=(3, 3), stride=(2, 2), dilation=(1, 1),
+        extracted_data = [extract_convolution_data(data_for_label[train_indices][i], kernel_size=(3, 3), stride=(1, 1), dilation=(1, 1),
                                         padding=(0, 0), encoding_gate_parameter_size=9) for i in range(num_data_per_label_train)]
         for i in range(num_data_per_label_train):
             selected_train_images.append((extracted_data[i], label))
-        test_images['data'].append(extract_convolution_data(data_for_label[test_indices][0], kernel_size=(3, 3), stride=(2, 2), dilation=(1, 1),
+        test_images['data'].append(extract_convolution_data(data_for_label[test_indices][0], kernel_size=(3, 3), stride=(1, 1), dilation=(1, 1),
                                         padding=(0, 0), encoding_gate_parameter_size=9))
         test_images['labels'].append(label)
 
     # pair the training data
-    paired_extracted_data = []
+    """paired_extracted_data = []
     for i in range(len(selected_train_images)):
         for j in range(len(selected_train_images)):
             if i!=j:
                 paired_extracted_data.append((selected_train_images[i], selected_train_images[j]))
-
-    return paired_extracted_data, test_images
+    """
+    return selected_train_images #, test_images
 
 def su4_circuit(params):
     su4 = QuantumCircuit(2, name='su4')
@@ -298,11 +298,11 @@ data_single_kernel = ParameterVector('x', 9)
 conv_pooling_params = ParameterVector('θ', 35)
 kernel_3x3x1(data_single_kernel, conv_pooling_params).decompose().draw(output='mpl', filename='kernel_3x3x1.png', style='bw', fold=-1)
 
-def encode(data_for_3x3_feature_map, params):
+def encode(data_for_complete_feature_map, params):
     """
-    An RNN-like encoding circuit to encode an 8x8 image, with 3x3 kernel, stride=2
-    :param data_for_3x3_feature_map: length 9 list of length 9 lists
-    :param params:
+    An RNN-like encoding circuit to encode an 8x8 image, with 3x3 kernel, stride=1
+    :param data_for_complete_feature_map: length 9 list of length 9 lists
+    :param params: 15+35+27+46=123 parameters
     :return:
     """
     circ = QuantumCircuit(6, name="encode")
@@ -310,5 +310,49 @@ def encode(data_for_3x3_feature_map, params):
     circ.h(1)
     circ.barrier()
     circ.compose(su4_circuit(params[0:15]), [0, 1], inplace=True)
-    circ.compose(kernel_3x3x1(data_for_3x3_feature_map[0], params[15:50]), [0, 1, 2], inplace=True)
+    circ.compose(kernel_3x3x1(data_for_complete_feature_map[0], params[15:50]), [2, 3, 4], inplace=True)
     circ.compose(three_q_interaction(params[50:77]), [0, 1, 2], inplace=True)
+    circ.barrier()
+    for index in range(1, 6 * 6):
+        circ.compose(kernel_3x3x1(data_for_complete_feature_map[index], params[15:50]), [3,4,5], inplace=True)
+        circ.compose(memory_cell(params[77:123]), [0, 1, 2, 3], inplace=True)
+        circ.barrier()
+    circ_inst = circ.to_instruction()
+    circ = QuantumCircuit(6)
+    circ.append(circ_inst, list(range(6)))
+    return circ
+
+# draw the encoding circuit
+data = []
+for i in range(6):
+    for j in range(6):
+        data.append(ParameterVector(f"x_{i}{j}", length=9))
+
+parameter_encode = ParameterVector('θ', 123)
+encode(data, parameter_encode).decompose().draw(output='mpl', filename='encode.png', style='bw')
+
+def backbone_qnn(data_for_complete_feature_map, params):
+    """
+    The backbone QNN to generate the feature map.
+    First section of the circuit is the encoding circuit, which is an RNN-like circuit with 123 parameters
+    After the encoding circuit, the first three qubits will contain information for the image, the rest qubits (last three) will be fresh.
+    :param data_for_complete_feature_map:
+    :param params: 123+3*15=168 parameters
+    :return:
+    """
+    circ = QuantumCircuit(6, 6, name="backbone")
+    circ.compose(encode(data_for_complete_feature_map, params[0:123]), list(range(6)), inplace=True)
+    circ.barrier()
+    for i in range(3):
+        circ.compose(su4_circuit(params[123 + i * 15:123 + (i + 1) * 15]), [i, 3 + i], inplace=True)
+    circ.barrier()
+    circ.measure([0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5])
+    return circ
+
+# draw the backbone QNN
+parameter_qnn = ParameterVector('θ', 168)
+backbone_qnn(data, parameter_qnn).draw(output='mpl', filename='backbone_qnn.png', style='bw')
+
+
+
+
