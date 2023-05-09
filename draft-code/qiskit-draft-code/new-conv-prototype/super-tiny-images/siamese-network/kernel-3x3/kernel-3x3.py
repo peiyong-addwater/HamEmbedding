@@ -21,6 +21,9 @@ PROVIDER = IBMProvider()
 
 DATA_PATH = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/tiny-handwritten.pkl"
 
+def nowtime():
+    return str(time.strftime("%Y%m%d-%H%M%S", time.localtime()))
+
 def add_padding(matrix: np.ndarray,
                 padding: Tuple[int, int]) -> np.ndarray:
     """Adds padding to the matrix.
@@ -373,4 +376,38 @@ def get_prob_vec_from_count_dict(counts:dict):
 
     return prob_vec
 
+if __name__ == '__main__':
+    import matplotlib as mpl
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import json
+    import os
 
+    print(os.getcwd())
+
+    NUM_SHOTS = 1024
+    N_WORKERS = 11
+    MAX_JOB_SIZE = 1
+    N_PARAMS = 168
+    BACKEND_SIM = Aer.get_backend('aer_simulator')
+    EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
+    BACKEND_SIM.set_options(executor=EXC)
+    BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
+    BACKEND_SIM.set_options(max_parallel_experiments=0)
+    seed = 1701
+    rng = np.random.default_rng(seed=seed)
+    KERNEL_SIZE = (5, 5)
+    STRIDE = (3, 3)
+    n_epochs = 50
+    n_img_per_label = 2
+    curr_t = nowtime()
+    save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-5x5-conv-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
+    checkpointfile = None
+    if checkpointfile is not None:
+        with open(checkpointfile, 'r') as f:
+            checkpoint = json.load(f)
+            print("Loaded checkpoint file: " + checkpointfile)
+        params = checkpoint['params']
+    else:
+        params = np.random.uniform(low=-np.pi, high=np.pi, size= N_PARAMS)
