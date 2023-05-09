@@ -206,6 +206,53 @@ param_9 = ParameterVector('θ', 9)
 su4_9p = su4_9_params(param_9)
 su4_9p.decompose().draw(output='mpl', filename='su4_9p.png', style='bw')
 
+def three_q_interaction(params):
+    """
+    The three-qubit interaction circuit, bottom-to-top
+    :param params: 15+15-3 = 27 parameters
+    :return:
+    """
+    circ = QuantumCircuit(3, name="three-qubit-interaction")
+    circ.compose(su4_circuit(params[0:15]), [1, 2], inplace=True)
+    circ.u(params[15], params[16], params[17], 0)
+    circ.cx(0, 1)
+    circ.ry(params[18], 0)
+    circ.rz(params[19], 1)
+    circ.cx(1, 0)
+    circ.ry(params[20], 0)
+    circ.cx(0, 1)
+    circ.u(params[21], params[22], params[23], 0)
+    circ.u(params[24], params[25], params[26], 1)
+    circ_inst = circ.to_instruction()
+    circ = QuantumCircuit(3)
+    circ.append(circ_inst, list(range(3)))
+    return circ
+
+# draw the three-qubit interaction circuit
+param_27 = ParameterVector('θ', 27)
+three_q_circ = three_q_interaction(param_27)
+three_q_circ.decompose().draw(output='mpl', filename='three_q_circ.png', style='bw', fold=-1)
+
+def memory_cell(params):
+    """
+    a four-qubit memory cell, with the 4th qubit reset and awaiting new data
+    :param params: 15+4+27 = 46 parameters
+    :return:
+    """
+    circ = QuantumCircuit(4, name="memory-cell")
+    circ.compose(su4_circuit(params[0:15]), [2, 3], inplace=True)
+    circ.cu(params[15], params[16], params[17], params[18], 3, 2)
+    circ.reset(3)
+    circ.compose(three_q_interaction(params[19:46]), [0, 1, 2], inplace=True)
+    circ_inst = circ.to_instruction()
+    circ = QuantumCircuit(4)
+    circ.append(circ_inst, list(range(4)))
+    return circ
+
+# draw the memory cell
+param_46 = ParameterVector('θ', 46)
+mem_circ = memory_cell(param_46)
+mem_circ.decompose().draw(output='mpl', filename='mem_circ.png', style='bw', fold=-1)
 
 def kernel_3x3x1(padded_data_in_kernel, conv_pooling_params):
     """
@@ -251,11 +298,17 @@ data_single_kernel = ParameterVector('x', 9)
 conv_pooling_params = ParameterVector('θ', 35)
 kernel_3x3x1(data_single_kernel, conv_pooling_params).decompose().draw(output='mpl', filename='kernel_3x3x1.png', style='bw', fold=-1)
 
-def backbone_net(data_for_3x3_feature_map, params):
+def encode(data_for_3x3_feature_map, params):
     """
-    35 params for the kernel
-    :param data_for_3x3_feature_map:
+    An RNN-like encoding circuit to encode an 8x8 image, with 3x3 kernel, stride=2
+    :param data_for_3x3_feature_map: length 9 list of length 9 lists
     :param params:
     :return:
     """
-    qreg = QuantumRegister()
+    circ = QuantumCircuit(6, name="encode")
+    circ.h(0)
+    circ.h(1)
+    circ.barrier()
+    circ.compose(su4_circuit(params[0:15]), [0, 1], inplace=True)
+    circ.compose(kernel_3x3x1(data_for_3x3_feature_map[0], params[15:50]), [0, 1, 2], inplace=True)
+    circ.compose(three_q_interaction(params[50:77]), [0, 1, 2], inplace=True)
