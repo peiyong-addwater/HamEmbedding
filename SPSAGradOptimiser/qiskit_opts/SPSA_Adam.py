@@ -222,7 +222,7 @@ class ADAMSPSA(Optimizer):
             verbose: bool = False,
     )->Tuple[np.ndarray, float, int, list[float]]:
         super().optimize(
-            num_vars,objective_function, gradient_function, variable_bounds, initial_point
+            num_vars,objective_function, gradient_function, variable_bounds, initial_point, verbose
         )
         if initial_point is None:
             initial_point = algorithm_globals.random.random(num_vars)
