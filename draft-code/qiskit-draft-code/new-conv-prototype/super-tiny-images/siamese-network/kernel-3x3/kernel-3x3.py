@@ -488,7 +488,7 @@ if __name__ == '__main__':
                 if i != j:
                     count= count + 1
                     if prob_vecs[i][1] == prob_vecs[j][1]:
-                        loss += (1 - np.linalg.norm(prob_vecs[i][0] - prob_vecs[j][0]))**2
+                        loss += (np.linalg.norm(prob_vecs[i][0] - prob_vecs[j][0]))**2
                     else:
                         loss += max(0, margin - np.linalg.norm(prob_vecs[i][0] - prob_vecs[j][0]))**2
 
