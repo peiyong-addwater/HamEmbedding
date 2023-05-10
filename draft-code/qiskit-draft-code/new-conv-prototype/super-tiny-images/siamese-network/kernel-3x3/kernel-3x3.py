@@ -15,7 +15,6 @@ from qiskit.circuit import ParameterVector
 
 shutup.please()
 
-from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 from qiskit_ibm_provider import IBMProvider
 PROVIDER = IBMProvider()
 
