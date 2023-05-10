@@ -5,7 +5,7 @@ from typing import List, Tuple, Union
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit import Aer
 from concurrent.futures import ThreadPoolExecutor
-from qiskit.algorithms.optimizers import SPSA
+from qiskit.algorithms.optimizers import SPSA, COBYLA
 import json
 import time
 import shutup
@@ -203,12 +203,12 @@ def su4_9_params(params):
     su4 = QuantumCircuit(2)
     su4.append(su4_inst, list(range(2)))
     return su4
-
+"""
 # draw the 9-param version of su4
 param_9 = ParameterVector('θ', 9)
 su4_9p = su4_9_params(param_9)
 su4_9p.decompose().draw(output='mpl', filename='su4_9p.png', style='bw')
-
+"""
 def three_q_interaction(params):
     """
     The three-qubit interaction circuit, bottom-to-top
@@ -231,10 +231,12 @@ def three_q_interaction(params):
     circ.append(circ_inst, list(range(3)))
     return circ
 
+"""
 # draw the three-qubit interaction circuit
 param_27 = ParameterVector('θ', 27)
 three_q_circ = three_q_interaction(param_27)
 three_q_circ.decompose().draw(output='mpl', filename='three_q_circ.png', style='bw', fold=-1)
+"""
 
 def memory_cell(params):
     """
@@ -252,10 +254,12 @@ def memory_cell(params):
     circ.append(circ_inst, list(range(4)))
     return circ
 
+"""
 # draw the memory cell
 param_46 = ParameterVector('θ', 46)
 mem_circ = memory_cell(param_46)
 mem_circ.decompose().draw(output='mpl', filename='mem_circ.png', style='bw', fold=-1)
+"""
 
 def kernel_3x3x1(padded_data_in_kernel, conv_pooling_params):
     """
@@ -296,10 +300,12 @@ def kernel_3x3x1(padded_data_in_kernel, conv_pooling_params):
 
     return circ
 
+"""
 # draw the 3x3x1 kernel circuit
 data_single_kernel = ParameterVector('x', 9)
 conv_pooling_params = ParameterVector('θ', 35)
 kernel_3x3x1(data_single_kernel, conv_pooling_params).decompose().draw(output='mpl', filename='kernel_3x3x1.png', style='bw', fold=-1)
+"""
 
 def encode(data_for_complete_feature_map, params):
     """
@@ -325,6 +331,7 @@ def encode(data_for_complete_feature_map, params):
     circ.append(circ_inst, list(range(6)))
     return circ
 
+"""
 # draw the encoding circuit
 data = []
 for i in range(6):
@@ -333,6 +340,7 @@ for i in range(6):
 
 parameter_encode = ParameterVector('θ', 123)
 encode(data, parameter_encode).decompose().draw(output='mpl', filename='encode.png', style='bw')
+"""
 
 def backbone_qnn(data_for_complete_feature_map, params):
     """
@@ -352,24 +360,31 @@ def backbone_qnn(data_for_complete_feature_map, params):
     circ.measure([0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5])
     return circ
 
+"""
 # draw the backbone QNN
 parameter_qnn = ParameterVector('θ', 168)
 backbone_qnn(data, parameter_qnn).draw(output='mpl', filename='backbone_qnn.png', style='bw')
 """
+
+"""
 # sample some data
 sample_data = select_data()
-print(sample_data[0])
+print([data[1] for data in sample_data])
+print(len(sample_data[0][0]))
+print(len(sample_data[0][0][0]))
+flatten_data_list = [item for sublist in sample_data[0][0] for item in sublist]
+print(len(flatten_data_list))
 """
-
-def get_prob_vec_from_count_dict(counts:dict):
+def get_prob_vec_from_count_dict(counts:dict, n_qubits:int=6):
     """
 
     :param counts:
+    :param n_qubits:
     :return:
     """
     keys = list(counts.keys())
     shots = sum(counts.values())
-    prob_vec = np.zeros(len(keys))
+    prob_vec = np.zeros(2**n_qubits)
     for key in keys:
         index = int(key, 2)
         prob_vec[index] = counts[key] / shots
@@ -395,6 +410,7 @@ if __name__ == '__main__':
     BACKEND_SIM.set_options(executor=EXC)
     BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
     BACKEND_SIM.set_options(max_parallel_experiments=0)
+    # BACKEND_SIM.set_options(device='GPU') # GPU is probably more suitable for a few very large circuits instead of a large number of small-to-medium sized circuits
     seed = 1701
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (5, 5)
@@ -411,6 +427,118 @@ if __name__ == '__main__':
         params = checkpoint['params']
     else:
         params = np.random.uniform(low=-np.pi, high=np.pi, size= N_PARAMS)
+
+    def get_batch_prob_vectors(params, dataset:List[Tuple[List[List[float]],int]]):
+        """
+
+        :param params:
+        :param dataset: full dataset. Each entry is a tuple containing a 6 by 6 list and a label
+        :return:
+        """
+        all_circs = []
+        circ_name_label_dict = {}
+        circ_count = 0
+        for data in dataset:
+            flatten_data_list = [item for sublist in data[0] for item in sublist]
+            #circ = transpile(backbone_qnn(flatten_data_list, params), BACKEND_SIM)
+            circ = backbone_qnn(flatten_data_list, params).decompose(reps=4) # decompose everything
+            circ.name = f"circ_{circ_count}"
+            # print(circ.name)
+            circ_name_label_dict[f"circ_{circ_count}"] = data[1]
+            all_circs.append(circ)
+            circ_count+=1
+
+        # run the circuits in parallel
+        job = BACKEND_SIM.run(all_circs, shots=NUM_SHOTS)
+        result_dict = job.result().to_dict()["results"]
+        result_counts = job.result().get_counts()
+        prob_vec_list = [] # list of tuples (prob_vec, label)
+        for i in range(len(all_circs)):
+            name = result_dict[i]["header"]["name"]
+            counts = result_counts[i]
+            label = circ_name_label_dict[name]
+            prob_vec = get_prob_vec_from_count_dict(counts, n_qubits=6)
+            prob_vec_list.append((prob_vec, label))
+
+        return prob_vec_list
+
+    """
+    test_params = np.random.randn(N_PARAMS)
+    data_sample = select_data()
+    start_test = time.time()
+    test_prob_vecs = get_batch_prob_vectors(test_params, data_sample)
+    end_test = time.time()
+    print("Size of the data: " + str(len(data_sample)))
+    print("Time for single run: " + str(end_test - start_test)) # 102 seconds; 58 seconds with just decompose 4 reps instead of transpile
+    print(len(test_prob_vecs))
+    print([item[1] for item in test_prob_vecs])
+    """
+
+    def contrastive_loss(params, dataset:List[Tuple[List[List[float]],int]], margin = 1):
+        """
+
+        :param params:
+        :param dataset:
+        :return:
+        """
+        prob_vecs = get_batch_prob_vectors(params, dataset)
+        loss = 0
+        count = 0
+        for i in range(len(prob_vecs)):
+            for j in range(len(prob_vecs)):
+                if i != j:
+                    count= count + 1
+                    if prob_vecs[i][1] == prob_vecs[j][1]:
+                        loss += (1 - np.linalg.norm(prob_vecs[i][0] - prob_vecs[j][0]))**2
+                    else:
+                        loss += max(0, margin - np.linalg.norm(prob_vecs[i][0] - prob_vecs[j][0]))**2
+
+        return loss / count
+
+    def train_model(n_img_per_label, n_epochs, starting_point,rng):
+        train_cost_epochs = []
+        data_list = select_data(num_data_per_label_train=n_img_per_label, rng=rng)
+        cost = lambda xk: contrastive_loss(xk, data_list, margin=1)
+        start = time.time()
+        def callback_fn(xk):
+            train_cost = cost(xk)
+            train_cost_epochs.append(train_cost)
+            iteration_num = len(train_cost_epochs)
+            time_till_now = time.time() - start
+            avg_epoch_time = time_till_now / iteration_num
+            if iteration_num % 1 == 0:
+                print(
+                    f"Training with {len(data_list)} images with {n_img_per_label} image(s) per class, at Epoch {iteration_num}, "
+                    f"train cost {np.round(train_cost, 4)}, "
+                    f"avg epoch time "
+                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
+
+        bounds = [(0, 2 * np.pi)] * (N_PARAMS)
+        opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
+        res = opt.minimize(
+            cost,
+            x0=starting_point,
+            bounds=bounds
+        )
+        optimized_params = res.x
+        return dict(
+            losses=train_cost_epochs,
+            params=optimized_params
+        )
+
+
+    res = train_model(n_img_per_label=n_img_per_label, n_epochs=n_epochs, starting_point=params, rng=rng)
+
+    with open(save_filename, 'w') as f:
+        json.dump(res, f, indent=4, cls=NpEncoder)
+
+
+
+
+
+
+
+
 
 
 
