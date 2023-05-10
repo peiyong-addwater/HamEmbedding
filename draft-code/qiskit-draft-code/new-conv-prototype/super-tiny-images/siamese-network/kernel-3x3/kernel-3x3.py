@@ -412,8 +412,8 @@ if __name__ == '__main__':
     # BACKEND_SIM.set_options(device='GPU') # GPU is probably more suitable for a few very large circuits instead of a large number of small-to-medium sized circuits
     seed = 1701
     rng = np.random.default_rng(seed=seed)
-    KERNEL_SIZE = (5, 5)
-    STRIDE = (3, 3)
+    KERNEL_SIZE = (3, 3)
+    STRIDE = (1, 1)
     n_epochs = 500
     n_img_per_label = 2
     curr_t = nowtime()
