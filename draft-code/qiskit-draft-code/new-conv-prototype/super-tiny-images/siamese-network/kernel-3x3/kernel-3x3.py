@@ -421,7 +421,7 @@ if __name__ == '__main__':
     n_img_per_label = 2
     curr_t = nowtime()
     save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
-    checkpointfile = None
+    checkpointfile = "20230510-134752_siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-2-img_per_class-COBYLA.json"
     if checkpointfile is not None:
         with open(checkpointfile, 'r') as f:
             checkpoint = json.load(f)
