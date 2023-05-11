@@ -426,7 +426,7 @@ if __name__ == '__main__':
         with open(checkpointfile, 'r') as f:
             checkpoint = json.load(f)
             print("Loaded checkpoint file: " + checkpointfile)
-        params = checkpoint['params']
+        params = np.array(checkpoint['params'])
     else:
         params = np.random.uniform(low=-np.pi, high=np.pi, size= N_PARAMS)
 
@@ -502,54 +502,8 @@ if __name__ == '__main__':
         data_list = select_data(num_data_per_label_train=n_img_per_label, rng=rng)
         cost = lambda xk: contrastive_loss(xk, data_list, margin=1)
         start = time.time()
-        def callback_fn(xk):
-            train_cost = cost(xk)
-            train_cost_epochs.append(train_cost)
-            iteration_num = len(train_cost_epochs)
-            time_till_now = time.time() - start
-            avg_epoch_time = time_till_now / iteration_num
-            if iteration_num % 1 == 0:
-                print(
-                    f"Training with {len(data_list)} images with {n_img_per_label} image(s) per class, at Epoch {iteration_num}, "
-                    f"train cost {np.round(train_cost, 4)}, "
-                    f"avg epoch time "
-                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
-
-        def callback_fn_qiskit_spsa(n_func_eval, xk, next_loss, stepsize, accepted):
-            train_cost = next_loss
-            train_cost_epochs.append(train_cost)
-            iteration_num = len(train_cost_epochs)
-            time_till_now = time.time() - start
-            avg_epoch_time = time_till_now / iteration_num
-            if iteration_num % 1 == 0:
-                print(
-                    f"Training with {len(data_list)} images with {n_img_per_label} image(s) per class, at Epoch {iteration_num}, "
-                    f"train cost {np.round(train_cost, 4)}, "
-                    f"avg epoch time "
-                    f"{round(avg_epoch_time, 4)}, total time {round(time_till_now, 4)}")
-
         bounds = [(0, 2 * np.pi)] * (N_PARAMS)
-        """
-        opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
-        res = opt.minimize(
-            cost,
-            x0=starting_point,
-            bounds=bounds
-        )
-        optimized_params = res.x
-        return dict(
-            losses=train_cost_epochs,
-            params=optimized_params
-        )"""
         opt = ADAMSPSA(maxiter=n_epochs, amsgrad=True)
-        """
-        res = opt.minimize(
-            cost,
-            x0=starting_point,
-            bounds=bounds
-        )
-        """
-        # optimized_params = res.x
         res = opt.optimize(
             num_vars=N_PARAMS,
             objective_function=cost,
