@@ -424,7 +424,7 @@ if __name__ == '__main__':
     def batch_data_loss_avg(params, data_pair_list, margin = 1):
         overlap = batch_data_overlap_sim(params, data_pair_list)
         Y = [1-int(data0[1]==data1[1]) for (data0, data1) in data_pair_list]
-        loss =[(1-y)*(1/2)*(d)+y*(1/2)*(max(0., margin-d)) for y, d in zip(Y, overlap)]
+        loss =[(1-y)*(1/2)*(1-ol)+y*(1/2)*(max(0., margin-(1-ol))) for y, ol in zip(Y, overlap)]
         return sum(loss)/len(loss)
 
     def train_model(n_img_per_label, n_epochs, starting_point,rng):

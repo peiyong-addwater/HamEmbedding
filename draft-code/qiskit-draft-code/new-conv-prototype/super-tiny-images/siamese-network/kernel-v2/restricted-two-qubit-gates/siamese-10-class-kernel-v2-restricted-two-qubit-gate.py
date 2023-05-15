@@ -265,4 +265,227 @@ pooling_params = ParameterVector('φ', 18)
 circ = kernel_5x5_v2(data_single_kernel, conv_params, pooling_params)
 circ.draw(output='mpl', filename="kernel_5x5_v2_restricted_two_qubit_gate.png", style='bw', fold=-1)
 
+def backbone_net(data_for_entire_2x2_feature_map, params):
+    """
+    ingle kernel requires 21+18 parameters
+    three consective linear transformation requires 3*3=9 parameters
+    two consective non-linear transformation requires 3*2*2=12 parameters
+    total number of parameters: 21+18+9+12 = 60
+    :param data_for_entire_2x2_feature_map:
+    :param params:
+    :return:
+    """
+    qreg = QuantumRegister(7, name='conv')
+    creg = ClassicalRegister(5, name="pooling-meas")
+    circ = QuantumCircuit(qreg, creg, name='backbone')
+    conv_kernel_param = params[:21]
+    pooling_param = params[21:21 + 18]
+    linear_params = params[21 + 18:21 + 18 + 9]
+    non_linear_transformation_param = params[21 + 18 + 9:21 + 18 + 9 + 12]
+    qubit_counter = 0
+    for i in range(2):
+        for j in range(2):
+            conv_op = kernel_5x5_v2(data_for_entire_2x2_feature_map[i][j], conv_kernel_param,
+                                 pooling_param)  # .to_instruction(label="Conv5x5")
+            circ.compose(conv_op, qubits=qreg[qubit_counter:qubit_counter + 4], clbits=creg, inplace=True)
+            circ.barrier(qreg)
+            qubit_counter += 1
+    # linear layer on the feature produced by conv kernels transformation
+    circ.compose(conv_circuit(linear_params[:3]), qubits=[qreg[0], qreg[1]], inplace=True)
+    circ.compose(conv_circuit(linear_params[3:6]), qubits=[qreg[1], qreg[2]], inplace=True)
+    circ.compose(conv_circuit(linear_params[6:9]), qubits=[qreg[2], qreg[3]], inplace=True)
+    circ.barrier()
+    # non-linear transformation, just like those in the kernel
+    circ.measure(qreg[0], creg[3])
+    circ.measure(qreg[2], creg[4])
+    circ.barrier()
+    circ.compose(conv_circuit(non_linear_transformation_param[:3]), qubits=[qreg[0], qreg[1]], inplace=True)
+    circ.compose(conv_circuit(non_linear_transformation_param[3:6]), qubits=[qreg[2], qreg[3]], inplace=True)
+    circ.measure(qreg[1], creg[3])
+    circ.measure(qreg[3], creg[4])
+    circ.barrier()
+    circ.compose(conv_circuit(non_linear_transformation_param[6:9]), qubits=[qreg[0], qreg[1]], inplace=True)
+    circ.compose(conv_circuit(non_linear_transformation_param[9:12]), qubits=[qreg[2], qreg[3]], inplace=True)
+
+    return circ
+
+# draw the backbone network
+data = []
+for i in range(2):
+    row = []
+    for j in range(2):
+        row.append(ParameterVector(f"x_{i}{j}", length=30))
+    data.append(row)
+
+parameter_backbone = ParameterVector("θ", length=60)
+backbone = backbone_net(data, parameter_backbone)
+backbone.draw(output='mpl', filename='backbone-5x5-input-8x8_restricted_two_qubit_gate.png', style='bw')
+print("backbone circuit picture saved...")
+
+def full_circ(prepared_data_twin, params):
+    """
+    60 parameters
+    :param prepared_data_twin:
+    :param params:
+    :return:
+    """
+    network_qreg = QuantumRegister(4 + 7, name="network-qreg")
+    pooling_measure = ClassicalRegister(5, name='pooling-measure')
+    swap_test_creg = ClassicalRegister(1, name="swap-test-meas")
+    circ = QuantumCircuit(network_qreg, pooling_measure, swap_test_creg)
+
+    img0, label0 = prepared_data_twin[0]
+    img1, label1 = prepared_data_twin[1]
+
+    # network for image 0
+    circ.compose(backbone_net(img0, params), qubits=network_qreg[:7], clbits=pooling_measure, inplace=True)
+    circ.barrier(network_qreg)
+    # network for image 1
+    circ.compose(backbone_net(img1, params), qubits=network_qreg[4:], clbits=pooling_measure, inplace=True)
+    circ.barrier(network_qreg)
+    # swap test
+    circ.h(network_qreg[-1])
+    for i in range(4):
+        circ.cswap(control_qubit=network_qreg[-1], target_qubit1=network_qreg[i], target_qubit2=network_qreg[i + 4])
+    circ.h(network_qreg[-1])
+    circ.measure(network_qreg[-1], swap_test_creg)
+
+    return circ
+
+# draw the siamese network
+data0 = []
+for i in range(2):
+    row = []
+    for j in range(2):
+        row.append(ParameterVector(f"x0_{i}{j}", length=30))
+    data0.append(row)
+
+data1 = []
+for i in range(2):
+    row = []
+    for j in range(2):
+        row.append(ParameterVector(f"x1_{i}{j}", length=30))
+    data1.append(row)
+parameter_backbone = ParameterVector("θ", length=60)
+data = ((data0,0), (data1,1))
+
+siamese_circ = full_circ(data, parameter_backbone)
+siamese_circ.draw(output='mpl', filename='siamese-v2-conv-5x5-restricted-two-qubit-gates.png', style='bw', scale=0.5)
+print("siamese circuit picture saved...")
+
+def get_state_overlap_from_counts(counts:dict):
+    """
+    prob_0 = 1/2(1+inner_product^2)
+    prob_1 = 1/2(1-inner_product^2)
+    inner_product = 2*prob_0-1 = 1-2*prob_1
+    :param counts:
+    :return:
+    """
+    swap_test_counts = {"0": 0, "1": 0}
+    # print(counts)
+    for key in counts.keys():
+        swap_test_meas = key.split(' ')[0]
+        swap_test_counts[swap_test_meas] += counts[key]
+    prob_1 = swap_test_counts['1']/sum(swap_test_counts.values())
+    overlap_squared = -2*prob_1+1 # sometimes there is negative values
+    overlap_squared = np.sqrt(overlap_squared**2)
+    # print(overlap_squared)
+    return overlap_squared
+
+def single_data_pair_overlap_sim(params, data, shots = 2048):
+    backend_sim = Aer.get_backend('aer_simulator')
+    net = transpile(full_circ(data, params), backend_sim)
+    job = backend_sim.run(net, shots=shots)
+    results = job.result()
+    counts = results.get_counts()
+    print(counts)
+    return get_state_overlap_from_counts(counts)
+
+"""
+data_pair_list, _ = select_data(num_data_per_label_train=2, rng=np.random.default_rng(seed=42))
+print(data_pair_list[0])
+params = np.random.uniform(0, 2*np.pi, size=60)
+print(single_data_pair_overlap_sim(params, data_pair_list[0], shots=2048))
+"""
+if __name__ == '__main__':
+    import matplotlib as mpl
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import json
+    import os
+
+    print(os.getcwd())
+
+    NUM_SHOTS = 1024
+    N_WORKERS = 11
+    MAX_JOB_SIZE = 1
+    N_PARAMS = 60
+    BACKEND_SIM = Aer.get_backend('aer_simulator')
+    EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
+    BACKEND_SIM.set_options(executor=EXC)
+    BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
+    BACKEND_SIM.set_options(max_parallel_experiments=0)
+    seed = 1701
+    rng = np.random.default_rng(seed=seed)
+    KERNEL_SIZE = (5, 5)
+    STRIDE = (3, 3)
+    n_epochs = 50
+    n_img_per_label = 2
+    curr_t = nowtime()
+    save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-5x5-conv-restricted-2q-gates-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
+    checkpointfile = None
+    if checkpointfile is not None:
+        with open(checkpointfile, 'r') as f:
+            checkpoint = json.load(f)
+            print("Loaded checkpoint file: " + checkpointfile)
+        params = np.array(checkpoint['params'])
+    else:
+        params = np.random.uniform(low=-np.pi, high=np.pi, size= N_PARAMS)
+
+
+    def batch_data_overlap(params, data_pair_list):
+        """
+
+        :param params: 60 parameters
+        :param data_pair_list: a list of ((padded data in kernel view, label),(padded data in kernel view, label))
+        :return:
+        """
+        circs = []
+        circ_name_label_dict = {}
+        for i in range(len(data_pair_list)):
+            data_pair = data_pair_list[i]
+            circ = full_circ(data_pair, params).decompose(reps=5)
+            circ.name = f"siamese-circ-{i}"
+            circ_name_label_dict[circ.name] = {"lable-0": data_pair[0][1], "lable-1": data_pair[1][1]}
+            circs.append(circ)
+        job = BACKEND_SIM.run(circs, shots=NUM_SHOTS)
+        result_dict = job.result().to_dict()["results"]
+        result_counts = job.result().get_counts()
+
+        overlap_dict = {}
+        for i in range(len(data_pair_list)):
+            name = result_dict[i]["header"]["name"]
+            counts = result_counts[i]
+            overlap = get_state_overlap_from_counts(counts)
+            overlap_dict[name] = {"overlap":overlap, "label": circ_name_label_dict[name]}
+
+        return overlap_dict
+
+    def batch_data_loss_avg(params, data_pair_list, margin = 1):
+        overlap_dict = batch_data_overlap(params, data_pair_list)
+        loss = 0
+        for key in overlap_dict.keys():
+            label = overlap_dict[key]["label"]
+            overlap = overlap_dict[key]["overlap"]
+            distance = 1 - overlap
+            if label["lable-0"] == label["lable-1"]:
+                # two images belong to the same class
+                loss += distance
+            else:
+                # two images belong to different classes
+                loss += max(0, margin-distance)
+        loss = loss/len(data_pair_list)
+        return loss
+
 
