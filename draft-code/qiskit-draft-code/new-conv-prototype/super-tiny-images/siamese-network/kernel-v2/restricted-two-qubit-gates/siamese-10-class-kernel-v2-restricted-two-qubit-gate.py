@@ -488,4 +488,40 @@ if __name__ == '__main__':
         loss = loss/len(data_pair_list)
         return loss
 
+    def train_model(n_img_per_label, n_epochs, starting_point,rng):
+        train_cost_epochs = []
+        data_pair_list, _ = select_data(num_data_per_label_train=n_img_per_label, rng=rng)
+        n_train = len(data_pair_list)
+        print(f"Training with {n_train} data pairs, for {n_epochs} epochs...")
+        cost = lambda xk: batch_data_loss_avg(xk, data_pair_list)
+        start = time.time()
+        bounds = [(0, 2 * np.pi)] * (N_PARAMS)
+        # opt = COBYLA(maxiter=n_epochs, callback=callback_fn)
+        opt = ADAMSPSA(maxiter=n_epochs, amsgrad=True)
+        """
+        res = opt.minimize(
+            cost,
+            x0=starting_point,
+            bounds=bounds
+        )
+        """
+        #optimized_params = res.x
+        res = opt.optimize(
+            num_vars=N_PARAMS,
+            objective_function=cost,
+            gradient_function=None,
+            variable_bounds=bounds,
+            initial_point=starting_point,
+            verbose=True
+        )
+        optimized_params = res[0]
+        train_cost_epochs = res[3]
+        return dict(
+            losses = train_cost_epochs,
+            params = optimized_params
+        )
 
+    res = train_model(n_img_per_label=n_img_per_label, n_epochs=n_epochs, starting_point=params, rng=rng)
+
+    with open(save_filename, 'w') as f:
+        json.dump(res, f, indent=4, cls=NpEncoder)
