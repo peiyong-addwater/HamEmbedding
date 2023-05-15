@@ -426,11 +426,11 @@ if __name__ == '__main__':
     BACKEND_SIM.set_options(executor=EXC)
     BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
     BACKEND_SIM.set_options(max_parallel_experiments=0)
-    seed = 1701
+    seed = 42
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
-    n_epochs = 50
+    n_epochs = 500
     n_img_per_label = 2
     curr_t = nowtime()
     save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-5x5-conv-restricted-2q-gates-multiclass-tiny-image-results-{n_img_per_label}-img_per_class-COBYLA.json"
