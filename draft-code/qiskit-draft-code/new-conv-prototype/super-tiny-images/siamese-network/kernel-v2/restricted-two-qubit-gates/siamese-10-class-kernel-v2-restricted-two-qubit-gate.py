@@ -210,3 +210,59 @@ def conv_circuit(params):
     conv_circ.append(target, list(range(2)))
     return conv_circ
 
+def kernel_5x5_v2(padded_data_in_kernel_view, conv_params, pooling_params):
+    """
+
+    :param padded_data_in_kernel_view:
+    :param conv_params: 21
+    :param pooling_params: 18
+    :return:
+    """
+    qreg = QuantumRegister(4, name="conv-pooling")
+    creg = ClassicalRegister(5, name='pooling-meas')
+    circ = QuantumCircuit(qreg, creg, name="conv-encode-5x5")
+    circ.h(qreg)
+    # encode the pixel data
+    circ.compose(su4_circuit(padded_data_in_kernel_view[:15]), qubits=qreg[:2], inplace=True)
+    circ.compose(su4_circuit(padded_data_in_kernel_view[15:]), qubits=qreg[2:], inplace=True)
+    # convolution
+    circ.compose(conv_circuit(conv_params[0:3]), qubits=[qreg[1], qreg[2]], inplace=True)
+    circ.compose(conv_circuit(conv_params[3:6]), qubits=[qreg[0], qreg[1]], inplace=True)
+    circ.compose(conv_circuit(conv_params[6:9]), qubits=[qreg[2], qreg[3]], inplace=True)
+    # collapse two of the four qubits
+    # the measured qubits will remain in the measured state (sometimes with a phase)
+    circ.measure(qreg[0], creg[3])
+    circ.measure(qreg[2], creg[4])
+    circ.barrier()
+    circ.compose(conv_circuit(conv_params[9:12]), qubits=[qreg[0], qreg[1]], inplace=True)
+    circ.compose(conv_circuit(conv_params[12:15]), qubits=[qreg[2], qreg[3]], inplace=True)
+    circ.barrier()
+    circ.measure(qreg[1], creg[3])
+    circ.measure(qreg[3], creg[4])
+    circ.barrier()
+    circ.compose(conv_circuit(conv_params[15:18]), qubits=[qreg[0], qreg[1]], inplace=True)
+    circ.compose(conv_circuit(conv_params[18:21]), qubits=[qreg[2], qreg[3]], inplace=True)
+    # measurement and pooling
+    circ.measure(qreg[1:], creg[:3])
+    circ.u(pooling_params[0], pooling_params[1], pooling_params[2], qubit=qreg[0]).c_if(creg[0], 1)
+    circ.u(pooling_params[3], pooling_params[4], pooling_params[5], qubit=qreg[0]).c_if(creg[0], 0)
+    circ.u(pooling_params[6], pooling_params[7], pooling_params[8], qubit=qreg[0]).c_if(creg[1], 1)
+    circ.u(pooling_params[9], pooling_params[10], pooling_params[11], qubit=qreg[0]).c_if(creg[1], 0)
+    circ.u(pooling_params[12], pooling_params[13], pooling_params[14], qubit=qreg[0]).c_if(creg[2], 1)
+    circ.u(pooling_params[15], pooling_params[16], pooling_params[17], qubit=qreg[0]).c_if(creg[2], 0)
+    # reset the last three qubits
+    circ.barrier(qreg)
+    circ.reset(qreg[1])
+    circ.reset(qreg[2])
+    circ.reset(qreg[3])
+
+    return circ
+
+# draw the kernel
+data_single_kernel = ParameterVector('x', 30)
+conv_params = ParameterVector('θ', 21)
+pooling_params = ParameterVector('φ', 18)
+circ = kernel_5x5_v2(data_single_kernel, conv_params, pooling_params)
+circ.draw(output='mpl', filename="kernel_5x5_v2_restricted_two_qubit_gate.png", style='bw', fold=-1)
+
+
