@@ -418,10 +418,10 @@ if __name__ == '__main__':
     KERNEL_SIZE = (3, 3)
     STRIDE = (1, 1)
     n_epochs = 500*2
-    n_img_per_label = 2
+    n_img_per_label = 3
     curr_t = nowtime()
     save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-{n_img_per_label}-img_per_class-ADAM-SPSA.json"
-    checkpointfile = "20230512-030158_siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-2-img_per_class-ADAM-SPSA.json"
+    checkpointfile = "20230515-010140_siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-2-img_per_class-ADAM-SPSA.json"
     if checkpointfile is not None:
         with open(checkpointfile, 'r') as f:
             checkpoint = json.load(f)
