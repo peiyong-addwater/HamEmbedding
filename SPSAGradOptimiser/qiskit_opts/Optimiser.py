@@ -79,6 +79,8 @@ class OptimizerSPSAGrad(ABC):
 
         grad = [(yplus - yminus) / (2 * ck * di) for di in delta]
 
+        #TODO: Clip gradient
+
         return np.array(grad)
 
     @abstractmethod
