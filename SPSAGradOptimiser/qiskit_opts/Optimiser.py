@@ -79,9 +79,10 @@ class OptimizerSPSAGrad(ABC):
 
         grad = [(yplus - yminus) / (2 * ck * di) for di in delta]
 
-        #TODO: Clip gradient
+        #Clip gradient
+        grad = np.clip(grad, -np.pi, np.pi)
 
-        return np.array(grad)
+        return grad
 
     @abstractmethod
     def optimize(
