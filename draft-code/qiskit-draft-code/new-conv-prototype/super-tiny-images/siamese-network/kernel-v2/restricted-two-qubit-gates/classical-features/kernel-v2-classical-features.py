@@ -169,15 +169,15 @@ def select_data(labels=[0,1,2,3,4,5,6,7,8,9], num_data_per_label_train = 3, num_
         test_images['data'].append(extract_convolution_data(data_for_label[test_indices][0], kernel_size=(5, 5), stride=(3, 3), dilation=(1, 1),
                                         padding=(0, 0), encoding_gate_parameter_size=15))
         test_images['labels'].append(label)
-
-    # pair the training data
-    paired_extracted_data = []
-    for i in range(len(selected_train_images)):
-        for j in range(len(selected_train_images)):
-            if i!=j:
-                paired_extracted_data.append((selected_train_images[i], selected_train_images[j]))
-
-    return paired_extracted_data, test_images
+        """
+        # pair the training data
+        paired_extracted_data = []
+        for i in range(len(selected_train_images)):
+            for j in range(len(selected_train_images)):
+                if i!=j:
+                    paired_extracted_data.append((selected_train_images[i], selected_train_images[j]))
+        """
+    return selected_train_images #, test_images
 
 def su4_circuit(params):
     su4 = QuantumCircuit(2, name='su4')
@@ -277,7 +277,8 @@ def backbone_net(data_for_entire_2x2_feature_map, params):
     """
     qreg = QuantumRegister(7, name='conv')
     creg = ClassicalRegister(5, name="pooling-meas")
-    circ = QuantumCircuit(qreg, creg, name='backbone')
+    res_creg = ClassicalRegister(4, name="res-meas")
+    circ = QuantumCircuit(qreg, creg, res_creg, name='backbone')
     conv_kernel_param = params[:21]
     pooling_param = params[21:21 + 18]
     linear_params = params[21 + 18:21 + 18 + 9]
@@ -307,6 +308,8 @@ def backbone_net(data_for_entire_2x2_feature_map, params):
     circ.compose(conv_circuit(non_linear_transformation_param[6:9]), qubits=[qreg[0], qreg[1]], inplace=True)
     circ.compose(conv_circuit(non_linear_transformation_param[9:12]), qubits=[qreg[2], qreg[3]], inplace=True)
 
+    circ.measure([qreg[0], qreg[1], qreg[2], qreg[3]], res_creg)
+
     return circ
 
 # draw the backbone network
@@ -321,5 +324,64 @@ parameter_backbone = ParameterVector("θ", length=60)
 backbone = backbone_net(data, parameter_backbone)
 backbone.draw(output='mpl', filename='backbone-5x5-input-8x8_restricted_two_qubit_gate.png', style='bw')
 print("backbone circuit picture saved...")
+"""
+test_params = np.random.randn(60)
+data_sample = select_data()[0][0]
+test_circ = backbone_net(data_sample, test_params).decompose(reps=4)
+BACKEND_SIM = Aer.get_backend('aer_simulator')
+job = BACKEND_SIM.run(test_circ)
+result_counts = job.result().get_counts()
+print(result_counts)
+"""
+def get_prob_vec_from_count_dict(counts:dict, n_qubits:int=4):
+    """
+    get the probability vector from the counts dictionary
+    :param counts:
+    :param n_qubits:
+    :return:
+    """
+    prob_vec = np.zeros(2**n_qubits)
+    shots = sum(counts.values())
+    for key, value in counts.items():
+        feature_measure = key.split(" ")[0]
+        prob_vec[int(feature_measure, 2)] += value
+    return prob_vec/shots
 
+
+if __name__ == '__main__':
+    import matplotlib as mpl
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import json
+    import os
+
+    print(os.getcwd())
+
+    NUM_SHOTS = 1024
+    N_WORKERS = 11
+    MAX_JOB_SIZE = 1
+    N_PARAMS = 60
+    BACKEND_SIM = Aer.get_backend('aer_simulator')
+    EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
+    BACKEND_SIM.set_options(executor=EXC)
+    BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
+    BACKEND_SIM.set_options(max_parallel_experiments=0)
+    # BACKEND_SIM.set_options(device='GPU') # GPU is probably more suitable for a few very large circuits instead of a large number of small-to-medium sized circuits
+    seed = 1701
+    rng = np.random.default_rng(seed=seed)
+    KERNEL_SIZE = (5, 5)
+    STRIDE = (3, 3)
+    n_epochs = 500*2
+    n_img_per_label = 4
+    curr_t = nowtime()
+    save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-5x5-conv-classical-features-tiny-image-results-{n_img_per_label}-img_per_class-ADAM-SPSA.json"
+    checkpointfile = None
+    if checkpointfile is not None:
+        with open(checkpointfile, 'r') as f:
+            checkpoint = json.load(f)
+            print("Loaded checkpoint file: " + checkpointfile)
+        params = np.array(checkpoint['params'])
+    else:
+        params = np.random.uniform(low=-np.pi, high=np.pi, size= N_PARAMS)
 
