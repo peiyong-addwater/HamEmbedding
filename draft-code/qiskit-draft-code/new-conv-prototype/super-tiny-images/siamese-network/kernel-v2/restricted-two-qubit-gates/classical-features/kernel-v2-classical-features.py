@@ -385,3 +385,96 @@ if __name__ == '__main__':
     else:
         params = np.random.uniform(low=-np.pi, high=np.pi, size= N_PARAMS)
 
+    def get_batch_prob_vectors(params, dataset:List[Tuple[List[List[float]], int]]):
+        """
+
+        :param params:
+        :param dataset:
+        :return:
+        """
+        all_circs = []
+        circ_name_label_dict = {}
+        circ_count = 0
+        for data, label in dataset:
+            circ = backbone_net(data, params).decompose(reps=4) # decompose everything
+            circ.name = f"circ_{circ_count}"
+            all_circs.append(circ)
+            circ_name_label_dict[circ.name] = label
+            circ_count += 1
+
+        # run the circuits in parallel
+        job = BACKEND_SIM.run(all_circs, shots=NUM_SHOTS)
+        result_dict = job.result().to_dict()["results"]
+        result_counts = job.result().get_counts()
+        prob_vec_list = []  # list of tuples (prob_vec, label)
+        for i in range(len(all_circs)):
+            name = result_dict[i]["header"]["name"]
+            counts = result_counts[i]
+            label = circ_name_label_dict[name]
+            prob_vec = get_prob_vec_from_count_dict(counts, n_qubits=4)
+            prob_vec_list.append((prob_vec, label))
+
+        return prob_vec_list
+
+    """
+    test_params = np.random.randn(N_PARAMS)
+    data_sample = select_data()
+    start_test = time.time()
+    test_prob_vecs = get_batch_prob_vectors(test_params, data_sample)
+    end_test = time.time()
+    print("Size of the data: " + str(len(data_sample)))
+    print("Time for single run: " + str(
+        end_test - start_test))  #  16.312373399734497 for 3 images per label
+    print(len(test_prob_vecs))
+    print([item[1] for item in test_prob_vecs])
+    """
+
+    def contrastive_loss(params, dataset:List[Tuple[List[List[float]],int]], margin = 1):
+        """
+
+        :param params:
+        :param dataset:
+        :return:
+        """
+        prob_vecs = get_batch_prob_vectors(params, dataset)
+        loss = 0
+        count = 0
+        for i in range(len(prob_vecs)):
+            for j in range(len(prob_vecs)):
+                if i != j:
+                    count= count + 1
+                    if prob_vecs[i][1] == prob_vecs[j][1]:
+                        loss += (np.linalg.norm(prob_vecs[i][0] - prob_vecs[j][0]))**2
+                    else:
+                        loss += max(0, margin - np.linalg.norm(prob_vecs[i][0] - prob_vecs[j][0]))**2
+
+        return loss / count
+
+    def train_model(n_img_per_label, n_epochs, starting_point,rng):
+        train_cost_epochs = []
+        data_list = select_data(num_data_per_label_train=n_img_per_label, rng=rng)
+        cost = lambda xk: contrastive_loss(xk, data_list, margin=1)
+        start = time.time()
+        bounds = [(0, 2 * np.pi)] * (N_PARAMS)
+        opt = ADAMSPSA(maxiter=n_epochs, amsgrad=True)
+        res = opt.optimize(
+            num_vars=N_PARAMS,
+            objective_function=cost,
+            gradient_function=None,
+            variable_bounds=bounds,
+            initial_point=starting_point,
+            verbose=True
+        )
+        optimized_params = res[0]
+        train_cost_epochs = res[3]
+        return dict(
+            losses=train_cost_epochs,
+            params=optimized_params
+        )
+
+
+    res = train_model(n_img_per_label=n_img_per_label, n_epochs=n_epochs, starting_point=params, rng=rng)
+
+    with open(save_filename, 'w') as f:
+        json.dump(res, f, indent=4, cls=NpEncoder)
+
