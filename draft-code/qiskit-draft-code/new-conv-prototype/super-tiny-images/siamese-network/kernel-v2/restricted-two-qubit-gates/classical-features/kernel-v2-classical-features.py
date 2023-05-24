@@ -372,7 +372,7 @@ if __name__ == '__main__':
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (5, 5)
     STRIDE = (3, 3)
-    n_epochs = 500*2
+    n_epochs = 500*2*2
     n_img_per_label = 8
     curr_t = nowtime()
     save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-5x5-conv-restricted-2q-gate-classical-features-tiny-image-results-{n_img_per_label}-img_per_class-ADAM-SPSA.json"
