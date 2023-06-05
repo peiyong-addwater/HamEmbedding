@@ -427,7 +427,7 @@ if __name__ == '__main__':
     n_epochs = 500
     n_img_per_label = 2
     curr_t = nowtime()
-    save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-{n_img_per_label}-img_per_class-ADAM-SPSA.json"
+    save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-{n_img_per_label}-img_per_class-ADAM-SPSA-NOISY.json"
     checkpointfile = "20230520-163129_siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-4-img_per_class-ADAM-SPSA.json"
     if checkpointfile is not None:
         with open(checkpointfile, 'r') as f:
