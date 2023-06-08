@@ -450,7 +450,7 @@ if __name__ == '__main__':
         for data in dataset:
             flatten_data_list = [item for sublist in data[0] for item in sublist]
             #circ = transpile(backbone_qnn(flatten_data_list, params), BACKEND_SIM)
-            circ = backbone_qnn(flatten_data_list, params).decompose(reps=4) # decompose everything
+            circ = transpile(backbone_qnn(flatten_data_list, params).decompose(reps=4), backend=BACKEND_SIM) # decompose everything
             circ.name = f"circ_{circ_count}"
             # print(circ.name)
             circ_name_label_dict[f"circ_{circ_count}"] = data[1]
