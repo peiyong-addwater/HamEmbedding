@@ -419,7 +419,7 @@ if __name__ == '__main__':
     BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
     BACKEND_SIM.set_options(max_parallel_experiments=0)
     BACKEND_SIM.set_options(noise_model=ibm_perth_noise_model)
-    BACKEND_SIM.set_options(method='statevector', device='GPU', cuStateVec_enable=True)
+    # BACKEND_SIM.set_options(method='statevector', device='GPU', cuStateVec_enable=True) cuQuantum support need to be built
     # BACKEND_SIM.set_options(device='GPU') # GPU is probably more suitable for a few very large circuits instead of a large number of small-to-medium sized circuits
     seed = 1701
     rng = np.random.default_rng(seed=seed)
