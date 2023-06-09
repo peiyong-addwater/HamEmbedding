@@ -419,13 +419,14 @@ if __name__ == '__main__':
     BACKEND_SIM.set_options(max_job_size=MAX_JOB_SIZE)
     BACKEND_SIM.set_options(max_parallel_experiments=0)
     BACKEND_SIM.set_options(noise_model=ibm_perth_noise_model)
+    BACKEND_SIM.set_options(method='statevector', device='GPU', cuStateVec_enable=True)
     # BACKEND_SIM.set_options(device='GPU') # GPU is probably more suitable for a few very large circuits instead of a large number of small-to-medium sized circuits
     seed = 1701
     rng = np.random.default_rng(seed=seed)
     KERNEL_SIZE = (3, 3)
     STRIDE = (1, 1)
     n_epochs = 1000
-    n_img_per_label = 6
+    n_img_per_label = 4
     curr_t = nowtime()
     save_filename = curr_t + "_" + f"siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-{n_img_per_label}-img_per_class-ADAM-SPSA-NOISY.json"
     checkpointfile = "20230607-160803_siamese-10-class-qiskit-mnist-3x3-conv-classical-features-tiny-image-results-4-img_per_class-ADAM-SPSA-NOISY.json"
