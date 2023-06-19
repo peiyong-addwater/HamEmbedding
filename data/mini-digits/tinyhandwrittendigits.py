@@ -67,8 +67,8 @@ if __name__ == '__main__':
     data = load()
     train_images = data[0]
     train_labels = data[1]
-    idx = 1123
+    idx = 1223
     example_image_array = train_images[idx]
-    example_image_formatted = (example_image_array * 255 / np.max(example_image_array)).astype('uint8')
+    example_image_formatted = (example_image_array * 255 / (2*np.pi)).astype('uint8')
     example_image = Image.fromarray(example_image_formatted)
     example_image.save(f"example_tiny_handwritten_digit_{train_labels[idx]}.png")
