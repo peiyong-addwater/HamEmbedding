@@ -16,14 +16,14 @@ from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 from qiskit.circuit import ParameterVector
 import os
 
-def FourPixelEncodeTwoQubits(pixels:Union[list, np.ndarray], parameters:Union[List, np.ndarray]):
+def FourPixelEncodeTwoQubits(pixels:Union[list, np.ndarray, ParameterVector], parameters:Union[List, np.ndarray, ParameterVector], to_gate = True):
     """
 
     :param pixels: 4-element array
     :param parameters: 6N-element array, one-dim, where N is the number of "layers" of data-reuploading
     :return:
     """
-    circ = QuantumCircuit(2)
+    circ = QuantumCircuit(2, name = "PatchEncode")
     n_layers = len(parameters) // 6
     for i in range(n_layers):
         circ.rx(pixels[0], 0)
@@ -35,5 +35,10 @@ def FourPixelEncodeTwoQubits(pixels:Union[list, np.ndarray], parameters:Union[Li
         circ.u(parameters[6*i+3], parameters[6*i+4], parameters[6*i+5], 1)
         circ.cz(0, 1)
 
-    return circ.to_gate(label="PatchEncode")
+    return circ.to_gate(label="PatchEncode") if to_gate else circ
 
+if __name__ == '__main__':
+    x = ParameterVector('x', 4)
+    theta = ParameterVector('θ', 12)
+    circ = FourPixelEncodeTwoQubits(x, theta, to_gate=False)
+    circ.draw(output='mpl', style='bw', filename='PatchEncode4Pixels.png')
