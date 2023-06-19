@@ -19,6 +19,7 @@ import os
 def FourPixelEncodeTwoQubits(pixels:Union[list, np.ndarray, ParameterVector], parameters:Union[List, np.ndarray, ParameterVector], to_gate = True):
     """
 
+    :param to_gate:
     :param pixels: 4-element array
     :param parameters: 6N-element array, one-dim, where N is the number of "layers" of data-reuploading
     :return:
