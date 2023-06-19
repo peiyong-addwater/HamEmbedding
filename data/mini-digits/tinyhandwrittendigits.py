@@ -6,6 +6,7 @@ import gzip
 import pickle
 from PIL import Image
 import pandas as pd
+import os
 
 filename = [
     "optdigits.tes",
@@ -13,6 +14,7 @@ filename = [
     "optdigits.names"
 ]
 
+data_dir = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits"
 
 def download_tiny_handwritten_digits():
     base_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/optdigits/"
@@ -26,24 +28,24 @@ def save_mnist():
     mnist["training_images"] = []
     mnist["training_labels"] = []
     mnist["test_images"], mnist["test_labels"] = [], []
-    train_filename = "../../draft-code/qiskit-draft-code/new-conv-prototype/super-tiny-images/optdigits.tra"
-    test_filename = "../../draft-code/qiskit-draft-code/new-conv-prototype/super-tiny-images/optdigits.tes"
+    train_filename = os.path.join(data_dir,"optdigits.tra")#"../../draft-code/qiskit-draft-code/new-conv-prototype/super-tiny-images/optdigits.tra"
+    test_filename =  os.path.join(data_dir,"optdigits.tes") #"../../draft-code/qiskit-draft-code/new-conv-prototype/super-tiny-images/optdigits.tes"
     train_df = pd.read_csv(train_filename)
     train_array = train_df.to_numpy()
     test_df = pd.read_csv(test_filename)
     test_array = test_df.to_numpy()
     for c in train_array:
-        image = c[:-1]/16
+        image = c[:-1]/16*(2*np.pi)
         label = c[-1]
         mnist["training_images"].append(image.reshape(8, 8))
         mnist["training_labels"].append(label)
     for c in test_array:
-        image = c[:-1]/16
+        image = c[:-1]/16*(2*np.pi)
         label = c[-1]
         mnist["test_images"].append(image.reshape(8, 8))
         mnist["test_labels"].append(label)
 
-    with open("tiny-handwritten.pkl", 'wb') as f:
+    with open("tiny-handwritten-as-rotation-angles.pkl", 'wb') as f:
         pickle.dump(mnist,f)
     print("Save complete.")
 
@@ -52,7 +54,7 @@ def init():
     save_mnist()
 
 def load():
-    with open("tiny-handwritten.pkl", 'rb') as f:
+    with open(os.path.join(data_dir, "tiny-handwritten-as-rotation-angles.pkl"), 'rb') as f:
         mnist = pickle.load(f)
     return mnist["training_images"], mnist["training_labels"], mnist["test_images"], mnist["test_labels"]
 
