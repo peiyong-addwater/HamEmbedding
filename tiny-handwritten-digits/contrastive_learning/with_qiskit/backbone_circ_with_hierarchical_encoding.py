@@ -45,6 +45,11 @@ def TwoByTwoPatchLocalTokenMixing(
     return circ.to_gate(label="PatchLocalTokenMixing") if to_gate else circ
 
 def FourQubitParameterisedLayer(parameters:Union[ParameterVector, np.ndarray]):
+    """
+    A four-qubit parameterised layer, which ends with circular entanglement with CZ gates
+    :param parameters:
+    :return:
+    """
     pass
 
 
