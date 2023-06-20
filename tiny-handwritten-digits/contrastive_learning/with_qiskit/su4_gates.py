@@ -23,6 +23,12 @@ import pickle
 import sys
 
 def SU4Gate(params:Union[ParameterVector, np.ndarray], to_gate = True):
+    """
+    A 15-parameter, most generic 2-qubit gate
+    :param params:
+    :param to_gate:
+    :return:
+    """
     su4 = QuantumCircuit(2, name='SU4')
     su4.u(params[0], params[1], params[2], qubit=0)
     su4.u(params[3], params[4], params[5], qubit=1)

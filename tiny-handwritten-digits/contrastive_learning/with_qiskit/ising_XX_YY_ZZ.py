@@ -24,7 +24,7 @@ import sys
 
 def IsingXXYYZZ(params:Union[ParameterVector, np.ndarray], to_gate=True):
     """
-
+    A three-parameter two qubit gate
     :param params:
     :param to_gate:
     :return:
