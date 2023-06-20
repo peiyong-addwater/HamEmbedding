@@ -43,3 +43,21 @@ def SU4Gate(params:Union[ParameterVector, np.ndarray], to_gate = True):
 
     return su4.to_gate(label="SU4") if to_gate else su4
 
+def BeheadedSU4(params:Union[ParameterVector, np.ndarray], to_gate = True):
+    """
+    SU4 without the first layer of U3 gates
+    :param params: 9 parameters
+    :param to_gate:
+    :return:
+    """
+    su4 = QuantumCircuit(2, name='BeheadedSU4')
+    su4.cx(0, 1)
+    su4.ry(params[0], 0)
+    su4.rz(params[1], 1)
+    su4.cx(1, 0)
+    su4.ry(params[2], 0)
+    su4.cx(0, 1)
+    su4.u(params[3], params[4], params[5], 0)
+    su4.u(params[6], params[7], params[8], 1)
+
+    return su4.to_gate(label="BeheadedSU4") if to_gate else su4
