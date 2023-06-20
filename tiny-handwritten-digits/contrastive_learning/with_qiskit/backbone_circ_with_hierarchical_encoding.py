@@ -44,7 +44,10 @@ def TwoByTwoPatchLocalTokenMixing(
 
     return circ.to_gate(label="PatchLocalTokenMixing") if to_gate else circ
 
-#def Level2FeatureMapTwoByTwoDepositAndReverse()
+def FourQubitParameterisedLayer(parameters:Union[ParameterVector, np.ndarray]):
+    pass
+
+
 if __name__ == '__main__':
     def cut_8x8_to_2x2(img: np.ndarray):
         # img: 8x8 image
@@ -54,6 +57,14 @@ if __name__ == '__main__':
             for j in range(4):
                 patches[i, j] = img[2 * i:2 * i + 2, 2 * j:2 * j + 2].flatten()
         return patches
+
+
+    img = np.arange(64).reshape(8, 8)
+    patches = cut_8x8_to_2x2(img)
+    print(patches)
+    print(img)
+    first_four_patches = patches[:2, :2]
+    print(first_four_patches)
 
     first_four_patch_pv = [[ParameterVector('x1',4),ParameterVector('x2',4)],[ParameterVector('x5',4),ParameterVector('x6',4)]]
     theta = ParameterVector('θ', 12)
