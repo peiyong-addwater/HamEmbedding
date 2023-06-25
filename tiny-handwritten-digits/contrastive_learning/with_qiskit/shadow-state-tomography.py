@@ -1,11 +1,15 @@
 # Based on https://github.com/ryanlevy/shadow-tutorial/blob/main/Tutorial_Shadow_State_Tomography.ipynb
 import math
 import numpy as np
+import dill
+from multiprocessing import Process
 from typing import List, Tuple, Union
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit import Aer
+from qiskit.compiler import transpile
 from concurrent.futures import ThreadPoolExecutor
 from qiskit.quantum_info import random_clifford
+from qiskit.tools import parallel_map
 import qiskit
 import json
 import time
@@ -18,6 +22,19 @@ from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 from qiskit.circuit import ParameterVector
 import os
 from backbone_circ_with_hierarchical_encoding import backboneCircFourQubitFeature
+
+class DillProcess(Process):
+    # from https://stackoverflow.com/a/72776044
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._target = dill.dumps(self._target)  # Save the target function as bytes, using dill
+
+    def run(self):
+        if self._target:
+            self._target = dill.loads(self._target)    # Unpickle the target function before executing
+            self._target(*self._args, **self._kwargs)  # Execute the target function
+
 
 # Each "image" in the data file is a 4x4x4 array, each element in the first 4x4 is a flattend patch
 DATA_FILE = "/home/peiyongw/Desktop/Research/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning/with_qiskit/tiny-handwritten-as-rotation-angles-patches.pkl"
@@ -66,6 +83,28 @@ def operator_2_norm(R):
 def complexMatrixDiff(A, B):
     return np.real_if_close(operator_2_norm(A - B))
 
+def constructCliffordShadowSingleCirc(n_qubits:int,
+                   base_circuit:QuantumCircuit,
+                   clifford,
+                   circ_name:str,
+                   shadow_register:Union[QuantumRegister, List[QuantumRegister], List[int]],
+                   device_backend=Aer.get_backend('aer_simulator'),
+                   transpile:bool=True):
+    """
+
+    :param n_qubits:
+    :param base_circuit:
+    :param clifford:
+    :param circ_name:
+    :param shadow_register:
+    :param device_backend:
+    :param transpile:
+    :return:
+    """
+
+
+
+
 def cliffordShadow(n_shadows:int,
                    n_qubits:int,
                    base_circuit:QuantumCircuit,
@@ -74,7 +113,8 @@ def cliffordShadow(n_shadows:int,
                    reps:int=1,
                    seed = 1701,
                    parallel:bool=True,
-                   simulation:bool=True
+                   simulation:bool=True,
+                   transpile:bool=True
                    ):
     """
     Shadow state tomography with Clifford circuits
@@ -87,6 +127,7 @@ def cliffordShadow(n_shadows:int,
     :param seed: random seed for generating the Clifford circuit
     :param simulation: whether running on a simulator
     :param parallel: whether running in parallel
+    :param transpile: whether to transpile the circuits
     :return:
     """
     rng = np.random.default_rng(seed)
@@ -100,6 +141,8 @@ def cliffordShadow(n_shadows:int,
         device_backend.set_options(executor=EXC)
         device_backend.set_options(max_job_size=MAX_JOB_SIZE)
         device_backend.set_options(max_parallel_experiments=0)
+
+
     for i in range(len(cliffords)):
         print(i)
         shadow_meas = ClassicalRegister(n_qubits, name="shadow")
@@ -108,11 +151,11 @@ def cliffordShadow(n_shadows:int,
         qc.add_register(shadow_meas)
         qc.append(clifford.to_instruction(), shadow_register)
         qc.measure(shadow_register, shadow_meas)
-        #qc = transpile(qc.decompose(reps=4), device_backend)
         qc = qc.decompose(reps=4)
         qc.name = f"Shadow_{i}"
         cliffords_dict[f"Shadow_{i}"] = clifford
         shadow_circs.append(qc)
+    name_list = [qc.name for qc in shadow_circs]
     job = device_backend.run(shadow_circs, shots=reps)
     result_dict = job.result().to_dict()["results"]
     result_counts = job.result().get_counts()
@@ -126,6 +169,8 @@ def cliffordShadow(n_shadows:int,
             shadows.append(Minv(n_qubits, np.outer(Ub, Ub.conj())) * count)
     rho_shadow = np.sum(shadows, axis=0) / (n_shadows * reps)
     return rho_shadow
+
+
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
@@ -159,11 +204,11 @@ if __name__ == '__main__':
     omega = np.random.randn(1)
     eta = np.random.randn(12)
 
-    nShadows = 512
+    nShadows = 500
 
     backbone = backboneCircFourQubitFeature(patches,theta, phi, gamma, omega, eta)
     rho_actual = qiskit.quantum_info.partial_trace(DensityMatrix(backbone), [4,5,6,7,8,9]).data
-    rho_shadow = cliffordShadow(nShadows, 4, backbone, [0,1,2,3])
+    rho_shadow = cliffordShadow(nShadows, 4, backbone, [0,1,2,3], transpile=True, parallel=True, simulation=True)
     print(complexMatrixDiff(rho_actual, rho_shadow))
     print(qiskit.quantum_info.state_fidelity(DensityMatrix(rho_shadow), DensityMatrix(rho_actual), validate= False))
 
