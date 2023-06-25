@@ -51,8 +51,20 @@ def Minv(N, X):
     '''inverse shadow channel'''
     return ((2 ** N + 1.)) * X - np.eye(2 ** N)
 
+def operator_2_norm(R):
+    """
+    Calculate the operator 2-norm.
+
+    Args:
+        R (array): The operator whose norm we want to calculate.
+
+    Returns:
+        Scalar corresponding to the norm.
+    """
+    return np.sqrt(np.trace(R.conjugate().transpose() @ R))
+
 def complexMatrixDiff(A, B):
-    return np.linalg.norm(A - B, ord='fro')
+    return np.real_if_close(operator_2_norm(A - B))
 
 def cliffordShadow(n_shadows:int,
                    n_qubits:int,
@@ -117,7 +129,8 @@ def cliffordShadow(n_shadows:int,
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    import qiskit
+    from qiskit.visualization.state_visualization import plot_state_city
+    from qiskit.quantum_info import DensityMatrix
     def cut_8x8_to_2x2(img: np.ndarray):
         # img: 8x8 image
         # return: 4x4x4 array, each element in the first 4x4 is a flattened patch
@@ -140,19 +153,19 @@ if __name__ == '__main__':
             print("Patch ", i, j)
             print(patches[i * 2:i * 2 + 2, j * 2:j * 2 + 2])
     """
-    theta = np.random.random(12)
-    phi = np.random.random(2)
-    gamma = np.random.random(12)
-    omega = np.random.random(1)
-    eta = np.random.random(12)
+    theta = np.random.randn(12)
+    phi = np.random.randn(2)
+    gamma = np.random.randn(12)
+    omega = np.random.randn(1)
+    eta = np.random.randn(12)
 
-    nShadows = 100
+    nShadows = 512
 
     backbone = backboneCircFourQubitFeature(patches,theta, phi, gamma, omega, eta)
-    rho_actual = qiskit.quantum_info.partial_trace(qiskit.quantum_info.DensityMatrix(backbone), [4,5,6,7,8,9]).data
+    rho_actual = qiskit.quantum_info.partial_trace(DensityMatrix(backbone), [4,5,6,7,8,9]).data
     rho_shadow = cliffordShadow(nShadows, 4, backbone, [0,1,2,3])
     print(complexMatrixDiff(rho_actual, rho_shadow))
-    print(qiskit.quantum_info.state_fidelity(rho_shadow, rho_actual, validate= False))
+    print(qiskit.quantum_info.state_fidelity(DensityMatrix(rho_shadow), DensityMatrix(rho_actual), validate= False))
 
     plt.subplot(121)
     plt.suptitle("Correct")
@@ -168,8 +181,8 @@ if __name__ == '__main__':
     plt.imshow(rho_shadow.imag, vmax=0.7, vmin=-0.7)
     plt.savefig(f"shadow-clifford-{nShadows}-shadows.png")
 
-    qiskit.visualization.state_visualization.plot_state_city(rho_actual, title="Correct").savefig("correct-city.png")
-    qiskit.visualization.state_visualization.plot_state_city(rho_shadow, title="Shadow (clifford)").savefig(
+    plot_state_city(rho_actual, title="Correct").savefig("correct-city.png")
+    plot_state_city(rho_shadow, title="Shadow (clifford)").savefig(
         f"shadow-clifford-{nShadows}-shadows-city.png")
     plt.close('all')
 
