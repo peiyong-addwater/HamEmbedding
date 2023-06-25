@@ -5,6 +5,7 @@ from typing import List, Tuple, Union
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit import Aer
 from concurrent.futures import ThreadPoolExecutor
+from qiskit.quantum_info import random_clifford
 import qiskit
 import json
 import time
@@ -50,6 +51,9 @@ def Minv(N, X):
     '''inverse shadow channel'''
     return ((2 ** N + 1.)) * X - np.eye(2 ** N)
 
+def complexMatrixDiff(A, B):
+    return np.linalg.norm(A - B, ord='fro')
+
 def cliffordShadow(n_shadows:int,
                    n_qubits:int,
                    base_circuit:QuantumCircuit,
@@ -74,27 +78,28 @@ def cliffordShadow(n_shadows:int,
     :return:
     """
     rng = np.random.default_rng(seed)
-    cliffords = [qiskit.quantum_info.random_clifford(n_qubits, seed=rng) for _ in range(n_shadows)]
+    cliffords = [random_clifford(n_qubits, seed=rng) for _ in range(n_shadows)]
     shadow_circs = []
     cliffords_dict = {}
-    cliffords_counts_dict = {}
     if simulation and parallel:
         N_WORKERS = 11
-        MAX_JOB_SIZE = 1
+        MAX_JOB_SIZE = 10
         EXC = ThreadPoolExecutor(max_workers=N_WORKERS)
         device_backend.set_options(executor=EXC)
         device_backend.set_options(max_job_size=MAX_JOB_SIZE)
         device_backend.set_options(max_parallel_experiments=0)
     for i in range(len(cliffords)):
+        print(i)
         shadow_meas = ClassicalRegister(n_qubits, name="shadow")
         clifford = cliffords[i]
         qc = base_circuit.copy()
         qc.add_register(shadow_meas)
         qc.append(clifford.to_instruction(), shadow_register)
         qc.measure(shadow_register, shadow_meas)
+        #qc = transpile(qc.decompose(reps=4), device_backend)
+        qc = qc.decompose(reps=4)
         qc.name = f"Shadow_{i}"
-        cliffords_dict[qc.name] = clifford
-        qc = transpile(qc, device_backend)
+        cliffords_dict[f"Shadow_{i}"] = clifford
         shadow_circs.append(qc)
     job = device_backend.run(shadow_circs, shots=reps)
     result_dict = job.result().to_dict()["results"]
@@ -103,15 +108,70 @@ def cliffordShadow(n_shadows:int,
     for i in range(n_shadows):
         name = result_dict[i]["header"]["name"]
         counts = result_counts[i]
-        mat = cliffords_counts_dict[name].adjoint().to_matrix()
+        mat = cliffords_dict[name].adjoint().to_matrix()
         for bit, count in counts.items():
             Ub = mat[:, int(bit, 2)] # this is Udag|b>
             shadows.append(Minv(n_qubits, np.outer(Ub, Ub.conj())) * count)
     rho_shadow = np.sum(shadows, axis=0) / (n_shadows * reps)
     return rho_shadow
 
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    import qiskit
+    def cut_8x8_to_2x2(img: np.ndarray):
+        # img: 8x8 image
+        # return: 4x4x4 array, each element in the first 4x4 is a flattened patch
+        patches = np.zeros((4, 4, 4))
+        for i in range(4):
+            for j in range(4):
+                patches[i, j] = img[2 * i:2 * i + 2, 2 * j:2 * j + 2].flatten()
+        return patches
 
 
+    img = np.arange(64).reshape(8, 8)
+    patches = cut_8x8_to_2x2(img)
+    """
+    print(patches)
+    print(img)
+    first_four_patches = patches[:2, :2]
+    print(first_four_patches)
+    for i in range(2):
+        for j in range(2):
+            print("Patch ", i, j)
+            print(patches[i * 2:i * 2 + 2, j * 2:j * 2 + 2])
+    """
+    theta = np.random.random(12)
+    phi = np.random.random(2)
+    gamma = np.random.random(12)
+    omega = np.random.random(1)
+    eta = np.random.random(12)
+
+    nShadows = 100
+
+    backbone = backboneCircFourQubitFeature(patches,theta, phi, gamma, omega, eta)
+    rho_actual = qiskit.quantum_info.partial_trace(qiskit.quantum_info.DensityMatrix(backbone), [4,5,6,7,8,9]).data
+    rho_shadow = cliffordShadow(nShadows, 4, backbone, [0,1,2,3])
+    print(complexMatrixDiff(rho_actual, rho_shadow))
+    print(qiskit.quantum_info.state_fidelity(rho_shadow, rho_actual, validate= False))
+
+    plt.subplot(121)
+    plt.suptitle("Correct")
+    plt.imshow(rho_actual.real, vmax=0.7, vmin=-0.7)
+    plt.subplot(122)
+    plt.imshow(rho_actual.imag, vmax=0.7, vmin=-0.7)
+    plt.savefig("correct-clifford.png")
+
+    plt.subplot(121)
+    plt.suptitle(f"Shadow(Clifford)-{nShadows}-shadows")
+    plt.imshow(rho_shadow.real, vmax=0.7, vmin=-0.7)
+    plt.subplot(122)
+    plt.imshow(rho_shadow.imag, vmax=0.7, vmin=-0.7)
+    plt.savefig(f"shadow-clifford-{nShadows}-shadows.png")
+
+    qiskit.visualization.state_visualization.plot_state_city(rho_actual, title="Correct").savefig("correct-city.png")
+    qiskit.visualization.state_visualization.plot_state_city(rho_shadow, title="Shadow (clifford)").savefig(
+        f"shadow-clifford-{nShadows}-shadows-city.png")
+    plt.close('all')
 
 
 
