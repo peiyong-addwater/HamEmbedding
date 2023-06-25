@@ -98,12 +98,12 @@ def LocalTokenMixing(
 
     return circ.to_gate(label="LocalTokenMixing") if to_gate else circ
 
-def backbone_circ_four_q_feature(
+def backboneCircFourQubitFeature(
         image_patches:Union[List[List[ParameterVector]], np.ndarray],
         single_patch_encoding_parameter:Union[ParameterVector, np.ndarray],
         single_patch_d_and_r_phase_parameter:Union[ParameterVector, np.ndarray],
         four_q_param_layer_parameter:Union[ParameterVector, np.ndarray],
-        local_token_mixing_phase_parameter:Union[ParameterVector, np.ndarray, float],
+        local_token_mixing_phase_parameter:Union[ParameterVector, np.ndarray],
         finishing_layer_parameter:Union[ParameterVector, np.ndarray]
 ):
     """
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     local_token_mixing = LocalTokenMixing(first_four_patch_pv, theta, phi, gamma, omega, to_gate=False)
     local_token_mixing.draw(output='mpl', style='bw', filename='TwoByTwoPatchLocalTokenMixing.png')
 
-    backbone = backbone_circ_four_q_feature(patches, theta, phi, gamma, omega, eta)
+    backbone = backboneCircFourQubitFeature(patches, theta, phi, gamma, omega, eta)
     backbone.draw(output='mpl', style='bw', filename='BackboneCirc4QFeature.png')
 
 
