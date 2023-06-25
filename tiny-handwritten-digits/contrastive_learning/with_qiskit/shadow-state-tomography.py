@@ -101,7 +101,8 @@ def constructCliffordShadowSingleCirc(n_qubits:int,
     :param transpile:
     :return:
     """
-
+    #TODO: parallel construction of clifford shadow circuits
+    pass
 
 
 
