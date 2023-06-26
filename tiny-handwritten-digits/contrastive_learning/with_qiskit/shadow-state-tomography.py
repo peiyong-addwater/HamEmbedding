@@ -105,7 +105,7 @@ def constructCliffordShadowSingleCirc(n_qubits:int,
                    circ_name:str,
                    shadow_register:Union[QuantumRegister, List[QuantumRegister], List[int]],
                    device_backend=Aer.get_backend('aer_simulator'),
-                   transpile_circ:bool=True):
+                   transpile_circ:bool=False):
     """
 
     :param n_qubits: number of qubits involved in the shadow
@@ -207,21 +207,36 @@ def constructPauliShadowSingleCirc(n_qubits:int,
                                    circ_name:str,
                                    shadow_register:Union[QuantumRegister, List[QuantumRegister], List[int]],
                                    device_backend=Aer.get_backend('aer_simulator'),
-                                   transpile_circ:bool=True
+                                   transpile_circ:bool=False
                                    ):
     """
 
-    :param n_qubits:
-    :param base_circuit:
-    :param pauli_string:
-    :param circ_name:
-    :param shadow_register:
-    :param device_backend:
-    :param transpile_circ:
+    :param n_qubits: number of qubits involved in the classical shadow
+    :param base_circuit: the base circuit that produces the state to be tomographed
+    :param pauli_string: the random Pauli string to be measured
+    :param circ_name: name of the circuit
+    :param shadow_register: the quantum register involving the classical shadow
+    :param device_backend: the backend to run the circuit
+    :param transpile_circ: whether to transpile the circuit
     :return:
     """
-    # TODO: parallel construction of Pauli shadow circuits
-    pass
+    shadow_meas = ClassicalRegister(n_qubits, name="shadow")
+    qc_m = base_circuit.copy()
+    qc_bitstring = QuantumCircuit(n_qubits)
+    for j, bit in enumerate(pauli_string):
+        bitGateMap(qc_bitstring, bit, j)
+    qc_m.append(qc_bitstring.to_instruction(), shadow_register)
+    qc_m.add_register(shadow_meas)
+    qc_m.measure(shadow_register, shadow_meas)
+    qc_m = qc_m.decompose(reps=4)
+    if transpile_circ:
+        qc_m = transpile(qc_m, device_backend)
+    qc_m.name = circ_name
+    return circ_name, qc_m, pauli_string
+
+@dask.delayed
+def constructPauliShadowSingleCircSingleArg(args):
+    return constructPauliShadowSingleCirc(*args)
 
 def pauliShadow(
         n_shadows:int,
@@ -260,23 +275,20 @@ def pauliShadow(
     scheme = [rng.choice(['X', 'Y', 'Z'], size=n_qubits).tolist() for _ in range(n_shadows)]
     shadow_circs = []
     shadow_circ_name_pauli_dict = {}
-    # TODO: replace the following loop with parallelization
-    for i in range(n_shadows):
-        print(i)
-        name = f"Shadow_{i}"
-        shadow_meas = ClassicalRegister(n_qubits, name="shadow")
-        qc_m = base_circuit.copy()
-        bit_string = scheme[i]
-        qc_bitstring = QuantumCircuit(n_qubits)
-        for j, bit in enumerate(bit_string):
-            bitGateMap(qc_bitstring, bit, j)
-        qc_m.append(qc_bitstring.to_instruction(), shadow_register)
-        qc_m.add_register(shadow_meas)
-        qc_m.measure(shadow_register, shadow_meas)
-        qc_m = qc_m.decompose(reps=4)
-        qc_m.name = name
-        shadow_circs.append(qc_m)
-        shadow_circ_name_pauli_dict[name] = bit_string
+    # args for the parallelled construction of the shadow circuits
+    n_qubits_list = [n_qubits]*n_shadows
+    base_circuit_list = [base_circuit] * n_shadows
+    circ_name_list = [f"Shadow_{i}" for i in range(n_shadows)]
+    shadow_register_list = [shadow_register] * n_shadows
+    dev_backend_list = [device_backend] * n_shadows
+    transpile_circ_list = [transpile_circ] * n_shadows
+    parallel_arg_list = zip(n_qubits_list, base_circuit_list, scheme, circ_name_list, shadow_register_list, dev_backend_list, transpile_circ_list)
+    shadow_circ_and_names = [constructPauliShadowSingleCircSingleArg(args) for args in parallel_arg_list]
+    shadow_circ_and_names = dask.compute(shadow_circ_and_names)[0]
+    for circ_name, circ, pauli_string in shadow_circ_and_names:
+        shadow_circs.append(circ)
+        shadow_circ_name_pauli_dict[circ_name] = pauli_string
+
     job = device_backend.run(shadow_circs, shots=reps)
     result_dict = job.result().to_dict()["results"]
     result_counts = job.result().get_counts()
@@ -331,11 +343,11 @@ if __name__ == '__main__':
     omega = np.random.randn(1)
     eta = np.random.randn(12)
 
-    nShadows = 1000
+    nShadows = 500
 
     backbone = backboneCircFourQubitFeature(patches,theta, phi, gamma, omega, eta)
-    #rho_shadow = pauliShadow(nShadows, 4, backbone, [0,1,2,3], transpile_circ=True, parallel=True, simulation=True)
-    rho_shadow = cliffordShadow(nShadows, 4, backbone, [0,1,2,3], transpile_circ=True, parallel=True, simulation=True)
+    rho_shadow = pauliShadow(nShadows, 4, backbone, [0,1,2,3], transpile_circ=False, parallel=True, simulation=True)
+    #rho_shadow = cliffordShadow(nShadows, 4, backbone, [0,1,2,3], transpile_circ=False, parallel=True, simulation=True)
     rho_actual = qiskit.quantum_info.partial_trace(DensityMatrix(backbone), [4, 5, 6, 7, 8, 9]).data
     print(complexMatrixDiff(rho_actual, rho_shadow))
     print(qiskit.quantum_info.state_fidelity(DensityMatrix(rho_shadow), DensityMatrix(rho_actual), validate= False))
