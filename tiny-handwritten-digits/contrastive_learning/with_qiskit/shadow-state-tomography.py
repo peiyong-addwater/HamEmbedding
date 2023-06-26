@@ -1,8 +1,10 @@
 # Based on https://github.com/ryanlevy/shadow-tutorial/blob/main/Tutorial_Shadow_State_Tomography.ipynb
+import multiprocessing
+
 import math
 import numpy as np
 import dill
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 from typing import List, Tuple, Union
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit import Aer
@@ -10,6 +12,8 @@ from qiskit.compiler import transpile
 from concurrent.futures import ThreadPoolExecutor
 from qiskit.quantum_info import random_clifford
 from qiskit.tools import parallel_map
+from multiprocessing import Pool
+import dask
 import qiskit
 import json
 import time
@@ -104,18 +108,32 @@ def constructCliffordShadowSingleCirc(n_qubits:int,
                    transpile_circ:bool=True):
     """
 
-    :param n_qubits:
-    :param base_circuit:
-    :param clifford:
-    :param circ_name:
-    :param shadow_register:
-    :param device_backend:
-    :param transpile_circ:
+    :param n_qubits: number of qubits involved in the shadow
+    :param base_circuit: the base circuit that produce the target state, should be only quantum regs
+    :param clifford: the random Clifford that is going to be appended to the base circuit
+    :param circ_name: name of the circuit
+    :param shadow_register: the quantum register involved in the shadow
+    :param device_backend: backend to run the circuit
+    :param transpile_circ: whether to transpile the circuit
     :return:
     """
-    #TODO: parallel construction of clifford shadow circuits
-    pass
+    shadow_meas = ClassicalRegister(n_qubits, name="shadow")
+    qc = base_circuit.copy()
+    qc.add_register(shadow_meas)
+    qc.append(clifford.to_instruction(), shadow_register)
+    qc.measure(shadow_register, shadow_meas)
+    qc = qc.decompose(reps=4)
+    if transpile_circ:
+        qc = transpile(qc, device_backend)
+    qc.name = circ_name
+    return circ_name, qc, clifford
 
+@dask.delayed
+def constructCliffordShadowSingeCirSingleArg(args):
+    n_qubits, base_circuit, clifford, circ_name, shadow_register, device_backend, transpile_circ = args
+    return constructCliffordShadowSingleCirc(n_qubits=n_qubits, base_circuit=base_circuit, clifford=clifford,
+                                             circ_name=circ_name, shadow_register=shadow_register,
+                                             device_backend=device_backend, transpile_circ=transpile_circ)
 
 
 def cliffordShadow(n_shadows:int,
@@ -127,7 +145,7 @@ def cliffordShadow(n_shadows:int,
                    seed = 1701,
                    parallel:bool=True,
                    simulation:bool=True,
-                   transpile:bool=True
+                   transpile_circ:bool=True
                    ):
     """
     Shadow state tomography with Clifford circuits
@@ -140,13 +158,12 @@ def cliffordShadow(n_shadows:int,
     :param seed: random seed for generating the Clifford circuit
     :param simulation: whether running on a simulator
     :param parallel: whether running in parallel
-    :param transpile: whether to transpile the circuits
+    :param transpile_circ: whether to transpile the circuits
     :return:
     """
+    N_CORES = multiprocessing.cpu_count()-1
     rng = np.random.default_rng(seed)
     cliffords = [random_clifford(n_qubits, seed=rng) for _ in range(n_shadows)]
-    shadow_circs = []
-    cliffords_dict = {}
     if simulation and parallel:
         N_WORKERS = 11
         MAX_JOB_SIZE = 10
@@ -155,21 +172,21 @@ def cliffordShadow(n_shadows:int,
         device_backend.set_options(max_job_size=MAX_JOB_SIZE)
         device_backend.set_options(max_parallel_experiments=0)
 
-
-    #TODO: replace the following loop with parallelization
-    for i in range(len(cliffords)):
-        #print(i)
-        shadow_meas = ClassicalRegister(n_qubits, name="shadow")
-        clifford = cliffords[i]
-        qc = base_circuit.copy()
-        qc.add_register(shadow_meas)
-        qc.append(clifford.to_instruction(), shadow_register)
-        qc.measure(shadow_register, shadow_meas)
-        qc = qc.decompose(reps=4)
-        qc.name = f"Shadow_{i}"
-        cliffords_dict[f"Shadow_{i}"] = clifford
-        shadow_circs.append(qc)
-    name_list = [qc.name for qc in shadow_circs]
+    # args for the parallelled construction of the shadow circuits
+    n_qubits_list = [n_qubits] * n_shadows
+    base_circuit_list = [base_circuit] * n_shadows
+    circ_name_list = [f"Shadow_{i}" for i in range(n_shadows)]
+    shadow_register_list = [shadow_register] * n_shadows
+    dev_backend_list = [device_backend] * n_shadows
+    transpile_circ_list = [transpile_circ] * n_shadows
+    parallel_args_list = zip(n_qubits_list, base_circuit_list, cliffords, circ_name_list, shadow_register_list,dev_backend_list,transpile_circ_list)
+    shadow_circ_and_names = [constructCliffordShadowSingeCirSingleArg(args) for args in parallel_args_list]
+    shadow_circ_and_names=dask.compute(shadow_circ_and_names)[0]
+    shadow_circs = []
+    cliffords_dict = {}
+    for (name, circ, clifford) in shadow_circ_and_names:
+        shadow_circs.append(circ)
+        cliffords_dict[name] = clifford
     job = device_backend.run(shadow_circs, shots=reps)
     result_dict = job.result().to_dict()["results"]
     result_counts = job.result().get_counts()
@@ -216,7 +233,7 @@ def pauliShadow(
         seed = 1701,
         parallel:bool=True,
         simulation:bool=True,
-        transpile:bool=False
+        transpile_circ:bool=False
 ):
     """
     Shadow state tomography with random Pauli measurements
@@ -229,7 +246,7 @@ def pauliShadow(
     :param seed: random seed
     :param parallel: whether to run in parallel
     :param simulation: whether to run on a simulator
-    :param transpile: whether to transpile the circuit
+    :param transpile_circ: whether to transpile the circuit
     :return:
     """
     if simulation and parallel:
@@ -284,6 +301,8 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from qiskit.visualization.state_visualization import plot_state_city
     from qiskit.quantum_info import DensityMatrix
+    import multiprocessing
+    multiprocessing.set_start_method('fork')
     def cut_8x8_to_2x2(img: np.ndarray):
         # img: 8x8 image
         # return: 4x4x4 array, each element in the first 4x4 is a flattened patch
@@ -315,8 +334,8 @@ if __name__ == '__main__':
     nShadows = 1000
 
     backbone = backboneCircFourQubitFeature(patches,theta, phi, gamma, omega, eta)
-    rho_shadow = pauliShadow(nShadows, 4, backbone, [0,1,2,3], transpile=True, parallel=True, simulation=True)
-    #rho_shadow = cliffordShadow(nShadows, 4, backbone, [0,1,2,3], transpile=True, parallel=True, simulation=True)
+    #rho_shadow = pauliShadow(nShadows, 4, backbone, [0,1,2,3], transpile_circ=True, parallel=True, simulation=True)
+    rho_shadow = cliffordShadow(nShadows, 4, backbone, [0,1,2,3], transpile_circ=True, parallel=True, simulation=True)
     rho_actual = qiskit.quantum_info.partial_trace(DensityMatrix(backbone), [4, 5, 6, 7, 8, 9]).data
     print(complexMatrixDiff(rho_actual, rho_shadow))
     print(qiskit.quantum_info.state_fidelity(DensityMatrix(rho_shadow), DensityMatrix(rho_actual), validate= False))
@@ -326,18 +345,18 @@ if __name__ == '__main__':
     plt.imshow(rho_actual.real, vmax=0.7, vmin=-0.7)
     plt.subplot(122)
     plt.imshow(rho_actual.imag, vmax=0.7, vmin=-0.7)
-    plt.savefig("correct-pauli.png")
+    plt.savefig("correct.png")
 
     plt.subplot(121)
-    plt.suptitle(f"Shadow(pauli)-{nShadows}-shadows")
+    plt.suptitle(f"Shadow-{nShadows}-shadows")
     plt.imshow(rho_shadow.real, vmax=0.7, vmin=-0.7)
     plt.subplot(122)
     plt.imshow(rho_shadow.imag, vmax=0.7, vmin=-0.7)
-    plt.savefig(f"shadow-pauli-{nShadows}-shadows.png")
+    plt.savefig(f"shadow-{nShadows}-shadows.png")
 
     plot_state_city(rho_actual, title="Correct").savefig("correct-city.png")
-    plot_state_city(rho_shadow, title="Shadow (pauli)").savefig(
-        f"shadow-pauli-{nShadows}-shadows-city.png")
+    plot_state_city(rho_shadow, title="Shadow").savefig(
+        f"shadow-{nShadows}-shadows-city.png")
     plt.close('all')
 
 
