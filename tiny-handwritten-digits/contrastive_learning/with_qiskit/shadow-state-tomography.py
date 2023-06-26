@@ -156,6 +156,7 @@ def cliffordShadow(n_shadows:int,
         device_backend.set_options(max_parallel_experiments=0)
 
 
+    #TODO: replace the following loop with parallelization
     for i in range(len(cliffords)):
         #print(i)
         shadow_meas = ClassicalRegister(n_qubits, name="shadow")
@@ -169,7 +170,6 @@ def cliffordShadow(n_shadows:int,
         cliffords_dict[f"Shadow_{i}"] = clifford
         shadow_circs.append(qc)
     name_list = [qc.name for qc in shadow_circs]
-    #TODO: parallel transpilation of the circuits
     job = device_backend.run(shadow_circs, shots=reps)
     result_dict = job.result().to_dict()["results"]
     result_counts = job.result().get_counts()
@@ -243,6 +243,7 @@ def pauliShadow(
     scheme = [rng.choice(['X', 'Y', 'Z'], size=n_qubits).tolist() for _ in range(n_shadows)]
     shadow_circs = []
     shadow_circ_name_pauli_dict = {}
+    # TODO: replace the following loop with parallelization
     for i in range(n_shadows):
         print(i)
         name = f"Shadow_{i}"
@@ -256,7 +257,6 @@ def pauliShadow(
         qc_m.add_register(shadow_meas)
         qc_m.measure(shadow_register, shadow_meas)
         qc_m = qc_m.decompose(reps=4)
-        #TODO: parallel transpilation of the circuits
         qc_m.name = name
         shadow_circs.append(qc_m)
         shadow_circ_name_pauli_dict[name] = bit_string
