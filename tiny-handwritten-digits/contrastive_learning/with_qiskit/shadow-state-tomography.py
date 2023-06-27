@@ -316,6 +316,18 @@ if __name__ == '__main__':
     from qiskit.quantum_info import DensityMatrix, partial_trace, state_fidelity
     from backbone_circ_with_hierarchical_encoding import backboneCircFourQubitFeature
 
+
+    class NpEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            else:
+                return super(NpEncoder, self).default(obj)
+
     # Times of sampling for calculating shadows
     SAMPLES = 5
 
@@ -398,7 +410,9 @@ if __name__ == '__main__':
     for n in pauli_shadow_sizes:
         seeds = GLOBAL_RNG.integers(low=0, high=10000, size=SAMPLES)
         pauli_shadow_accuracies_single_size = []
+        print("Calculating Pauli shadow accuracy for n_shadows =", n)
         for seed in seeds:
+            print("Calculating Pauli shadow accuracy for n_shadows =", n, "and seed =", seed)
             parameters = GLOBAL_RNG.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
             img = GLOBAL_RNG.choice(image_patches)
             rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="pauli", n_shadows=n, seed=seed)
@@ -407,9 +421,11 @@ if __name__ == '__main__':
     # calculate clifford shadow accuracy
     clifford_shadow_accuracies = []
     for n in clifford_shadow_sizes:
+        print("Calculating Clifford shadow accuracy for n_shadows =", n)
         seeds = GLOBAL_RNG.integers(low=0, high=10000, size=SAMPLES)
         clifford_shadow_accuracies_single_size = []
         for seed in seeds:
+            print("Calculating Clifford shadow accuracy for n_shadows =", n, "and seed =", seed)
             parameters = GLOBAL_RNG.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
             img = GLOBAL_RNG.choice(image_patches)
             rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="clifford", n_shadows=n, seed=seed)
@@ -421,7 +437,7 @@ if __name__ == '__main__':
         "clifford_shadows": (clifford_shadow_sizes,clifford_shadow_accuracies)
     }
     with open("shadow_accuracy_benchmark.json", "w") as f:
-        json.dump(res_dict, f)
+        json.dump(res_dict, f, indent=4, cls=NpEncoder)
     print("Done!")
     print("Results saved to shadow_accuracy_benchmark.json")
     print("Plotting the results...")
