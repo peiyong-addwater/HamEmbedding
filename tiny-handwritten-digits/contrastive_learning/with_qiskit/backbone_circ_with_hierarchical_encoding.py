@@ -102,7 +102,7 @@ def backboneCircFourQubitFeature(
         image_patches:Union[List[List[ParameterVector]], np.ndarray],
         single_patch_encoding_parameter:Union[ParameterVector, np.ndarray],
         single_patch_d_and_r_phase_parameter:Union[ParameterVector, np.ndarray],
-        four_q_param_layer_parameter:Union[ParameterVector, np.ndarray],
+        four_q_param_layer_parameter_local_patches:Union[ParameterVector, np.ndarray],
         local_token_mixing_phase_parameter:Union[ParameterVector, np.ndarray],
         finishing_layer_parameter:Union[ParameterVector, np.ndarray]
 ):
@@ -112,7 +112,7 @@ def backboneCircFourQubitFeature(
     :param image_patches: All 16 image patches, each of which is a 4-element array (ParameterVector) reshaped into a 4 by 4 list, or a 4 by 4 by 4 ndarray, in which the last dimension is the original pixels.
     :param single_patch_encoding_parameter: "θ", 6NL-element array, one-dim, where N is the number of "layers" of data-reuploading and L is the number of D&R repetitions in the single patch D&R
     :param single_patch_d_and_r_phase_parameter: "φ", L-element array, one-dim, where L is the number of D&R repetitions in the single patch D&R
-    :param four_q_param_layer_parameter: "γ", 12N-element array, one-dim, where N is the number of layers of the 4-q parameterised layer
+    :param four_q_param_layer_parameter_local_patches: "γ", 12M-element array, one-dim, where M is the number of layers of the 4-q parameterised layer
     :param local_token_mixing_phase_parameter: "ω", a one-element array for the phase parameter of the token mixing D&R
     :param finishing_layer_parameter: "η", 12K-element array, one-dim, where K is the number of layers of the finishing layer
     :return:
@@ -153,7 +153,7 @@ def backboneCircFourQubitFeature(
     for i in range(2):
         for j in range(2):
             local_patches = image_patches[i * 2:i * 2 + 2, j * 2:j * 2 + 2]
-            circ.append(LocalTokenMixing(local_patches, single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, four_q_param_layer_parameter, local_token_mixing_phase_parameter), [local_mixing_count, local_mixing_count + 1, local_mixing_count + 2, local_mixing_count + 3, local_mixing_count + 4, local_mixing_count + 5, local_mixing_count+6])
+            circ.append(LocalTokenMixing(local_patches, single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, four_q_param_layer_parameter_local_patches, local_token_mixing_phase_parameter), [local_mixing_count, local_mixing_count + 1, local_mixing_count + 2, local_mixing_count + 3, local_mixing_count + 4, local_mixing_count + 5, local_mixing_count + 6])
             local_mixing_count += 1
 
     circ.append(FourQubitParameterisedLayer(finishing_layer_parameter), [0, 1, 2, 3])

@@ -25,7 +25,7 @@ sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 from qiskit.circuit import ParameterVector
 import os
-from backbone_circ_with_hierarchical_encoding import backboneCircFourQubitFeature
+
 
 class DillProcess(Process):
     # from https://stackoverflow.com/a/72776044
@@ -40,8 +40,6 @@ class DillProcess(Process):
             self._target(*self._args, **self._kwargs)  # Execute the target function
 
 
-# Each "image" in the data file is a 4x4x4 array, each element in the first 4x4 is a flattend patch
-DATA_FILE = "/home/peiyongw/Desktop/Research/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning/with_qiskit/tiny-handwritten-as-rotation-angles-patches.pkl"
 
 pauli_list = [
     np.eye(2),
@@ -310,66 +308,47 @@ def pauliShadow(
 
 
 if __name__ == '__main__':
+    """
+    Benchmarking the "accuracy" of shadow state tomography
+    """
     import matplotlib.pyplot as plt
     from qiskit.visualization.state_visualization import plot_state_city
     from qiskit.quantum_info import DensityMatrix
-    import multiprocessing
-    multiprocessing.set_start_method('fork')
-    def cut_8x8_to_2x2(img: np.ndarray):
-        # img: 8x8 image
-        # return: 4x4x4 array, each element in the first 4x4 is a flattened patch
-        patches = np.zeros((4, 4, 4))
-        for i in range(4):
-            for j in range(4):
-                patches[i, j] = img[2 * i:2 * i + 2, 2 * j:2 * j + 2].flatten()
-        return patches
+    from backbone_circ_with_hierarchical_encoding import backboneCircFourQubitFeature
+
+    # Structural parameters of the backbone circuit
+    N = 1 # number of data-reuploading layers for a single patch
+    L = 1 # number of D&R repetitions in the single patch D&R layer
+    M = 1 # number of 4-qubit parameterised layers after the 2x2 local patches in the LocalTokenMixing layer
+    K = 1 # number of 4-qubit  parameterised layers at the end of the backbone circuit, right before producing the learned representation
+    THETA_DIM = 6*N*L # single_patch_encoding_parameter
+    PHI_DIM = L # single_patch_d_and_r_phase_parameter
+    GAMMA_DIM = 12*M # four_q_param_layer_parameter_local_patches
+    OMEGA_DIM = 1 # local_token_mixing_phase_parameter
+    ETA_DIM = 12*K # finishing_layer_parameter
 
 
-    img = np.arange(64).reshape(8, 8)
-    patches = cut_8x8_to_2x2(img)
-    """
-    print(patches)
-    print(img)
-    first_four_patches = patches[:2, :2]
-    print(first_four_patches)
-    for i in range(2):
-        for j in range(2):
-            print("Patch ", i, j)
-            print(patches[i * 2:i * 2 + 2, j * 2:j * 2 + 2])
-    """
-    theta = np.random.randn(12)
-    phi = np.random.randn(2)
-    gamma = np.random.randn(12)
-    omega = np.random.randn(1)
-    eta = np.random.randn(12)
 
-    nShadows = 500
 
-    backbone = backboneCircFourQubitFeature(patches,theta, phi, gamma, omega, eta)
-    rho_shadow = pauliShadow(nShadows, 4, backbone, [0,1,2,3], transpile_circ=False, parallel=True, simulation=True)
-    #rho_shadow = cliffordShadow(nShadows, 4, backbone, [0,1,2,3], transpile_circ=False, parallel=True, simulation=True)
-    rho_actual = qiskit.quantum_info.partial_trace(DensityMatrix(backbone), [4, 5, 6, 7, 8, 9]).data
-    print(complexMatrixDiff(rho_actual, rho_shadow))
-    print(qiskit.quantum_info.state_fidelity(DensityMatrix(rho_shadow), DensityMatrix(rho_actual), validate= False))
+    # Each "image" in the data file is a 4x4x4 array, each element in the first 4x4 is a flattend patch
+    DATA_FILE = "/home/peiyongw/Desktop/Research/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning/with_qiskit/tiny-handwritten-as-rotation-angles-patches.pkl"
+    with open(DATA_FILE, "rb") as f:
+        patched_data = pickle.load(f)
+    image_patches = patched_data["training_patches"] + patched_data["test_patches"]
 
-    plt.subplot(121)
-    plt.suptitle("Correct")
-    plt.imshow(rho_actual.real, vmax=0.7, vmin=-0.7)
-    plt.subplot(122)
-    plt.imshow(rho_actual.imag, vmax=0.7, vmin=-0.7)
-    plt.savefig("correct.png")
+    def calculate_shadows_single_image_single_parameter(image, parameters):
+        """
+        Calculate the Clifford and Pauli shadows, as well as extracting the original density matrix, for a single image with a single set of parameter
 
-    plt.subplot(121)
-    plt.suptitle(f"Shadow-{nShadows}-shadows")
-    plt.imshow(rho_shadow.real, vmax=0.7, vmin=-0.7)
-    plt.subplot(122)
-    plt.imshow(rho_shadow.imag, vmax=0.7, vmin=-0.7)
-    plt.savefig(f"shadow-{nShadows}-shadows.png")
+        :param image: patches of a single image
+        :param parameters:
+        :return:
+        """
 
-    plot_state_city(rho_actual, title="Correct").savefig("correct-city.png")
-    plot_state_city(rho_shadow, title="Shadow").savefig(
-        f"shadow-{nShadows}-shadows-city.png")
-    plt.close('all')
+
+
+
+
 
 
 
