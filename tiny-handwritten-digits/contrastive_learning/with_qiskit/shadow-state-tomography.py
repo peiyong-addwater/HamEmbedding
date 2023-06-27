@@ -313,7 +313,7 @@ if __name__ == '__main__':
     """
     import matplotlib.pyplot as plt
     from qiskit.visualization.state_visualization import plot_state_city
-    from qiskit.quantum_info import DensityMatrix
+    from qiskit.quantum_info import DensityMatrix, partial_trace, state_fidelity
     from backbone_circ_with_hierarchical_encoding import backboneCircFourQubitFeature
 
     # Structural parameters of the backbone circuit
@@ -326,6 +326,7 @@ if __name__ == '__main__':
     GAMMA_DIM = 12*M # four_q_param_layer_parameter_local_patches
     OMEGA_DIM = 1 # local_token_mixing_phase_parameter
     ETA_DIM = 12*K # finishing_layer_parameter
+    TOTAL_PARAM_DIM = THETA_DIM + PHI_DIM + GAMMA_DIM + OMEGA_DIM + ETA_DIM
 
 
 
@@ -336,14 +337,59 @@ if __name__ == '__main__':
         patched_data = pickle.load(f)
     image_patches = patched_data["training_patches"] + patched_data["test_patches"]
 
-    def calculate_shadows_single_image_single_parameter(image, parameters):
+    def calculate_shadows_single_image_single_parameter(image, parameters, shadow_type, n_shadows, seed):
         """
         Calculate the Clifford and Pauli shadows, as well as extracting the original density matrix, for a single image with a single set of parameter
 
         :param image: patches of a single image
-        :param parameters:
+        :param parameters: a single set of parameters, dim = THETA_DIM + PHI_DIM + GAMMA_DIM + OMEGA_DIM + ETA_DIM
         :return:
         """
+        # Construct the backbone circuit
+        single_patch_encoding_parameter = parameters[:THETA_DIM]
+        single_patch_d_and_r_phase_parameter = parameters[THETA_DIM:THETA_DIM+PHI_DIM]
+        four_q_param_layer_parameter_local_patches = parameters[THETA_DIM+PHI_DIM:THETA_DIM+PHI_DIM+GAMMA_DIM]
+        local_token_mixing_phase_parameter = parameters[THETA_DIM+PHI_DIM+GAMMA_DIM:THETA_DIM+PHI_DIM+GAMMA_DIM+OMEGA_DIM]
+        finishing_layer_parameter = parameters[THETA_DIM+PHI_DIM+GAMMA_DIM+OMEGA_DIM:THETA_DIM+PHI_DIM+GAMMA_DIM+OMEGA_DIM+ETA_DIM]
+        backbone = backboneCircFourQubitFeature(
+            image_patches=image,
+            single_patch_encoding_parameter=single_patch_encoding_parameter,
+            single_patch_d_and_r_phase_parameter=single_patch_d_and_r_phase_parameter,
+            four_q_param_layer_parameter_local_patches=four_q_param_layer_parameter_local_patches,
+            local_token_mixing_phase_parameter=local_token_mixing_phase_parameter,
+            finishing_layer_parameter=finishing_layer_parameter
+        )
+        # The reduced density matrix of the first 4 qubits
+        rho_actual = partial_trace(DensityMatrix(backbone), [4, 5, 6, 7, 8, 9])
+        rho_actual = rho_actual.data
+        # The Clifford shadow
+        if shadow_type == "clifford":
+            rho_shadow = cliffordShadow(
+                n_shadows=n_shadows,
+                n_qubits=4,
+                base_circuit=backbone,
+                shadow_register=[0,1, 2, 3],
+                reps=1,
+                transpile_circ=False,
+                seed=seed
+            )
+        # The Pauli shadow
+        elif shadow_type == "pauli":
+            rho_shadow = pauliShadow(
+                n_shadows=n_shadows,
+                n_qubits=4,
+                base_circuit=backbone,
+                shadow_register=[0,1, 2, 3],
+                reps=1,
+                transpile_circ=False,
+                seed=seed
+            )
+        else:
+            raise ValueError("shadow_type must be either clifford or pauli")
+        return rho_actual, rho_shadow
+
+
+
 
 
 
