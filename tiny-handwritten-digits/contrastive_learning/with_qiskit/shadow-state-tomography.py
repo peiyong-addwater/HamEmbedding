@@ -159,7 +159,6 @@ def cliffordShadow(n_shadows:int,
     :param transpile_circ: whether to transpile the circuits
     :return:
     """
-    N_CORES = multiprocessing.cpu_count()-1
     rng = np.random.default_rng(seed)
     cliffords = [random_clifford(n_qubits, seed=rng) for _ in range(n_shadows)]
     if simulation and parallel:
@@ -312,9 +311,15 @@ if __name__ == '__main__':
     Benchmarking the "accuracy" of shadow state tomography
     """
     import matplotlib.pyplot as plt
+    import json
     from qiskit.visualization.state_visualization import plot_state_city
     from qiskit.quantum_info import DensityMatrix, partial_trace, state_fidelity
     from backbone_circ_with_hierarchical_encoding import backboneCircFourQubitFeature
+
+    # Times of sampling for calculating shadows
+    SAMPLES = 5
+
+    GLOBAL_RNG = np.random.default_rng(42)
 
     # Structural parameters of the backbone circuit
     N = 1 # number of data-reuploading layers for a single patch
@@ -327,9 +332,7 @@ if __name__ == '__main__':
     OMEGA_DIM = 1 # local_token_mixing_phase_parameter
     ETA_DIM = 12*K # finishing_layer_parameter
     TOTAL_PARAM_DIM = THETA_DIM + PHI_DIM + GAMMA_DIM + OMEGA_DIM + ETA_DIM
-
-
-
+    print("Total number of parameters:", TOTAL_PARAM_DIM)
 
     # Each "image" in the data file is a 4x4x4 array, each element in the first 4x4 is a flattend patch
     DATA_FILE = "/home/peiyongw/Desktop/Research/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning/with_qiskit/tiny-handwritten-as-rotation-angles-patches.pkl"
@@ -388,6 +391,59 @@ if __name__ == '__main__':
             raise ValueError("shadow_type must be either clifford or pauli")
         return rho_actual, rho_shadow
 
+    pauli_shadow_sizes = [100, 500, 1000, 2000, 5000, 10000]
+    clifford_shadow_sizes = [100, 500, 1000, 2000]
+    # calculate pauli shadow accuracy
+    pauli_shadow_accuracies = []
+    for n in pauli_shadow_sizes:
+        seeds = GLOBAL_RNG.integers(low=0, high=10000, size=SAMPLES)
+        pauli_shadow_accuracies_single_size = []
+        for seed in seeds:
+            parameters = GLOBAL_RNG.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
+            img = GLOBAL_RNG.choice(image_patches)
+            rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="pauli", n_shadows=n, seed=seed)
+            pauli_shadow_accuracies_single_size.append(complexMatrixDiff(rho_actual, rho_shadow))
+        pauli_shadow_accuracies.append(np.mean(pauli_shadow_accuracies_single_size))
+    # calculate clifford shadow accuracy
+    clifford_shadow_accuracies = []
+    for n in clifford_shadow_sizes:
+        seeds = GLOBAL_RNG.integers(low=0, high=10000, size=SAMPLES)
+        clifford_shadow_accuracies_single_size = []
+        for seed in seeds:
+            parameters = GLOBAL_RNG.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
+            img = GLOBAL_RNG.choice(image_patches)
+            rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="clifford", n_shadows=n, seed=seed)
+            clifford_shadow_accuracies_single_size.append(complexMatrixDiff(rho_actual, rho_shadow))
+
+    # save the results
+    res_dict = {
+        "pauli_shadows": (pauli_shadow_sizes,pauli_shadow_accuracies),
+        "clifford_shadows": (clifford_shadow_sizes,clifford_shadow_accuracies)
+    }
+    with open("shadow_accuracy_benchmark.json", "w") as f:
+        json.dump(res_dict, f)
+    print("Done!")
+    print("Results saved to shadow_accuracy_benchmark.json")
+    print("Plotting the results...")
+    # plot the results with error bars
+    distances_pauli = np.zeros((SAMPLES, len(pauli_shadow_sizes)))
+    for j in range(len(pauli_shadow_sizes)):
+        for i in range(SAMPLES):
+            distances_pauli[i, j] = pauli_shadow_accuracies[j][i]
+    distances_clifford = np.zeros((SAMPLES, len(clifford_shadow_sizes)))
+    for j in range(len(clifford_shadow_sizes)):
+        for i in range(SAMPLES):
+            distances_clifford[i, j] = clifford_shadow_accuracies[j][i]
+    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(16, 8))
+    ax[0].errorbar(pauli_shadow_sizes, np.mean(distances_pauli, axis=0), yerr=np.std(distances_pauli, axis=0), fmt='o', color='black', ecolor='lightgray', elinewidth=3, capsize=0)
+    ax[0].set_xlabel("Number of Pauli Shadows")
+    ax[0].set_ylabel("Distance to Actual State")
+    ax[0].set_title("Pauli Shadows")
+    ax[1].errorbar(clifford_shadow_sizes, np.mean(distances_clifford, axis=0), yerr=np.std(distances_clifford, axis=0), fmt='o', color='black', ecolor='lightgray', elinewidth=3, capsize=0)
+    ax[1].set_xlabel("Number of Clifford Shadows")
+    ax[1].set_ylabel("Distance to Actual State")
+    ax[1].set_title("Clifford Shadows")
+    plt.savefig("shadow_accuracy_benchmark.png")
 
 
 
