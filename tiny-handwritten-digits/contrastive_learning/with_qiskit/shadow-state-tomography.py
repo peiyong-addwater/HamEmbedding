@@ -315,6 +315,7 @@ if __name__ == '__main__':
     from qiskit.visualization.state_visualization import plot_state_city
     from qiskit.quantum_info import DensityMatrix, partial_trace, state_fidelity
     from backbone_circ_with_hierarchical_encoding import backboneCircFourQubitFeature
+    import time
 
 
     class NpEncoder(json.JSONEncoder):
@@ -403,38 +404,49 @@ if __name__ == '__main__':
             raise ValueError("shadow_type must be either clifford or pauli")
         return rho_actual, rho_shadow
 
-    pauli_shadow_sizes = [100, 500, 1000, 2000, 5000, 10000]
+    pauli_shadow_sizes = [100, 500, 1000, 2000, 5000]
     clifford_shadow_sizes = [100, 500, 1000, 2000]
     # calculate pauli shadow accuracy
     pauli_shadow_accuracies = []
+    pauli_shadow_time=[]
     for n in pauli_shadow_sizes:
         seeds = GLOBAL_RNG.integers(low=0, high=10000, size=SAMPLES)
         pauli_shadow_accuracies_single_size = []
         print("Calculating Pauli shadow accuracy for n_shadows =", n)
         for seed in seeds:
+            start = time.time()
             print("Calculating Pauli shadow accuracy for n_shadows =", n, "and seed =", seed)
             parameters = GLOBAL_RNG.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
             img = GLOBAL_RNG.choice(image_patches)
             rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="pauli", n_shadows=n, seed=seed)
             pauli_shadow_accuracies_single_size.append(complexMatrixDiff(rho_actual, rho_shadow))
+            end = time.time()
+            pauli_shadow_time.append(end-start)
+            print("Time taken:", end-start)
         pauli_shadow_accuracies.append(np.mean(pauli_shadow_accuracies_single_size))
     # calculate clifford shadow accuracy
     clifford_shadow_accuracies = []
+    clifford_shadow_time = []
     for n in clifford_shadow_sizes:
         print("Calculating Clifford shadow accuracy for n_shadows =", n)
         seeds = GLOBAL_RNG.integers(low=0, high=10000, size=SAMPLES)
         clifford_shadow_accuracies_single_size = []
         for seed in seeds:
+            start = time.time()
             print("Calculating Clifford shadow accuracy for n_shadows =", n, "and seed =", seed)
             parameters = GLOBAL_RNG.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
             img = GLOBAL_RNG.choice(image_patches)
             rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="clifford", n_shadows=n, seed=seed)
             clifford_shadow_accuracies_single_size.append(complexMatrixDiff(rho_actual, rho_shadow))
-
+            end = time.time()
+            clifford_shadow_time.append(end-start)
+            print("Time taken:", end-start)
     # save the results
     res_dict = {
         "pauli_shadows": (pauli_shadow_sizes,pauli_shadow_accuracies),
-        "clifford_shadows": (clifford_shadow_sizes,clifford_shadow_accuracies)
+        "clifford_shadows": (clifford_shadow_sizes,clifford_shadow_accuracies),
+        "pauli_shadow_time": (pauli_shadow_sizes, pauli_shadow_time),
+        "clifford_shadow_time": (clifford_shadow_sizes, clifford_shadow_time)
     }
     with open("shadow_accuracy_benchmark.json", "w") as f:
         json.dump(res_dict, f, indent=4, cls=NpEncoder)
@@ -460,6 +472,8 @@ if __name__ == '__main__':
     ax[1].set_ylabel("Distance to Actual State")
     ax[1].set_title("Clifford Shadows")
     plt.savefig("shadow_accuracy_benchmark.png")
+    plt.close()
+
 
 
 
