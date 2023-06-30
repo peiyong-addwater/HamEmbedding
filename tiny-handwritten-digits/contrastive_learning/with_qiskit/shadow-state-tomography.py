@@ -405,13 +405,14 @@ if __name__ == '__main__':
         return rho_actual, rho_shadow
 
     pauli_shadow_sizes = [100, 500, 1000, 2000, 5000]
-    clifford_shadow_sizes = [100, 500, 1000, 2000]
+    clifford_shadow_sizes = [100, 500, 1000, 2000, 5000]
     # calculate pauli shadow accuracy
     pauli_shadow_accuracies = []
     pauli_shadow_time=[]
     for n in pauli_shadow_sizes:
         seeds = GLOBAL_RNG.integers(low=0, high=10000, size=SAMPLES)
         pauli_shadow_accuracies_single_size = []
+        pauli_shadow_time_single_size=[]
         print("Calculating Pauli shadow accuracy for n_shadows =", n)
         for seed in seeds:
             start = time.time()
@@ -421,9 +422,10 @@ if __name__ == '__main__':
             rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="pauli", n_shadows=n, seed=seed)
             pauli_shadow_accuracies_single_size.append(complexMatrixDiff(rho_actual, rho_shadow))
             end = time.time()
-            pauli_shadow_time.append(end-start)
+            pauli_shadow_time_single_size.append(end-start)
             print("Time taken:", end-start)
-        pauli_shadow_accuracies.append(np.mean(pauli_shadow_accuracies_single_size))
+        pauli_shadow_accuracies.append(pauli_shadow_accuracies_single_size)
+        pauli_shadow_time.append(pauli_shadow_time_single_size)
     # calculate clifford shadow accuracy
     clifford_shadow_accuracies = []
     clifford_shadow_time = []
@@ -431,6 +433,7 @@ if __name__ == '__main__':
         print("Calculating Clifford shadow accuracy for n_shadows =", n)
         seeds = GLOBAL_RNG.integers(low=0, high=10000, size=SAMPLES)
         clifford_shadow_accuracies_single_size = []
+        clifford_shadow_time_single_size = []
         for seed in seeds:
             start = time.time()
             print("Calculating Clifford shadow accuracy for n_shadows =", n, "and seed =", seed)
@@ -439,8 +442,10 @@ if __name__ == '__main__':
             rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="clifford", n_shadows=n, seed=seed)
             clifford_shadow_accuracies_single_size.append(complexMatrixDiff(rho_actual, rho_shadow))
             end = time.time()
-            clifford_shadow_time.append(end-start)
+            clifford_shadow_time_single_size.append(end-start)
             print("Time taken:", end-start)
+        clifford_shadow_accuracies.append(clifford_shadow_accuracies_single_size)
+        clifford_shadow_time.append(clifford_shadow_time_single_size)
     # save the results
     res_dict = {
         "pauli_shadows": (pauli_shadow_sizes,pauli_shadow_accuracies),
