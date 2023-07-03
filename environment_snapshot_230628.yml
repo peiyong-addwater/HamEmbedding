@@ -282,8 +282,8 @@ dependencies:
       - ipython==8.7.0
       - ipython-genutils==0.2.0
       - ipywidgets==8.0.2
-      - jax==0.3.25
-      - jaxlib==0.3.25+cuda11.cudnn82
+      - jax==0.4.13
+      - jaxlib==0.4.13+cuda11.cudnn86
       - jedi==0.18.2
       - jinja2==3.1.2
       - json5==0.9.10
@@ -304,6 +304,7 @@ dependencies:
       - markupsafe==2.1.1
       - matplotlib-inline==0.1.6
       - mistune==2.0.4
+      - ml-dtypes==0.2.0
       - more-itertools==9.0.0
       - msgpack==1.0.4
       - mthree==1.1.0
@@ -314,7 +315,7 @@ dependencies:
       - nbconvert==7.2.5
       - nbformat==5.7.0
       - nest-asyncio==1.5.6
-      - networkx==3.1
+      - networkx==2.8.8
       - ninja==1.11.1
       - noisyopt==0.2.2
       - notebook==6.5.2
@@ -323,10 +324,15 @@ dependencies:
       - numba==0.56.4
       - numpy==1.23.5
       - numpydoc==1.5.0
-      - nvidia-cublas-cu11==11.10.3.66
+      - nvidia-cublas-cu11==11.11.3.6
+      - nvidia-cuda-cupti-cu11==11.8.87
+      - nvidia-cuda-nvcc-cu11==11.8.89
       - nvidia-cuda-nvrtc-cu11==11.7.99
-      - nvidia-cuda-runtime-cu11==11.7.99
-      - nvidia-cudnn-cu11==8.5.0.96
+      - nvidia-cuda-runtime-cu11==11.8.89
+      - nvidia-cudnn-cu11==8.9.2.26
+      - nvidia-cufft-cu11==10.9.0.58
+      - nvidia-cusolver-cu11==11.4.1.48
+      - nvidia-cusparse-cu11==11.7.5.86
       - openfermion==1.5.1
       - openfermionpsi4==0.5
       - openfermionpyscf==0.5
@@ -397,11 +403,11 @@ dependencies:
       - requests-ntlm==1.1.0
       - retworkx==0.12.1
       - rsa==4.9
-      - rustworkx==0.13.0
+      - rustworkx==0.12.1
       - scienceplots==2.0.1
       - scikit-opt==0.6.6
       - scikit-quant==0.8.2
-      - scipy==1.9.3
+      - scipy==1.10.0
       - seaborn==0.12.1
       - semantic-version==2.10.0
       - send2trash==1.8.0
@@ -436,7 +442,7 @@ dependencies:
       - tweedledum==1.1.1
       - typing==3.7.4.3
       - typing-extensions==4.4.0
-      - urllib3==1.26.13
+      - urllib3==2.0.3
       - wcwidth==0.2.5
       - webencodings==0.5.1
       - websocket-client==1.3.3
