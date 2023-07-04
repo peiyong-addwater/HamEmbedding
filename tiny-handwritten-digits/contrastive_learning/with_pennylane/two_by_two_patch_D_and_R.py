@@ -11,8 +11,8 @@ from two_by_two_patch_encode import FourPixelEncodeTwoQubits
 
 def FourPixelDepositAndReverse(
         pixels: Union[list, np.ndarray, pnp.array],
-        encode_parameters: Union[List, np.ndarray, pnp.array],
-        phase_parameters: Union[List, np.ndarray, pnp.array],
+        encode_parameters: Union[jnp.ndarray, np.ndarray, pnp.array],
+        phase_parameters: Union[jnp.ndarray, np.ndarray, pnp.array],
         wires: Union[List[int], Wires]
 ):
     """

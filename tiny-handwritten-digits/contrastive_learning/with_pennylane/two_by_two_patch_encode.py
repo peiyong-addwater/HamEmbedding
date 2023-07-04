@@ -10,8 +10,8 @@ sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 
 def FourPixelEncodeTwoQubits(
-        pixels: Union[list, np.ndarray, pnp.array],
-        parameters: Union[List, np.ndarray, pnp.array],
+        pixels: Union[jnp.ndarray, np.ndarray, pnp.array],
+        parameters: Union[jnp.ndarray, np.ndarray, pnp.array],
         wires: Union[List[int], Wires]
 ):
     """
