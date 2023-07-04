@@ -40,7 +40,7 @@ def FourPixelDepositAndReverseFixed(
     :param pixels: 4-element array
     :param encode_parameters: 6N*2 element array
     :param phase_parameters: 2 element array
-    :param wires:
+    :param wires: 3
     :return:
     """
     n_encode_params = len(encode_parameters)

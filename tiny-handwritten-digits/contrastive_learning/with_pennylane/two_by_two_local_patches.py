@@ -7,7 +7,7 @@ from pennylane.wires import Wires
 import sys
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
-from two_by_two_patch_D_and_R import FourPixelDepositAndReverse
+from two_by_two_patch_D_and_R import FourPixelDepositAndReverse, FourPixelDepositAndReverseFixed
 
 def TwoByTwoLocalPatches(
         img_patches: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
@@ -29,7 +29,35 @@ def TwoByTwoLocalPatches(
     patch_count = 0
     for i in range(2):
         for j in range(2):
-            FourPixelDepositAndReverse(img_patches[i][j], single_patch_encode_parameters, single_patch_d_and_r_parameter, wires=[wires[patch_count], wires[patch_count + 1], wires[patch_count + 2]])
+            FourPixelDepositAndReverse(img_patches[i][j], single_patch_encode_parameters,
+                                       single_patch_d_and_r_parameter,
+                                       wires=[wires[patch_count], wires[patch_count + 1], wires[patch_count + 2]])
+            qml.Barrier()
+            patch_count += 1
+
+def TwoByTwoLocalPatches2(
+        img_patches: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
+        encode_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
+        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
+        wires: Union[List[int], Wires]
+):
+    """
+    Use the FourPixelDepositAndReverseFixed function to encode four (two by two) local potches into four single-qubit states
+    :param img_patches: four image patches, a 2 by 2 by 4 array
+    :param encode_parameters: "θ", 6N*2 element array, where N is the number of "layers" of data-reuploading
+    :param single_patch_phase_parameters: "φ", 2 element array
+    :param wires: 6
+    :return:
+    """
+    assert len(img_patches) == 2
+    assert len(img_patches[0]) == 2
+    assert len(img_patches[1]) == 2
+    patch_count = 0
+    for i in range(2):
+        for j in range(2):
+            FourPixelDepositAndReverseFixed(img_patches[i][j], encode_parameters, single_patch_phase_parameters,
+                                            wires=[wires[patch_count], wires[patch_count + 1], wires[patch_count + 2]])
+
             qml.Barrier()
             patch_count += 1
 
@@ -74,4 +102,18 @@ if __name__ == '__main__':
 
     fig, ax = qml.draw_mpl(circuit)(theta, phi)
     plt.savefig("two_by_two_local_patches_encoded.png")
+    plt.close(fig)
+
+    theta = np.random.randn(12)
+    phi = np.random.randn(2)
+
+
+    @qml.qnode(dev)
+    def circuit(theta, phi):
+        TwoByTwoLocalPatches2(first_four_patches, theta, phi, wires)
+        return qml.state()
+
+
+    fig, ax = qml.draw_mpl(circuit)(theta, phi)
+    plt.savefig("two_by_two_local_patches_encoded_fixed_d_and_r.png")
     plt.close(fig)
