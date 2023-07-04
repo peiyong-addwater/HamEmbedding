@@ -20,9 +20,7 @@ def FourQubitParameterisedLayer(
     layers = len(parameters) // 12
     for i in range(layers):
         for j in range(4):
-            qml.RX(parameters[12 * i + 3 * j], wires=wires[j])
-            qml.RZ(parameters[12 * i + 3 * j + 1], wires=wires[j])
-            qml.RX(parameters[12 * i + 3 * j + 2], wires=wires[j])
+            qml.U3(parameters[12 * i + 3 * j], parameters[12 * i + 3 * j + 1], parameters[12 * i + 3 * j + 2], wires=wires[j])
         qml.CZ(wires=[wires[0], wires[1]])
         qml.CZ(wires=[wires[1], wires[2]])
         qml.CZ(wires=[wires[2], wires[3]])

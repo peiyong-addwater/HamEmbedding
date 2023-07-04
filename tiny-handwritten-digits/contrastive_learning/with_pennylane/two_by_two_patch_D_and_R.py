@@ -11,8 +11,8 @@ from two_by_two_patch_encode import FourPixelEncodeTwoQubits
 
 def FourPixelDepositAndReverse(
         pixels: Union[list, np.ndarray, pnp.array],
-        encode_parameters: Union[jnp.ndarray, np.ndarray, pnp.array],
-        phase_parameters: Union[jnp.ndarray, np.ndarray, pnp.array],
+        encode_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
+        phase_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
         wires: Union[List[int], Wires]
 ):
     """
@@ -23,6 +23,7 @@ def FourPixelDepositAndReverse(
     :return:
     """
     n_layers = len(encode_parameters) // 6
+    qml.Hadamard(wires[0])
     for i in range(n_layers):
         FourPixelEncodeTwoQubits(pixels, encode_parameters[6 * i: 6 * (i + 1)], wires=[wires[1], wires[2]])
         qml.CPhase(phase_parameters[i], wires=[wires[0], wires[1]])
@@ -34,9 +35,9 @@ if __name__ == "__main__":
 
     qml.drawer.use_style("black_white")
 
-    x = np.random.randn(4)
-    theta = np.random.randn(12)
-    phi = np.random.randn(3)
+    x = pnp.random.randn(4)
+    theta = pnp.random.randn(12)
+    phi = pnp.random.randn(3)
     wires = Wires([0, 1, 2])
     dev = qml.device("default.qubit", wires=wires)
 
