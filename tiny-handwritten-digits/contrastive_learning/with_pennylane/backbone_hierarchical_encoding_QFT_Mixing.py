@@ -10,7 +10,7 @@ sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 from two_by_two_local_patches import TwoByTwoLocalPatches2, TwoByTwoLocalPatches
 from four_qubit_token_mixing import FourQubitParameterisedLayer, PermutationInvariantFourQLayer, QFTTokenMixing
 
-def LocalPatchesFixedDRWithQFTMixing(
+def LocalPatchesFixedDRWithQFTMixingDR(
         img_patches: Union[np.ndarray, jnp.ndarray, pnp.ndarray],
         encode_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
         single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
@@ -37,7 +37,9 @@ def LocalPatchesFixedDRWithQFTMixing(
     qml.Hadamard(wires[0])
     TwoByTwoLocalPatches2(img_patches, first_half_encode_params, single_patch_phase_parameters[:2],
                           wires=[wires[1], wires[2], wires[3], wires[4], wires[5], wires[6]])
+    QFTTokenMixing(wires=[wires[1], wires[2], wires[3], wires[4]])
     qml.CPhase(local_patches_phase_parameters[0], wires=[wires[0], wires[1]])
+    qml.adjoint(QFTTokenMixing)(wires=[wires[1], wires[2], wires[3], wires[4]])
     qml.adjoint(TwoByTwoLocalPatches2)(img_patches, first_half_encode_params, single_patch_phase_parameters[:2],
                           wires=[wires[1], wires[2], wires[3], wires[4], wires[5], wires[6]])
     qml.Barrier()
@@ -45,7 +47,9 @@ def LocalPatchesFixedDRWithQFTMixing(
     qml.Barrier()
     TwoByTwoLocalPatches2(img_patches, second_half_encode_params, single_patch_phase_parameters[2:],
                           wires=[wires[1], wires[2], wires[3], wires[4], wires[5], wires[6]])
+    QFTTokenMixing(wires=[wires[1], wires[2], wires[3], wires[4]])
     qml.CPhase(local_patches_phase_parameters[1], wires=[wires[0], wires[1]])
+    qml.adjoint(QFTTokenMixing)(wires=[wires[1], wires[2], wires[3], wires[4]])
     qml.adjoint(TwoByTwoLocalPatches2)(img_patches, second_half_encode_params, single_patch_phase_parameters[2:],
                           wires=[wires[1], wires[2], wires[3], wires[4], wires[5], wires[6]])
 
@@ -64,8 +68,6 @@ if __name__ == '__main__':
             for j in range(4):
                 patches[i, j] = img[2 * i:2 * i + 2, 2 * j:2 * j + 2].flatten()
         return patches
-
-
     img = np.arange(64).reshape(8, 8)
     patches = cut_8x8_to_2x2(img)
     print(patches)
@@ -77,5 +79,23 @@ if __name__ == '__main__':
             print("Patch ", i, j)
             print(patches[i * 2:i * 2 + 2, j * 2:j * 2 + 2])
 
+    theta = np.random.randn(24)
+    phi = np.random.randn(4)
+    psi = np.random.randn(2)
+    wires_local_mixing_dr = Wires(list(range(7)))
+    dev1 = qml.device("default.qubit", wires = wires_local_mixing_dr)
+    @qml.qnode(dev1)
+    def circ():
+        LocalPatchesFixedDRWithQFTMixingDR(
+            first_four_patches,
+            theta,
+            phi,
+            psi,
+            wires_local_mixing_dr
+        )
+        return qml.state()
+
+
+    print(qml.draw(circ)())
 
 
