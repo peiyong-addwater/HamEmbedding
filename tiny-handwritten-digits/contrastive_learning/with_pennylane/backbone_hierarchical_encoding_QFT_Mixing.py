@@ -4,6 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 from typing import List, Tuple, Union
 from pennylane.wires import Wires
+from utils import Reset0
 import sys
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
@@ -39,9 +40,8 @@ def LocalPatchesFixedDRWithQFTMixingDR(
                           wires=[wires[1], wires[2], wires[3], wires[4], wires[5], wires[6]])
     QFTTokenMixing(wires=[wires[1], wires[2], wires[3], wires[4]])
     qml.CPhase(local_patches_phase_parameters[0], wires=[wires[0], wires[1]])
-    qml.adjoint(QFTTokenMixing)(wires=[wires[1], wires[2], wires[3], wires[4]])
-    qml.adjoint(TwoByTwoLocalPatches2)(img_patches, first_half_encode_params, single_patch_phase_parameters[:2],
-                          wires=[wires[1], wires[2], wires[3], wires[4], wires[5], wires[6]])
+    Reset0(wires=[wires[1], wires[2], wires[3], wires[4]])
+
     qml.Barrier()
     qml.PauliX(wires[0])
     qml.Barrier()
@@ -49,9 +49,7 @@ def LocalPatchesFixedDRWithQFTMixingDR(
                           wires=[wires[1], wires[2], wires[3], wires[4], wires[5], wires[6]])
     QFTTokenMixing(wires=[wires[1], wires[2], wires[3], wires[4]])
     qml.CPhase(local_patches_phase_parameters[1], wires=[wires[0], wires[1]])
-    qml.adjoint(QFTTokenMixing)(wires=[wires[1], wires[2], wires[3], wires[4]])
-    qml.adjoint(TwoByTwoLocalPatches2)(img_patches, second_half_encode_params, single_patch_phase_parameters[2:],
-                          wires=[wires[1], wires[2], wires[3], wires[4], wires[5], wires[6]])
+    Reset0(wires=[wires[1], wires[2], wires[3], wires[4]])
 
 
 
