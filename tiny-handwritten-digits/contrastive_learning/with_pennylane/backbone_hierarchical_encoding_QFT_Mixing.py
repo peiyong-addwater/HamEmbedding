@@ -95,5 +95,8 @@ if __name__ == '__main__':
 
 
     print(qml.draw(circ)())
+    fig, ax = qml.draw_mpl(circ)()
+    plt.savefig("LocalPatchesFixedDRWithQFTMixingDR.png")
+    plt.close(fig)
 
 
