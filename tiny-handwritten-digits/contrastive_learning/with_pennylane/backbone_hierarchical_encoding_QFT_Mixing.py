@@ -50,6 +50,7 @@ def LocalPatchesFixedDRWithQFTMixingDR(
     QFTTokenMixing(wires=[wires[1], wires[2], wires[3], wires[4]])
     qml.CPhase(local_patches_phase_parameters[1], wires=[wires[0], wires[1]])
     Reset0(wires=[wires[1], wires[2], wires[3], wires[4]])
+    qml.Barrier()
 
 def backboneQFTMixing(
         patched_img: Union[np.ndarray, jnp.ndarray, pnp.ndarray],
@@ -70,7 +71,7 @@ def backboneQFTMixing(
     :param encode_parameters: "θ", 6N*2*2 element array, where N is the number of "layers" of data-reuploading
     :param single_patch_phase_parameters: "φ", 2*2 element array
     :param local_patches_phase_parameters: "ψ", 2 element array
-    :param final_layer_parameters: 12L parameters if using FourQubitParameterisedLayer, 3L parameters if using PermutationInvariantFourQLayer
+    :param final_layer_parameters: "η" 12L parameters if using FourQubitParameterisedLayer, 3L parameters if using PermutationInvariantFourQLayer
     :param wires: 10 wires, first 4 have the deposited encoded information of the image
     :return:
     """
@@ -120,6 +121,7 @@ def backboneQFTMixing(
                                                local_patches_phase_parameters,
                                                wires=[wires[local_mixing_count], wires[local_mixing_count+1],wires[local_mixing_count+2],wires[local_mixing_count+3], wires[local_mixing_count+4], wires[local_mixing_count+5], wires[local_mixing_count+6]]
                                                )
+            qml.Barrier()
             local_mixing_count += 1
     if final_layer_parameters is not None:
         if final_layer_type == "generic":
@@ -163,6 +165,7 @@ if __name__ == '__main__':
     theta = np.random.randn(24)
     phi = np.random.randn(4)
     psi = np.random.randn(2)
+    eta = np.random.rand(12)
     wires_local_mixing_dr = Wires(list(range(7)))
     dev1 = qml.device("default.qubit", wires = wires_local_mixing_dr)
     @qml.qnode(dev1)
@@ -180,6 +183,26 @@ if __name__ == '__main__':
     print(qml.draw(circ)())
     fig, ax = qml.draw_mpl(circ)()
     plt.savefig("LocalPatchesFixedDRWithQFTMixingDR.png")
+    plt.close(fig)
+
+    wires_backbone = Wires(list(range(10)))
+    dev2 = qml.device('default.qubit', wires = wires_backbone)
+    @qml.qnode(dev2)
+    def circ_backbone():
+        backboneQFTMixing(
+            patches,
+            theta,
+            phi,
+            psi,
+            eta,
+            final_layer_type="generic"
+        )
+        return qml.state()
+
+
+    print(qml.draw(circ_backbone)())
+    fig, ax = qml.draw_mpl(circ_backbone)()
+    plt.savefig("backbone.png")
     plt.close(fig)
 
 

@@ -18,6 +18,7 @@ def FourQubitParameterisedLayer(
     :return:
     """
     layers = len(parameters) // 12
+    assert int(layers) == layers
     for i in range(layers):
         for j in range(4):
             qml.U3(parameters[12 * i + 3 * j], parameters[12 * i + 3 * j + 1], parameters[12 * i + 3 * j + 2], wires=wires[j])
@@ -38,6 +39,7 @@ def PermutationInvariantFourQLayer(
     :return:
     """
     layers = len(parameters) // 3
+    assert int(layers) == layers
     for i in range(layers):
         for j in range(4):
             qml.RX(parameters[3 * i], wires=wires[j])
