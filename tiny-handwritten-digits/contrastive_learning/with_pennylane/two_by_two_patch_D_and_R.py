@@ -3,13 +3,14 @@ from pennylane import numpy as pnp
 import jax.numpy as jnp
 import numpy as np
 from typing import List, Tuple, Union
+from utils import Reset0
 from pennylane.wires import Wires
 import sys
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 from two_by_two_patch_encode import FourPixelEncodeTwoQubits
 
-def FourPixelDepositAndReverse(
+def FourPixelDepositAndReset(
         pixels: Union[list, np.ndarray, pnp.array],
         encode_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
         phase_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
@@ -27,9 +28,9 @@ def FourPixelDepositAndReverse(
     for i in range(n_layers):
         FourPixelEncodeTwoQubits(pixels, encode_parameters[6 * i: 6 * (i + 1)], wires=[wires[1], wires[2]])
         qml.CPhase(phase_parameters[i], wires=[wires[0], wires[1]])
-        qml.adjoint(FourPixelEncodeTwoQubits)(pixels, encode_parameters[6 * i: 6 * (i + 1)], wires=[wires[1], wires[2]])
+        Reset0(wires=[wires[1], wires[2]])
 
-def FourPixelDepositAndReverseFixed(
+def FourPixelDepositAndResetFixed(
         pixels: Union[list, np.ndarray, pnp.array],
         encode_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
         phase_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
@@ -51,14 +52,14 @@ def FourPixelDepositAndReverseFixed(
     qml.Hadamard(wires[0])
     FourPixelEncodeTwoQubits(pixels, first_half_params, wires=[wires[1], wires[2]])
     qml.CPhase(phase_parameters[0], wires=[wires[0], wires[1]])
-    qml.adjoint(FourPixelEncodeTwoQubits)(pixels, first_half_params, wires=[wires[1], wires[2]])
+    Reset0(wires=[wires[1], wires[2]])
     qml.Barrier()
     # an X gate on the deposit qubit swap 0 and 1, making room for the new phase encoding with different parameters
     qml.PauliX(wires=wires[0])
     qml.Barrier()
     FourPixelEncodeTwoQubits(pixels, second_half_params, wires=[wires[1], wires[2]])
     qml.CPhase(phase_parameters[1], wires=[wires[0], wires[1]])
-    qml.adjoint(FourPixelEncodeTwoQubits)(pixels, second_half_params, wires=[wires[1], wires[2]])
+    Reset0(wires=[wires[1], wires[2]])
 
 
 
@@ -76,7 +77,7 @@ if __name__ == "__main__":
 
     @qml.qnode(dev)
     def circuit(x, theta, phi):
-        FourPixelDepositAndReverse(x, theta, phi, wires=wires)
+        FourPixelDepositAndReset(x, theta, phi, wires=wires)
         return qml.state()
 
     fig, ax = qml.draw_mpl(circuit)(x, theta, phi)
@@ -86,7 +87,7 @@ if __name__ == "__main__":
 
     @qml.qnode(dev)
     def circuit(x, theta, phi):
-        FourPixelDepositAndReverseFixed(x, theta, phi, wires=wires)
+        FourPixelDepositAndResetFixed(x, theta, phi, wires=wires)
         return qml.state()
 
 

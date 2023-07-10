@@ -7,7 +7,7 @@ from pennylane.wires import Wires
 import sys
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
-from two_by_two_patch_D_and_R import FourPixelDepositAndReverse, FourPixelDepositAndReverseFixed
+from two_by_two_patch_D_and_R import FourPixelDepositAndReset, FourPixelDepositAndResetFixed
 
 def TwoByTwoLocalPatches(
         img_patches: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
@@ -29,9 +29,9 @@ def TwoByTwoLocalPatches(
     patch_count = 0
     for i in range(2):
         for j in range(2):
-            FourPixelDepositAndReverse(img_patches[i][j], single_patch_encode_parameters,
-                                       single_patch_d_and_r_parameter,
-                                       wires=[wires[patch_count], wires[patch_count + 1], wires[patch_count + 2]])
+            FourPixelDepositAndReset(img_patches[i][j], single_patch_encode_parameters,
+                                     single_patch_d_and_r_parameter,
+                                     wires=[wires[patch_count], wires[patch_count + 1], wires[patch_count + 2]])
             qml.Barrier()
             patch_count += 1
 
@@ -55,8 +55,8 @@ def TwoByTwoLocalPatches2(
     patch_count = 0
     for i in range(2):
         for j in range(2):
-            FourPixelDepositAndReverseFixed(img_patches[i][j], encode_parameters, single_patch_phase_parameters,
-                                            wires=[wires[patch_count], wires[patch_count + 1], wires[patch_count + 2]])
+            FourPixelDepositAndResetFixed(img_patches[i][j], encode_parameters, single_patch_phase_parameters,
+                                          wires=[wires[patch_count], wires[patch_count + 1], wires[patch_count + 2]])
 
             qml.Barrier()
             patch_count += 1
