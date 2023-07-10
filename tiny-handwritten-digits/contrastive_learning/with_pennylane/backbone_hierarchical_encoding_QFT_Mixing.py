@@ -2,7 +2,7 @@ import pennylane as qml
 from pennylane import numpy as pnp
 import jax.numpy as jnp
 import numpy as np
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 from pennylane.wires import Wires
 from utils import Reset0
 import sys
@@ -50,6 +50,89 @@ def LocalPatchesFixedDRWithQFTMixingDR(
     QFTTokenMixing(wires=[wires[1], wires[2], wires[3], wires[4]])
     qml.CPhase(local_patches_phase_parameters[1], wires=[wires[0], wires[1]])
     Reset0(wires=[wires[1], wires[2], wires[3], wires[4]])
+
+def backboneQFTMixing(
+        patched_img: Union[np.ndarray, jnp.ndarray, pnp.ndarray],
+        encode_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
+        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
+        local_patches_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
+        final_layer_parameters:Optional[Union[np.ndarray, jnp.ndarray, pnp.ndarray]] = None,
+        final_layer_type: Optional[str] = None,
+        wires: Union[List[int], Wires] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+):
+    """
+    The backbone of the hierarchical encoding with QFT mixing for each 4 adjacent patches.
+    If final_layer_parameters is not none, then an additional layer will be added at the end of the first 4 qubits,
+    after another QFT mixing.
+    The first 4 qubits contain the encoded information of the image,
+    and the last 6 qubits are ancilla qubits.
+    :param patched_img: All 16 image patches, a 4 by 4 by 4 array
+    :param encode_parameters: "θ", 6N*2*2 element array, where N is the number of "layers" of data-reuploading
+    :param single_patch_phase_parameters: "φ", 2*2 element array
+    :param local_patches_phase_parameters: "ψ", 2 element array
+    :param final_layer_parameters: 12L parameters if using FourQubitParameterisedLayer, 3L parameters if using PermutationInvariantFourQLayer
+    :param wires: 10 wires, first 4 have the deposited encoded information of the image
+    :return:
+    """
+    """
+        For an image:
+            [[ 0  1  2  3  4  5  6  7]
+            [ 8  9 10 11 12 13 14 15]
+            [16 17 18 19 20 21 22 23]
+            [24 25 26 27 28 29 30 31]
+            [32 33 34 35 36 37 38 39]
+            [40 41 42 43 44 45 46 47]
+            [48 49 50 51 52 53 54 55]
+            [56 57 58 59 60 61 62 63]]
+        the patches (4 by 4 by 4 array):
+            [[[ 0.  1.  8.  9.]
+            [ 2.  3. 10. 11.]
+            [ 4.  5. 12. 13.]
+            [ 6.  7. 14. 15.]]
+
+            [[16. 17. 24. 25.]
+            [18. 19. 26. 27.]
+            [20. 21. 28. 29.]
+            [22. 23. 30. 31.]]
+
+            [[32. 33. 40. 41.]
+            [34. 35. 42. 43.]
+            [36. 37. 44. 45.]
+            [38. 39. 46. 47.]]
+
+            [[48. 49. 56. 57.]
+            [50. 51. 58. 59.]
+            [52. 53. 60. 61.]
+            [54. 55. 62. 63.]]]
+    """
+    n_encode_params = len(encode_parameters)
+    n_single_patch_phase_parameters = len(single_patch_phase_parameters)
+    assert n_single_patch_phase_parameters == 4
+    assert n_encode_params / 2 == n_encode_params // 2
+    assert n_encode_params // 24 == n_encode_params / 24
+    local_mixing_count = 0
+    for i in range(2):
+        for j in range(2):
+            local_patches = patched_img[i * 2:i * 2 + 2, j * 2:j * 2 + 2]
+            LocalPatchesFixedDRWithQFTMixingDR(local_patches,
+                                               encode_parameters,
+                                               single_patch_phase_parameters,
+                                               local_patches_phase_parameters,
+                                               wires=[wires[local_mixing_count], wires[local_mixing_count+1],wires[local_mixing_count+2],wires[local_mixing_count+3], wires[local_mixing_count+4], wires[local_mixing_count+5], wires[local_mixing_count+6]]
+                                               )
+            local_mixing_count += 1
+    if final_layer_parameters is not None:
+        if final_layer_type == "generic":
+            QFTTokenMixing(wires=[wires[0], wires[1], wires[2], wires[3]])
+            FourQubitParameterisedLayer(final_layer_parameters, wires=[wires[0], wires[1], wires[2], wires[3]])
+        elif final_layer_type == "permutation-invariant":
+            PermutationInvariantFourQLayer(final_layer_parameters, wires=[wires[0], wires[1], wires[2], wires[3]])
+        else:
+            raise ValueError("final_layer_type must be either 'generic' or 'permutation-invariant'")
+    else:
+        QFTTokenMixing(wires=[wires[0], wires[1], wires[2], wires[3]])
+
+
 
 
 
