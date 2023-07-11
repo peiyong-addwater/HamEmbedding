@@ -12,8 +12,6 @@ def Reset0(wires:Union[Wires, List[int]]):
     :param wires:
     :return:
     """
-    p0 = 1
-    p1 = 0
     for wire in wires:
         Reset(wires=wire, id="|0>")
 
