@@ -7,6 +7,7 @@ import json
 import albumentations as A
 import os
 import pickle
+import numpy as np
 
 image_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/images"
 example_save_folder = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/example_augmentation"
@@ -27,11 +28,11 @@ img_files = os.listdir(image_folder)
 random.shuffle(img_files)
 
 filename_dict = {}
-filename_dict["train"] = {}
-filename_dict["test"] = {}
+filename_dict["train"] = []
+filename_dict["test"] = []
 img_dict = {}
-img_dict["train"] = {}
-img_dict["test"] = {}
+img_dict["train"] = []
+img_dict["test"] = []
 
 transform = A.Compose([
     #A.CLAHE(),
@@ -69,19 +70,37 @@ NUM_AUGMENTATIONS = 10
 for filename in tqdm(img_files):
     img = cv2.imread(os.path.join(image_folder, filename))
     cv2.imwrite(os.path.join(image_folder, filename), cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+    img_array = np.array(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     str_contain_label = filename.split("_")[-1]
     label = str_contain_label.split(".")[0]
     single_sample_filename_dict = {}
     single_sample_filename_dict["label"] = label
+    single_sample_filename_dict["original"] = os.path.join(image_folder, filename)
     single_sample_array_dict = {}
     single_sample_array_dict["label"] = label
+    single_sample_array_dict["original"] = img_array
     augs_filename = []
     augs_array = []
     for i in range(NUM_AUGMENTATIONS):
         transformed = transform(image=img)
         transformed_image = transformed["image"]
-
+        transformed_image_array = np.array(cv2.cvtColor(transformed_image, cv2.COLOR_BGR2GRAY))
+        augs_array.append(transformed_image_array)
         save_name = f"{filename.split('.')[0]}_aug_{i}.png"
-        augs_filename.append(save_name)
+        augs_filename.append(os.path.join(augmentation_folder, save_name))
         cv2.imwrite(os.path.join(augmentation_folder, save_name), cv2.cvtColor(transformed_image, cv2.COLOR_RGB2GRAY))
+    single_sample_filename_dict["augmentations"] = augs_filename
+    single_sample_array_dict["augmentations"] = augs_array
+    if "train" in filename:
+        filename_dict["train"].append(single_sample_filename_dict)
+        img_dict["train"].append(single_sample_array_dict)
+    if "test" in filename:
+        filename_dict["test"].append(single_sample_filename_dict)
+        img_dict["test"].append(single_sample_array_dict)
+
+with open("augmentation_filenames.json", "w") as f:
+    json.dump(filename_dict, f, indent=4)
+
+with open("augmentation_arrays.pickle", "wb") as f:
+    pickle.dump(img_dict, f)
