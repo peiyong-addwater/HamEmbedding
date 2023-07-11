@@ -22,6 +22,8 @@ if __name__ == '__main__':
     from PIL import Image
 
     image_png_dir = os.path.join(data_dir, "images")
+    if not os.path.exists(image_png_dir):
+        os.mkdir(image_png_dir)
 
     img = np.arange(64).reshape(8,8)
     print(img)
@@ -33,14 +35,17 @@ if __name__ == '__main__':
         mnist = pickle.load(f)
         train_imgs, train_labels, test_imgs, test_labels = mnist["training_images"], mnist["training_labels"], mnist["test_images"], mnist["test_labels"]
 
-    # save the individual images for inspection
+    # save the individual images
     counter = 0
     for i in range(len(train_imgs)):
         label = train_labels[i]
         img_array = train_imgs[i]/(2*np.pi)*255
         img = Image.fromarray(img_array.astype('uint8'))
         save_name = f"image_train_{counter:04}_label_{label}.png"
-        img.save(os.path.join(image_png_dir, save_name))
+        if not os.path.exists(os.path.join(image_png_dir, f"image_train_{counter:04}_label_{label}")):
+            os.mkdir(os.path.join(image_png_dir, f"image_train_{counter:04}_label_{label}"))
+        save_dir = os.path.join(image_png_dir, f"image_train_{counter:04}_label_{label}")
+        img.save(os.path.join(save_dir, save_name))
         counter += 1
 
     for i in range(len(test_imgs)):
@@ -48,7 +53,10 @@ if __name__ == '__main__':
         img_array = test_imgs[i]/(2*np.pi)*255
         img = Image.fromarray(img_array.astype('uint8'))
         save_name = f"image_test_{counter:04}_label_{label}.png"
-        img.save(os.path.join(image_png_dir, save_name))
+        if not os.path.exists(os.path.join(image_png_dir, f"image_test_{counter:04}_label_{label}")):
+            os.mkdir(os.path.join(image_png_dir, f"image_test_{counter:04}_label_{label}"))
+        save_dir = os.path.join(image_png_dir, f"image_test_{counter:04}_label_{label}")
+        img.save(os.path.join(save_dir, save_name))
         counter += 1
 
 
