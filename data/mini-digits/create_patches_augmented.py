@@ -19,10 +19,34 @@ def cut_8x8_to_2x2(img:np.ndarray):
     return patches
 
 if __name__ == '__main__':
+    from tqdm import tqdm
+
     with open(os.path.join(data_dir, "augmentation_arrays.pickle"), 'rb') as f:
+        # all 0 to 255
         mnist = pickle.load(f)
         train, test = mnist["train"], mnist["test"]
 
     print(len(train))
     print(len(test))
-    print(train[0])
+    print(train[0]["original"].shape)
+
+    patched_img_data = dict()
+    patched_img_data["train"] = []
+    patched_img_data["test"] = []
+    for c in tqdm(train):
+        patched_img_data["train"].append({
+            "original": cut_8x8_to_2x2(c["original"]*(2*np.pi)/255),
+            "augmentations": [cut_8x8_to_2x2(a*(2*np.pi)/255) for a in c["augmentations"]]
+        })
+    for c in tqdm(test):
+        patched_img_data["test"].append({
+            "original": cut_8x8_to_2x2(c["original"]*(2*np.pi)/255),
+            "augmentations": [cut_8x8_to_2x2(a*(2*np.pi)/255) for a in c["augmentations"]]
+        })
+
+
+    print(patched_img_data["train"][0]["original"])
+    print(patched_img_data["train"][0]["original"].shape)
+
+    with open(os.path.join(data_dir, "tiny-handwritten-with-augmented-as-rotation-angles-patches.pkl"), 'wb') as f:
+        pickle.dump(patched_img_data, f)
