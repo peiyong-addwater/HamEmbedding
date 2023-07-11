@@ -2,6 +2,10 @@ import numpy as np
 import os
 import pickle
 
+image_png_dir = os.path.join(data_dir, "images")
+if not os.path.exists(image_png_dir):
+    os.mkdir(image_png_dir)
+
 with open(os.path.join(data_dir, "tiny-handwritten-as-rotation-angles.pkl"), 'rb') as f:
     mnist = pickle.load(f)
     train_imgs, train_labels, test_imgs, test_labels = mnist["training_images"], mnist["training_labels"], mnist[

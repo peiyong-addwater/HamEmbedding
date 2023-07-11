@@ -21,10 +21,6 @@ def cut_8x8_to_2x2(img:np.ndarray):
 if __name__ == '__main__':
     from PIL import Image
 
-    image_png_dir = os.path.join(data_dir, "images")
-    if not os.path.exists(image_png_dir):
-        os.mkdir(image_png_dir)
-
     img = np.arange(64).reshape(8,8)
     print(img)
     patches = cut_8x8_to_2x2(img)

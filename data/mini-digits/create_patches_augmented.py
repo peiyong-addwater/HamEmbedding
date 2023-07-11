@@ -17,3 +17,12 @@ def cut_8x8_to_2x2(img:np.ndarray):
         for j in range(4):
             patches[i,j] = img[2*i:2*i+2, 2*j:2*j+2].flatten()
     return patches
+
+if __name__ == '__main__':
+    with open(os.path.join(data_dir, "augmentation_arrays.pickle"), 'rb') as f:
+        mnist = pickle.load(f)
+        train, test = mnist["train"], mnist["test"]
+
+    print(len(train))
+    print(len(test))
+    print(train[0])
