@@ -453,10 +453,10 @@ if __name__ == '__main__':
         "pauli_shadow_time": (pauli_shadow_sizes, pauli_shadow_time),
         "clifford_shadow_time": (clifford_shadow_sizes, clifford_shadow_time)
     }
-    with open("shadow_accuracy_benchmark.json", "w") as f:
+    with open("shadow_accuracy_benchmark_with_reset.json", "w") as f:
         json.dump(res_dict, f, indent=4, cls=NpEncoder)
     print("Done!")
-    print("Results saved to shadow_accuracy_benchmark.json")
+    print("Results saved to shadow_accuracy_benchmark_with_reset.json")
     print("Plotting the results...")
     # plot the results with error bars
     distances_pauli = np.zeros((SAMPLES, len(pauli_shadow_sizes)))
@@ -476,7 +476,7 @@ if __name__ == '__main__':
     ax[1].set_xlabel("Number of Clifford Shadows")
     ax[1].set_ylabel("Distance to Actual State")
     ax[1].set_title("Clifford Shadows")
-    plt.savefig("shadow_accuracy_benchmark.png")
+    plt.savefig("shadow_accuracy_benchmark_with_reset.png")
     plt.close()
 
 

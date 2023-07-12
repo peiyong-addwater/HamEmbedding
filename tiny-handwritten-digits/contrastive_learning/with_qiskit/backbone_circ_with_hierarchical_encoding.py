@@ -16,7 +16,7 @@ from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 from qiskit.circuit import ParameterVector
 import os
 
-from two_by_two_patch_D_and_R import FourPixelDepositAndReverse
+from two_by_two_patch_D_and_R import FourPixelDepositAndReset
 
 def TwoByTwoPatchLocalTokens(
         img_patches:Union[List[List[ParameterVector]], np.ndarray],
@@ -39,10 +39,10 @@ def TwoByTwoPatchLocalTokens(
     patch_count = 0
     for i in range(2):
         for j in range(2):
-            circ.append(FourPixelDepositAndReverse(img_patches[i][j], single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, to_gate=to_gate), [patch_count, patch_count + 1, patch_count + 2])
+            circ.append(FourPixelDepositAndReset(img_patches[i][j], single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, to_gate=to_gate), [patch_count, patch_count + 1, patch_count + 2])
             patch_count += 1
 
-    return circ.to_gate(label="PatchLocalTokens") if to_gate else circ
+    return circ.to_instruction(label="PatchLocalTokens") if to_gate else circ
 
 def FourQubitParameterisedLayer(parameters:Union[ParameterVector, np.ndarray], to_gate = True):
     """
@@ -64,7 +64,7 @@ def FourQubitParameterisedLayer(parameters:Union[ParameterVector, np.ndarray], t
         circ.cz(2, 3)
         circ.cz(3, 0)
 
-    return circ.to_gate(label="FourQLayer") if to_gate else circ
+    return circ.to_instruction(label="FourQLayer") if to_gate else circ
 
 def LocalTokenMixing(
         img_patches:Union[List[List[ParameterVector]], np.ndarray],
@@ -87,16 +87,15 @@ def LocalTokenMixing(
     circ = QuantumCircuit(7, name="LocalTokenMixing")
     circ.h(0)
     local_tokens = TwoByTwoPatchLocalTokens(img_patches, single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, to_gate=to_gate)
-    inv_local_tokens = local_tokens.inverse()
+    #inv_local_tokens = local_tokens.inverse()
     four_q_layer = FourQubitParameterisedLayer(four_q_param_layer_parameter, to_gate=to_gate)
     inv_four_q_layer = four_q_layer.inverse()
     circ.append(local_tokens, [1, 2, 3, 4, 5, 6])
     circ.append(four_q_layer, [1, 2, 3, 4])
     circ.cp(local_token_mixing_phase_parameter[0], 0, 1)
-    circ.append(inv_four_q_layer, [1, 2, 3, 4])
-    circ.append(inv_local_tokens, [1, 2, 3, 4, 5, 6])
+    circ.reset([1, 2, 3, 4, 5, 6])
 
-    return circ.to_gate(label="LocalTokenMixing") if to_gate else circ
+    return circ.to_instruction(label="LocalTokenMixing") if to_gate else circ
 
 def backboneCircFourQubitFeature(
         image_patches:Union[List[List[ParameterVector]], np.ndarray],
