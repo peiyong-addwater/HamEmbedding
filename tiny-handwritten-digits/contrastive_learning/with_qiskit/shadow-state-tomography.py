@@ -331,7 +331,8 @@ if __name__ == '__main__':
 
     # Times of sampling for calculating shadows
     SAMPLES = 20
-
+    PLOT_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples.png"
+    JSON_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples.json"
     GLOBAL_RNG = np.random.default_rng(42)
 
     # Structural parameters of the backbone circuit
@@ -453,10 +454,10 @@ if __name__ == '__main__':
         "pauli_shadow_time": (pauli_shadow_sizes, pauli_shadow_time),
         "clifford_shadow_time": (clifford_shadow_sizes, clifford_shadow_time)
     }
-    with open(f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples.json", "w") as f:
+    with open(JSON_FILENAME, "w") as f:
         json.dump(res_dict, f, indent=4, cls=NpEncoder)
     print("Done!")
-    print("Results saved to shadow_accuracy_benchmark_with_reset.json")
+    print(f"Results saved to {JSON_FILENAME}")
     print("Plotting the results...")
     # plot the results with error bars
     distances_pauli = np.zeros((SAMPLES, len(pauli_shadow_sizes)))
@@ -476,7 +477,7 @@ if __name__ == '__main__':
     ax[1].set_xlabel("Number of Clifford Shadows")
     ax[1].set_ylabel("Distance to Actual State")
     ax[1].set_title("Clifford Shadows")
-    plt.savefig(f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples.png")
+    plt.savefig(PLOT_FILENAME)
     plt.close()
 
 
