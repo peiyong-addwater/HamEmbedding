@@ -330,7 +330,7 @@ if __name__ == '__main__':
                 return super(NpEncoder, self).default(obj)
 
     # Times of sampling for calculating shadows
-    SAMPLES = 5
+    SAMPLES = 20
 
     GLOBAL_RNG = np.random.default_rng(42)
 
@@ -395,7 +395,7 @@ if __name__ == '__main__':
                 n_shadows=n_shadows,
                 n_qubits=4,
                 base_circuit=backbone,
-                shadow_register=[0,1, 2, 3],
+                shadow_register=[0, 1, 2, 3],
                 reps=1,
                 transpile_circ=False,
                 seed=seed
@@ -453,7 +453,7 @@ if __name__ == '__main__':
         "pauli_shadow_time": (pauli_shadow_sizes, pauli_shadow_time),
         "clifford_shadow_time": (clifford_shadow_sizes, clifford_shadow_time)
     }
-    with open("shadow_accuracy_benchmark_with_reset.json", "w") as f:
+    with open(f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples.json", "w") as f:
         json.dump(res_dict, f, indent=4, cls=NpEncoder)
     print("Done!")
     print("Results saved to shadow_accuracy_benchmark_with_reset.json")
@@ -476,7 +476,7 @@ if __name__ == '__main__':
     ax[1].set_xlabel("Number of Clifford Shadows")
     ax[1].set_ylabel("Distance to Actual State")
     ax[1].set_title("Clifford Shadows")
-    plt.savefig("shadow_accuracy_benchmark_with_reset.png")
+    plt.savefig(f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples.png")
     plt.close()
 
 
