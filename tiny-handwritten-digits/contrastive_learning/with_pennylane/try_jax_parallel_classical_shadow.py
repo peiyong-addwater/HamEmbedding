@@ -1,26 +1,25 @@
 import pennylane as qml
-from pennylane import numpy as pnp
-import jax.numpy as jnp
-import jax
-import numpy as np
-from typing import List, Tuple, Union, Optional
-from pennylane.wires import Wires
-jax.config.update('jax_platform_name', 'cpu')
-jax.config.update("jax_enable_x64", True)
-import sys
-sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
+import pennylane.numpy as np
+from matplotlib import pyplot as plt
+from pennylane import classical_shadow, shadow_expval, ClassicalShadow
 
-dev = qml.device("default.qubit", wires=2, shots=10000)
+np.random.seed(666)
 
-@qml.shadows.shadow_state(wires=[0, 1], diffable=True)
-@qml.qnode(dev)
-def circuit(x):
-    qml.Hadamard(wires=0)
-    qml.CNOT(wires=[0, 1])
+H = qml.Hamiltonian([1., 1.], [qml.PauliZ(0) @ qml.PauliZ(1), qml.PauliX(0) @ qml.PauliX(1)])
+
+dev = qml.device("default.qubit", wires=range(2), shots=10000)
+@qml.qnode(dev, interface="autograd")
+def qnode(x, H):
+    qml.Hadamard(0)
+    qml.CNOT((0,1))
     qml.RX(x, wires=0)
-    return qml.classical_shadow(wires=[0, 1])
+    return shadow_expval(H)
 
-x = pnp.array(1.2)
-print(circuit(x))
-grad = qml.jacobian(lambda x: np.real(circuit(x)))(x)
-print(grad)
+x = np.array(0.5, requires_grad=True)
+
+print(qnode(x, H), qml.grad(qnode)(x, H))
+
+Hs = [H, qml.PauliX(0), qml.PauliY(0), qml.PauliZ(0)]
+print(qnode(x, Hs))
+print(qml.jacobian(qnode)(x, Hs))
+
