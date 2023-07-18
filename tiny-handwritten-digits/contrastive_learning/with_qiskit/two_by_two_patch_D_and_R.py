@@ -37,13 +37,15 @@ def FourPixelDepositAndReset(
     """
     circ = QuantumCircuit(3, name = "FourPixelDepositAndReset")
     n_layers = len(phase_parameters)
+    assert n_layers == 2, "Only two layers of D&R are supported at the moment."
     n_params_per_encode = len(encode_parameters) // n_layers
     circ.h(0)
     for i in range(n_layers):
         img_patch_encode_gate = FourPixelEncodeTwoQubits(pixels, encode_parameters[n_params_per_encode*i:n_params_per_encode*(i+1)], to_gate=to_gate)
-        #img_patch_encode_gate_inv = img_patch_encode_gate.inverse()
         circ.append(img_patch_encode_gate, [1, 2])
         circ.cp(phase_parameters[i], 0, 1)
+        if i == 0:
+            circ.x(0)
         circ.reset([1, 2])
 
     return circ.to_instruction(label="FourPixelDepositAndReset") if to_gate else circ
