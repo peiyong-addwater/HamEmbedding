@@ -330,9 +330,10 @@ if __name__ == '__main__':
                 return super(NpEncoder, self).default(obj)
 
     # Times of sampling for calculating shadows
-    SAMPLES = 20
-    PLOT_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples.png"
-    JSON_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples.json"
+    SAMPLES = 10
+    REPs = 10
+    PLOT_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps.png"
+    JSON_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps.json"
     GLOBAL_RNG = np.random.default_rng(42)
 
     # Structural parameters of the backbone circuit
@@ -354,10 +355,14 @@ if __name__ == '__main__':
         patched_data = pickle.load(f)
     image_patches = patched_data["training_patches"] + patched_data["test_patches"]
 
-    def calculate_shadows_single_image_single_parameter(image, parameters, shadow_type, n_shadows, seed):
+    def calculate_shadows_single_image_single_parameter(image, parameters, shadow_type, n_shadows, reps, seed):
         """
         Calculate the Clifford and Pauli shadows, as well as extracting the original density matrix, for a single image with a single set of parameter
 
+        :param seed:
+        :param reps:
+        :param n_shadows:
+        :param shadow_type:
         :param image: patches of a single image
         :param parameters: a single set of parameters, dim = THETA_DIM + PHI_DIM + GAMMA_DIM + OMEGA_DIM + ETA_DIM
         :return:
@@ -386,7 +391,7 @@ if __name__ == '__main__':
                 n_qubits=4,
                 base_circuit=backbone,
                 shadow_register=[0,1, 2, 3],
-                reps=1,
+                reps=reps,
                 transpile_circ=False,
                 seed=seed
             )
@@ -397,7 +402,7 @@ if __name__ == '__main__':
                 n_qubits=4,
                 base_circuit=backbone,
                 shadow_register=[0, 1, 2, 3],
-                reps=1,
+                reps=reps,
                 transpile_circ=False,
                 seed=seed
             )
@@ -420,7 +425,7 @@ if __name__ == '__main__':
             print("Calculating Pauli shadow accuracy for n_shadows =", n, "and seed =", seed)
             parameters = GLOBAL_RNG.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
             img = GLOBAL_RNG.choice(image_patches)
-            rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="pauli", n_shadows=n, seed=seed)
+            rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="pauli", n_shadows=n, seed=seed, reps=REPs)
             pauli_shadow_accuracies_single_size.append(complexMatrixDiff(rho_actual, rho_shadow))
             end = time.time()
             pauli_shadow_time_single_size.append(end-start)
@@ -440,7 +445,7 @@ if __name__ == '__main__':
             print("Calculating Clifford shadow accuracy for n_shadows =", n, "and seed =", seed)
             parameters = GLOBAL_RNG.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
             img = GLOBAL_RNG.choice(image_patches)
-            rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="clifford", n_shadows=n, seed=seed)
+            rho_actual, rho_shadow = calculate_shadows_single_image_single_parameter(image=img, parameters=parameters, shadow_type="clifford", n_shadows=n, seed=seed, reps=REPs)
             clifford_shadow_accuracies_single_size.append(complexMatrixDiff(rho_actual, rho_shadow))
             end = time.time()
             clifford_shadow_time_single_size.append(end-start)
