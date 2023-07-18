@@ -330,7 +330,7 @@ if __name__ == '__main__':
                 return super(NpEncoder, self).default(obj)
 
     # Times of sampling for calculating shadows
-    SAMPLES = 10
+    SAMPLES = 20
     REPs = 10
     PLOT_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps.png"
     JSON_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps.json"
