@@ -35,7 +35,7 @@ def FourPixelDepositAndReset(
     :param to_gate:
     :return: a gate or circuit, in which the first qubit will have the image patch encoded as phase information
     """
-    circ = QuantumCircuit(3, name = "FourPixelDepositAndReverse")
+    circ = QuantumCircuit(3, name = "FourPixelDepositAndReset")
     n_layers = len(phase_parameters)
     n_params_per_encode = len(encode_parameters) // n_layers
     circ.h(0)
