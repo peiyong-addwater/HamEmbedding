@@ -67,6 +67,7 @@ def backboneQFTMixing(
     after another QFT mixing.
     The first 4 qubits contain the encoded information of the image,
     and the last 6 qubits are ancilla qubits.
+    :param final_layer_type:
     :param patched_img: All 16 image patches, a 4 by 4 by 4 array
     :param encode_parameters: "θ", 6N*2*2 element array, where N is the number of "layers" of data-reuploading
     :param single_patch_phase_parameters: "φ", 2*2 element array

@@ -13,7 +13,7 @@ def Reset0(wires:Union[Wires, List[int]]):
     :return:
     """
     for wire in wires:
-        Reset(wires=wire, id="|0>")
+        qml.ResetError(p0=1, p1=0, wires=wire)
 
 
 class Reset(Channel):
