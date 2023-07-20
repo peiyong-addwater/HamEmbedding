@@ -17,7 +17,53 @@ from qiskit.circuit import ParameterVector
 import os
 
 from two_by_two_patch_D_and_R import FourPixelDepositAndReset
-from token_mixing_layers import FourQubitParameterisedLayer
+from token_mixing_layers import FourQubitParameterisedLayer, TwoQubitParameterisedLayer
+
+def FourPatchOneQ(
+        img_patch1:Union[List, np.ndarray, ParameterVector],
+        img_patch2:Union[List, np.ndarray, ParameterVector],
+        img_patch3:Union[List, np.ndarray, ParameterVector],
+        img_patch4:Union[List, np.ndarray, ParameterVector],
+        single_patch_encoding_parameter:Union[ParameterVector, np.ndarray],
+        single_patch_d_and_r_phase_parameter:Union[ParameterVector, np.ndarray],
+        four_patch_d_and_r_phase_parameter:Union[ParameterVector, np.ndarray],
+        two_patch_2_q_pqc_parameter:Union[ParameterVector, np.ndarray],
+        to_gate = True
+):
+    """
+    Encode four image patches in to one qubit with deposit and reset.
+    Each patch is encode into one qubit with the FourPixelDepositAndReset circuit.
+    Then, the first two patches are mixed with the TwoQubitParameterisedLayer circuit, and encode into the phase
+    of the |0> state of the deposit qubit and the last two patches are mixed with the TwoQubitParameterisedLayer circuit,
+    and encode into the phase of the |1> state of the deposit qubit.
+    Finally, the deposit qubit holds the information of all four patches.
+    number of qubits required: 1 (for deposit) + (1+2+1)
+    :param img_patch1:
+    :param img_patch2:
+    :param img_patch4:
+    :param img_patch3:
+    :param single_patch_encoding_parameter:
+    :param single_patch_d_and_r_phase_parameter:
+    :param two_patch_d_and_r_phase_parameter:
+    :param two_patch_2_q_pqc_parameter:
+    :param to_gate:
+    :return:
+    """
+    circ = QuantumCircuit(5, name = "FourPatchOneQ")
+    circ.h(0)
+    circ.append(FourPixelDepositAndReset(img_patch1, single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, to_gate=to_gate), [1, 2, 3])
+    circ.append(FourPixelDepositAndReset(img_patch2, single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, to_gate=to_gate), [2, 3, 4])
+    circ.append(TwoQubitParameterisedLayer(two_patch_2_q_pqc_parameter, to_gate=to_gate), [1, 2])
+    circ.cp(four_patch_d_and_r_phase_parameter[0], 0, 1)
+    circ.reset([1, 2]) # qubits 3 and 4 are already reset by the FourPixelDepositAndReset circuit
+    circ.x(0)
+    circ.append(FourPixelDepositAndReset(img_patch3, single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, to_gate=to_gate), [1, 2, 3])
+    circ.append(FourPixelDepositAndReset(img_patch4, single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, to_gate=to_gate), [2, 3, 4])
+    circ.append(TwoQubitParameterisedLayer(two_patch_2_q_pqc_parameter, to_gate=to_gate), [1, 2])
+    circ.cp(four_patch_d_and_r_phase_parameter[1], 0, 1)
+    circ.reset([1, 2])  # qubits 3 and 4 are already reset by the FourPixelDepositAndReset circuit
+    return circ.to_instruction(label="FourPatchOneQ") if to_gate else circ
+
 
 def TwoByTwoPatchLocalTokens(
         img_patches:Union[List[List[ParameterVector]], np.ndarray],

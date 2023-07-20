@@ -37,7 +37,7 @@ def FourPixelDepositAndReset(
     """
     circ = QuantumCircuit(3, name = "FourPixelDepositAndReset")
     n_layers = len(phase_parameters)
-    #assert n_layers == 2, "Only two layers of D&R are supported at the moment."
+    assert n_layers == 2, "Only two layers of D&R are supported at the moment."
     n_params_per_encode = len(encode_parameters) // n_layers
     circ.h(0)
     for i in range(n_layers):
