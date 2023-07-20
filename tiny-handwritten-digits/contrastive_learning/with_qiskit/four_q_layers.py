@@ -1,0 +1,39 @@
+import math
+import numpy as np
+from typing import List, Tuple, Union
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
+from qiskit import Aer
+from concurrent.futures import ThreadPoolExecutor
+from qiskit.algorithms.optimizers import SPSA, COBYLA
+import json
+import time
+import shutup
+import pickle
+import sys
+sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
+
+from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
+from qiskit.circuit import ParameterVector
+import os
+
+def FourQubitParameterisedLayer(parameters:Union[ParameterVector, np.ndarray], to_gate = True):
+    """
+    A four-qubit parameterised layer, which ends with circular entanglement with CZ gates
+    :param parameters: 12N-element array, one-dim, where N is the number of layers
+    :param to_gate:
+    :return:
+    """
+    circ = QuantumCircuit(4, name = "FourQLayer")
+    layers = len(parameters) // 12
+    assert len(parameters) % 12 == 0
+    for i in range(layers):
+        for j in range(4):
+            circ.rx(parameters[12 * i + 3 * j], j)
+            circ.rz(parameters[12 * i + 3 * j + 1], j)
+            circ.rx(parameters[12 * i + 3 * j + 2], j)
+        circ.cz(0, 1)
+        circ.cz(1, 2)
+        circ.cz(2, 3)
+        circ.cz(3, 0)
+
+    return circ.to_instruction(label="FourQLayer") if to_gate else circ
