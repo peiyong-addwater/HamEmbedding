@@ -16,7 +16,7 @@ from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 from qiskit.circuit import ParameterVector
 import os
 
-from four_q_layers import FourQubitParameterisedLayer
+from token_mixing_layers import FourQubitParameterisedLayer
 from two_by_two_local_tokens import LocalTokenMixing
 
 def backboneCircFourQubitFeature(

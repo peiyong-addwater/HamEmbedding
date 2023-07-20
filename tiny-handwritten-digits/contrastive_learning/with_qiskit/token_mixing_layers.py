@@ -14,6 +14,7 @@ sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 from SPSAGradOptimiser.qiskit_opts.SPSA_Adam import ADAMSPSA
 from qiskit.circuit import ParameterVector
+from qiskit.circuit.library import QFT
 import os
 
 def FourQubitParameterisedLayer(parameters:Union[ParameterVector, np.ndarray], to_gate = True):
@@ -63,3 +64,12 @@ def PermutationInvariantFourQLayer(
         circ.rzz(parameters[3 * i + 2], 1, 3)
     return circ.to_instruction(label="FourQLayerPermInvariant") if to_gate else circ
 
+def QFTTokenMixingLayer(n_wires=4):
+    """
+    Token mixing with quantum Fourier transform
+    :param n_wires: number of qubits
+    :return:
+    """
+    circ = QuantumCircuit(n_wires, name="QFTTokenMixingLayer")
+    circ.compose(QFT(num_qubits=n_wires), range(n_wires), inplace=True)
+    return circ.to_instruction(label="QFTTokenMixingLayer")

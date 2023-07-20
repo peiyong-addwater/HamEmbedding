@@ -17,7 +17,7 @@ from qiskit.circuit import ParameterVector
 import os
 
 from two_by_two_patch_D_and_R import FourPixelDepositAndReset
-from four_q_layers import FourQubitParameterisedLayer
+from token_mixing_layers import FourQubitParameterisedLayer
 
 def TwoByTwoPatchLocalTokens(
         img_patches:Union[List[List[ParameterVector]], np.ndarray],
