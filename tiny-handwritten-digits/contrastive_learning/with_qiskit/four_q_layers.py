@@ -37,3 +37,29 @@ def FourQubitParameterisedLayer(parameters:Union[ParameterVector, np.ndarray], t
         circ.cz(3, 0)
 
     return circ.to_instruction(label="FourQLayer") if to_gate else circ
+
+def PermutationInvariantFourQLayer(
+    parameters:Union[ParameterVector, np.ndarray],
+    to_gate = True
+):
+    """
+    A permutation invariant four-qubit parameterised layer composed of RX, RY and IsingZZ gates.
+    :param parameters:
+    :param to_gate:
+    :return:
+    """
+    layers = len(parameters) // 3
+    assert int(layers) == layers
+    circ = QuantumCircuit(4, name="FourQLayerPermInvariant")
+    for i in range(layers):
+        for j in range(4):
+            circ.rx(parameters[3 * i], j)
+            circ.ry(parameters[3 * i + 1], j)
+        circ.rzz(parameters[3 * i + 2], 0, 1)
+        circ.rzz(parameters[3 * i + 2], 1, 2)
+        circ.rzz(parameters[3 * i + 2], 2, 3)
+        circ.rzz(parameters[3 * i + 2], 3, 0)
+        circ.rzz(parameters[3 * i + 2], 0, 2)
+        circ.rzz(parameters[3 * i + 2], 1, 3)
+    return circ.to_instruction(label="FourQLayerPermInvariant") if to_gate else circ
+
