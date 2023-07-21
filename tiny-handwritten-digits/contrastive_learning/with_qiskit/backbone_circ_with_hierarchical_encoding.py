@@ -21,20 +21,21 @@ from two_by_two_local_tokens import LocalTokenMixing
 
 def backboneCircFourQubitFeature(
         image_patches:Union[List[List[ParameterVector]], np.ndarray],
-        single_patch_encoding_parameter:Union[ParameterVector, np.ndarray],
-        single_patch_d_and_r_phase_parameter:Union[ParameterVector, np.ndarray],
-        four_q_param_layer_parameter_local_patches:Union[ParameterVector, np.ndarray],
-        local_token_mixing_phase_parameter:Union[ParameterVector, np.ndarray],
+        single_patch_encoding_parameter: Union[ParameterVector, np.ndarray],
+        single_patch_d_and_r_phase_parameter: Union[ParameterVector, np.ndarray],
+        four_patch_d_and_r_phase_parameter: Union[ParameterVector, np.ndarray],
+        two_patch_2_q_pqc_parameter: Union[ParameterVector, np.ndarray],
         finishing_layer_parameter:Union[ParameterVector, np.ndarray]
 ):
     """
     The backbone circuit for producing the four-qubit feature/representation of an 8 x 8 image.
     The first 4 qubits contain the feature, and the last 6 qubits are ancilla qubits, which, in an ideal simulation, should be reversed back to the |0> state.
+
     :param image_patches: All 16 image patches, each of which is a 4-element array (ParameterVector) reshaped into a 4 by 4 list, or a 4 by 4 by 4 ndarray, in which the last dimension is the original pixels.
-    :param single_patch_encoding_parameter: "θ", 6NL-element array, one-dim, where N is the number of "layers" of data-reuploading and L is the number of D&R repetitions in the single patch D&R
-    :param single_patch_d_and_r_phase_parameter: "φ", L-element array, one-dim, where L is the number of D&R repetitions in the single patch D&R
-    :param four_q_param_layer_parameter_local_patches: "γ", 12M-element array, one-dim, where M is the number of layers of the 4-q parameterised layer
-    :param local_token_mixing_phase_parameter: "ω", a one-element array for the phase parameter of the token mixing D&R
+    :param single_patch_encoding_parameter: "θ", 12N-element array, one-dim, where N is the number of "layers" of data-reuploading and L is the number of D&R repetitions in the single patch D&R
+    :param single_patch_d_and_r_phase_parameter: "φ", 2-element array, one-dim, where L is the number of D&R repetitions in the single patch D&R
+    :param four_patch_d_and_r_phase_parameter: 2-parameter array
+    :param two_patch_2_q_pqc_parameter: "γ", 6N-element array, one-dim, where N is the number of layers of the two-patch 2-qubit parameterised layer
     :param finishing_layer_parameter: "η", 12K-element array, one-dim, where K is the number of layers of the finishing layer
     :return:
     """
@@ -69,12 +70,18 @@ def backboneCircFourQubitFeature(
         [52. 53. 60. 61.]
         [54. 55. 62. 63.]]]
     """
-    circ = QuantumCircuit(10, name="BackboneCirc4QFeature")
+    circ = QuantumCircuit(8, name="BackboneCirc4QFeature")
     local_mixing_count = 0
     for i in range(2):
         for j in range(2):
             local_patches = image_patches[i * 2:i * 2 + 2, j * 2:j * 2 + 2]
-            circ.append(LocalTokenMixing(local_patches, single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, four_q_param_layer_parameter_local_patches, local_token_mixing_phase_parameter), [local_mixing_count, local_mixing_count + 1, local_mixing_count + 2, local_mixing_count + 3, local_mixing_count + 4, local_mixing_count + 5, local_mixing_count + 6])
+            circ.append(LocalTokenMixing(
+                local_patches,
+                single_patch_encoding_parameter,
+                single_patch_d_and_r_phase_parameter,
+                four_patch_d_and_r_phase_parameter,
+                two_patch_2_q_pqc_parameter
+            ), [local_mixing_count, local_mixing_count + 1, local_mixing_count + 2, local_mixing_count + 3, local_mixing_count + 4])
             local_mixing_count += 1
 
     circ.append(FourQubitParameterisedLayer(finishing_layer_parameter), [0, 1, 2, 3])
@@ -106,24 +113,27 @@ if __name__ == '__main__':
             print("Patch ", i, j)
             print(patches[i * 2:i * 2 + 2, j * 2:j * 2 + 2])
 
+    num_single_patch_data_reuploading_layers = 2
+    num_single_patch_d_and_r_repetitions = 2
+    num_four_patch_d_and_r_repetitions = 2
+    num_two_patch_2_q_pqc_layers = 2
     first_four_patch_pv = [[ParameterVector('x1',4),ParameterVector('x2',4)],[ParameterVector('x5',4),ParameterVector('x6',4)]]
-    theta = ParameterVector('θ', 12)
-    phi = ParameterVector('φ', 2)
-    gamma = ParameterVector('γ', 12)
-    omega = ParameterVector('ω', 1)
+    single_patch_encoding_parameter = ParameterVector('θ',
+                                                      6 * num_single_patch_data_reuploading_layers * num_single_patch_d_and_r_repetitions)
+    single_patch_d_and_r_phase_parameter = ParameterVector('φ', num_single_patch_d_and_r_repetitions)
+    four_patch_d_and_r_phase_parameter = ParameterVector('ψ', num_four_patch_d_and_r_repetitions)
+    two_patch_2_q_pqc_parameter = ParameterVector('γ', 6 * num_two_patch_2_q_pqc_layers)
+
     eta = ParameterVector('η', 12)
 
-    local_tokens = TwoByTwoPatchLocalTokens(first_four_patch_pv, theta, phi, to_gate=False)
-    local_tokens.draw(output='mpl', style='bw', filename='TwoByTwoPatchLocalTokens.png')
 
-    four_q_params = ParameterVector('θ', 24)
-    four_q_layer = FourQubitParameterisedLayer(four_q_params, to_gate=False)
-    four_q_layer.draw(output='mpl', style='bw', filename='FourQubitParameterisedLayer.png')
-
-    local_token_mixing = LocalTokenMixing(first_four_patch_pv, theta, phi, gamma, omega, to_gate=False)
-    local_token_mixing.draw(output='mpl', style='bw', filename='TwoByTwoPatchLocalTokenMixing.png')
-
-    backbone = backboneCircFourQubitFeature(patches, theta, phi, gamma, omega, eta)
+    backbone = backboneCircFourQubitFeature(
+        patches,
+        single_patch_encoding_parameter,
+        single_patch_d_and_r_phase_parameter,
+        four_patch_d_and_r_phase_parameter,
+        two_patch_2_q_pqc_parameter,
+        eta)
     backbone.draw(output='mpl', style='bw', filename='BackboneCirc4QFeature.png')
 
 
