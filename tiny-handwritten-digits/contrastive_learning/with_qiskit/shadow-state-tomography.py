@@ -332,21 +332,22 @@ if __name__ == '__main__':
     # Times of sampling for calculating shadows
     SAMPLES = 20
     REPs = 10
-    PLOT_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps.png"
-    JSON_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps.json"
+    PLOT_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps_8q_circ.png"
+    JSON_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps_8q_circ.json"
     GLOBAL_RNG = np.random.default_rng(42)
 
     # Structural parameters of the backbone circuit
-    N = 1 # number of data-reuploading layers for a single patch
-    L = 1 # number of D&R repetitions in the single patch D&R layer
-    M = 1 # number of 4-qubit parameterised layers after the 2x2 local patches in the LocalTokenMixing layer
-    K = 1 # number of 4-qubit  parameterised layers at the end of the backbone circuit, right before producing the learned representation
-    THETA_DIM = 6*N*L # single_patch_encoding_parameter
-    PHI_DIM = L # single_patch_d_and_r_phase_parameter
-    GAMMA_DIM = 12*M # four_q_param_layer_parameter_local_patches
-    OMEGA_DIM = 1 # local_token_mixing_phase_parameter
-    ETA_DIM = 12*K # finishing_layer_parameter
-    TOTAL_PARAM_DIM = THETA_DIM + PHI_DIM + GAMMA_DIM + OMEGA_DIM + ETA_DIM
+    num_single_patch_data_reuploading_layers = 2
+    num_single_patch_d_and_r_repetitions = 2
+    num_four_patch_d_and_r_repetitions = 2
+    num_two_patch_2_q_pqc_layers = 2
+    num_finishing_4q_layers = 2
+    single_patch_encoding_parameter_dim = 6 * num_single_patch_data_reuploading_layers * num_single_patch_d_and_r_repetitions
+    single_patch_d_and_r_phase_parameter_dim = num_single_patch_d_and_r_repetitions
+    four_patch_d_and_r_phase_parameter_dim = num_four_patch_d_and_r_repetitions
+    two_patch_2_q_pqc_parameter_dim = 6 * num_two_patch_2_q_pqc_layers
+    finishing_4q_layers_dim = 12*num_finishing_4q_layers # finishing_layer_parameter
+    TOTAL_PARAM_DIM = single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim + two_patch_2_q_pqc_parameter_dim + finishing_4q_layers_dim
     print("Total number of parameters:", TOTAL_PARAM_DIM)
 
     # Each "image" in the data file is a 4x4x4 array, each element in the first 4x4 is a flattend patch
@@ -368,21 +369,22 @@ if __name__ == '__main__':
         :return:
         """
         # Construct the backbone circuit
-        single_patch_encoding_parameter = parameters[:THETA_DIM]
-        single_patch_d_and_r_phase_parameter = parameters[THETA_DIM:THETA_DIM+PHI_DIM]
-        four_q_param_layer_parameter_local_patches = parameters[THETA_DIM+PHI_DIM:THETA_DIM+PHI_DIM+GAMMA_DIM]
-        local_token_mixing_phase_parameter = parameters[THETA_DIM+PHI_DIM+GAMMA_DIM:THETA_DIM+PHI_DIM+GAMMA_DIM+OMEGA_DIM]
-        finishing_layer_parameter = parameters[THETA_DIM+PHI_DIM+GAMMA_DIM+OMEGA_DIM:THETA_DIM+PHI_DIM+GAMMA_DIM+OMEGA_DIM+ETA_DIM]
+        single_patch_encoding = parameters[:single_patch_encoding_parameter_dim]
+        single_patch_d_and_r_phase = parameters[single_patch_encoding_parameter_dim:single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim]
+        four_patch_d_and_r_phase = parameters[single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim:single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim]
+        two_patch_2_q_pqc = parameters[single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim:single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim + two_patch_2_q_pqc_parameter_dim]
+        finishing_layer_parameter = parameters[single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim + two_patch_2_q_pqc_parameter_dim:]
+
         backbone = backboneCircFourQubitFeature(
             image_patches=image,
-            single_patch_encoding_parameter=single_patch_encoding_parameter,
-            single_patch_d_and_r_phase_parameter=single_patch_d_and_r_phase_parameter,
-            four_q_param_layer_parameter_local_patches=four_q_param_layer_parameter_local_patches,
-            local_token_mixing_phase_parameter=local_token_mixing_phase_parameter,
+            single_patch_encoding_parameter=single_patch_encoding,
+            single_patch_d_and_r_phase_parameter=single_patch_d_and_r_phase,
+            four_patch_d_and_r_phase_parameter=four_patch_d_and_r_phase,
+            two_patch_2_q_pqc_parameter=two_patch_2_q_pqc,
             finishing_layer_parameter=finishing_layer_parameter
         )
         # The reduced density matrix of the first 4 qubits
-        rho_actual = partial_trace(DensityMatrix(backbone), [4, 5, 6, 7, 8, 9])
+        rho_actual = partial_trace(DensityMatrix(backbone), [4, 5, 6, 7])
         rho_actual = rho_actual.data
         # The Clifford shadow
         if shadow_type == "clifford":
