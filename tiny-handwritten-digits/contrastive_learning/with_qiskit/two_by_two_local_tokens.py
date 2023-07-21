@@ -42,10 +42,10 @@ def FourPatchOneQ(
     :param img_patch2:
     :param img_patch4:
     :param img_patch3:
-    :param single_patch_encoding_parameter:
-    :param single_patch_d_and_r_phase_parameter:
-    :param two_patch_d_and_r_phase_parameter:
-    :param two_patch_2_q_pqc_parameter:
+    :param single_patch_encoding_parameter: 12N parameter array, where N is the number of layers of the single patch data re-uploading
+    :param single_patch_d_and_r_phase_parameter: 2-parameter array
+    :param four_patch_d_and_r_phase_parameter: 2-parameter array
+    :param two_patch_2_q_pqc_parameter: 6N-parameter array, where N is the number of layers of the two-patch 2-qubit parameterised layer
     :param to_gate:
     :return:
     """
@@ -119,3 +119,32 @@ def LocalTokenMixing(
     circ.reset([1, 2, 3, 4, 5, 6])
 
     return circ.to_instruction(label="LocalTokenMixing") if to_gate else circ
+
+if __name__ == '__main__':
+    def cut_8x8_to_2x2(img: np.ndarray):
+        # img: 8x8 image
+        # return: 4x4x4 array, each element in the first 4x4 is a flattened patch
+        patches = np.zeros((4, 4, 4))
+        for i in range(4):
+            for j in range(4):
+                patches[i, j] = img[2 * i:2 * i + 2, 2 * j:2 * j + 2].flatten()
+        return patches
+
+
+    first_four_patch_pv = [ParameterVector('x1',4),ParameterVector('x2',4),ParameterVector('x5',4),ParameterVector('x6',4)]
+
+    num_single_patch_data_reuploading_layers = 2
+    num_single_patch_d_and_r_repetitions = 2
+    num_four_patch_d_and_r_repetitions = 2
+    num_two_patch_2_q_pqc_layers = 2
+
+    single_patch_encoding_parameter = ParameterVector('θ', 6 * num_single_patch_data_reuploading_layers * num_single_patch_d_and_r_repetitions)
+    single_patch_d_and_r_phase_parameter = ParameterVector('φ', num_single_patch_d_and_r_repetitions)
+    four_patch_d_and_r_phase_parameter = ParameterVector('ψ', num_four_patch_d_and_r_repetitions)
+    two_patch_2_q_pqc_parameter = ParameterVector('γ', 6 * num_two_patch_2_q_pqc_layers)
+
+    four_patch_one_qubit_circ = FourPatchOneQ(
+        first_four_patch_pv[0], first_four_patch_pv[1], first_four_patch_pv[2], first_four_patch_pv[3],
+        single_patch_encoding_parameter, single_patch_d_and_r_phase_parameter, four_patch_d_and_r_phase_parameter, two_patch_2_q_pqc_parameter, to_gate=False
+    )
+    four_patch_one_qubit_circ.draw(output='mpl', style='bw', filename='FourPatchOneQ.png')
