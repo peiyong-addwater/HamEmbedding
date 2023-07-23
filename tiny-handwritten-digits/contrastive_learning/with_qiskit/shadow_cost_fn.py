@@ -288,3 +288,78 @@ def pauliShadow(
     rho_shadow = np.sum(shadows, axis=0) / (n_shadows * reps)
     return rho_shadow
 
+def getzFromImagePatches(
+        image_patches:Union[List[List[ParameterVector]], np.ndarray],
+        parameters:Union[ParameterVector, np.ndarray],
+        num_single_patch_data_reuploading_layers:int,
+        num_single_patch_d_and_r_repetitions:int,
+        num_four_patch_d_and_r_repetitions:int,
+        num_two_patch_2_q_pqc_layers:int,
+        num_finishing_4q_layers:int,
+        device_backend=Aer.get_backend('aer_simulator'),
+        simulation:bool=True,
+        shadow_type = "pauli",
+        shots = 100,
+        n_shadows = 50,
+        parallel = True,
+        seed = 1701
+):
+    single_patch_encoding_parameter_dim = 6 * num_single_patch_data_reuploading_layers * num_single_patch_d_and_r_repetitions
+    single_patch_d_and_r_phase_parameter_dim = num_single_patch_d_and_r_repetitions
+    four_patch_d_and_r_phase_parameter_dim = num_four_patch_d_and_r_repetitions
+    two_patch_2_q_pqc_parameter_dim = 6 * num_two_patch_2_q_pqc_layers
+    finishing_4q_layers_dim = 12 * num_finishing_4q_layers  # finishing_layer_parameter
+
+    single_patch_encoding = parameters[:single_patch_encoding_parameter_dim]
+    single_patch_d_and_r_phase = parameters[
+                                 single_patch_encoding_parameter_dim:single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim]
+    four_patch_d_and_r_phase = parameters[
+                               single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim:single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim]
+    two_patch_2_q_pqc = parameters[
+                        single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim:single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim + two_patch_2_q_pqc_parameter_dim]
+    finishing_layer_parameter = parameters[
+                                single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim + two_patch_2_q_pqc_parameter_dim:]
+
+    backbone = backboneCircFourQubitFeature(
+        image_patches=image_patches,
+        single_patch_encoding_parameter=single_patch_encoding,
+        single_patch_d_and_r_phase_parameter=single_patch_d_and_r_phase,
+        four_patch_d_and_r_phase_parameter=four_patch_d_and_r_phase,
+        two_patch_2_q_pqc_parameter=two_patch_2_q_pqc,
+        finishing_layer_parameter=finishing_layer_parameter
+    )
+    # The Clifford shadow
+    if shadow_type == "clifford":
+        rho_shadow = cliffordShadow(
+            n_shadows=n_shadows,
+            n_qubits=4,
+            base_circuit=backbone,
+            shadow_register=[0, 1, 2, 3],
+            reps=shots,
+            transpile_circ=False if simulation else True,
+            seed=seed,
+            parallel=parallel,
+            simulation=simulation,
+            device_backend=device_backend
+        )
+    # The Pauli shadow
+    elif shadow_type == "pauli":
+        rho_shadow = pauliShadow(
+            n_shadows=n_shadows,
+            n_qubits=4,
+            base_circuit=backbone,
+            shadow_register=[0, 1, 2, 3],
+            reps=shots,
+            transpile_circ=False if simulation else True,
+            seed=seed,
+            parallel = parallel,
+            simulation = simulation,
+            device_backend = device_backend
+        )
+    else:
+        raise ValueError("shadow_type must be either clifford or pauli")
+    return rho_shadow
+
+@dask.delayed
+def getzSingleArg(args):
+    return getzFromImagePatches(*args)
