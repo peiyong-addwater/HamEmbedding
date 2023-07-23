@@ -331,7 +331,7 @@ if __name__ == '__main__':
 
     # Times of sampling for calculating shadows
     SAMPLES = 20
-    REPs = 50
+    REPs = 100
     PLOT_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps_8q_circ.png"
     JSON_FILENAME = f"shadow_accuracy_benchmark_with_reset_{SAMPLES}_samples_{REPs}_reps_8q_circ.json"
     GLOBAL_RNG = np.random.default_rng(42)
@@ -412,8 +412,8 @@ if __name__ == '__main__':
             raise ValueError("shadow_type must be either clifford or pauli")
         return rho_actual, rho_shadow
 
-    pauli_shadow_sizes = [50, 100, 200, 500]
-    clifford_shadow_sizes = [50, 100, 200, 500]
+    pauli_shadow_sizes = [10, 20, 50, 100]
+    clifford_shadow_sizes = [10, 20, 50, 100]
     # calculate pauli shadow accuracy
     pauli_shadow_accuracies = []
     pauli_shadow_time=[]
