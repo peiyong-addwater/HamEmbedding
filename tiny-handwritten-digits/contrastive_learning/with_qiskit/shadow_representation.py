@@ -282,6 +282,7 @@ def getzFromImagePatches(
         num_four_patch_d_and_r_repetitions:int,
         num_two_patch_2_q_pqc_layers:int,
         num_finishing_4q_layers:int,
+        index:int,
         device_backend=Aer.get_backend('aer_simulator'),
         simulation:bool=True,
         shadow_type = "pauli",
@@ -344,7 +345,7 @@ def getzFromImagePatches(
         )
     else:
         raise ValueError("shadow_type must be either clifford or pauli")
-    return rho_shadow
+    return rho_shadow, index
 
 @dask.delayed
 def getzSingleArg(args):
