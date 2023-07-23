@@ -70,20 +70,6 @@ def rotGate(g):
     else:
         raise NotImplementedError(f"Unknown gate {g}")
 
-def operator_2_norm(R):
-    """
-    Calculate the operator 2-norm.
-
-    Args:
-        R (array): The operator whose norm we want to calculate.
-
-    Returns:
-        Scalar corresponding to the norm.
-    """
-    return np.sqrt(np.trace(R.conjugate().transpose() @ R))
-
-def complexMatrixDiff(A, B):
-    return np.real_if_close(operator_2_norm(A - B))
 
 def constructCliffordShadowSingleCirc(n_qubits:int,
                    base_circuit:QuantumCircuit,

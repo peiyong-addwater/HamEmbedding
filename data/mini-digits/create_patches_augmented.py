@@ -36,17 +36,20 @@ if __name__ == '__main__':
     for c in tqdm(train):
         patched_img_data["train"].append({
             "original": cut_8x8_to_2x2(c["original"]*(2*np.pi)/255),
+            "label": c["label"], # 0~9
             "augmentations": [cut_8x8_to_2x2(a*(2*np.pi)/255) for a in c["augmentations"]]
         })
     for c in tqdm(test):
         patched_img_data["test"].append({
             "original": cut_8x8_to_2x2(c["original"]*(2*np.pi)/255),
+            "label": c["label"],  # 0~9
             "augmentations": [cut_8x8_to_2x2(a*(2*np.pi)/255) for a in c["augmentations"]]
         })
 
 
     print(patched_img_data["train"][0]["original"])
     print(patched_img_data["train"][0]["original"].shape)
+    print(patched_img_data["train"][0])
 
     with open(os.path.join(data_dir, "tiny-handwritten-with-augmented-as-rotation-angles-patches.pkl"), 'wb') as f:
         pickle.dump(patched_img_data, f)
