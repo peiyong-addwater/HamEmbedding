@@ -55,8 +55,12 @@ def operator_2_norm(R):
     """
     return np.sqrt(np.trace(R.conjugate().transpose() @ R))
 
-def complexMatrixDiff(A, B):
-    return np.real_if_close(operator_2_norm(A - B))
+def complexMatrixSim(A, B):
+    norm = np.real_if_close(operator_2_norm(A - B))
+    distance = 1-np.exp(-norm) # normalise to [0, 1]
+    return 1 - distance
+
+
 
 def createBatches(data, batchSize, seed = 0):
     """
@@ -119,8 +123,28 @@ def getBatchz(
     z_and_indices = dask.compute(z_and_indices)[0]
     res = dict()
     for c in z_and_indices:
-        res[c[1]] = c[0] # c[1] is the index, c[0] is the z
+        res[c[1]+1] = c[0] # c[1] is the index, needs to start from 1 for the convenience of loss calculation, c[0] is the z
     return res
+
+def lij(res_dict, i, j, tau = 1):
+    zi = res_dict[i]
+    zj = res_dict[j]
+    numerator = np.exp(complexMatrixSim(zi, zj)/tau)
+    denominator = 0
+    for k in res_dict.keys():
+        if k!=i:
+            zk = res_dict[k]
+            denominator += np.exp(complexMatrixSim(zi, zk)/tau)
+    return -np.log(numerator/denominator)
+
+def L(res_dict, tau = 1):
+    loss = 0
+    batch_size = len(res_dict)//2
+    assert batch_size == len(res_dict)/2
+    for k in range(1, batch_size+1):
+        loss += lij(res_dict, 2*k-1, 2*k, tau)
+        loss += lij(res_dict, 2*k, 2*k-1, tau)
+    return loss/(2*batch_size)
 
 
 
@@ -131,14 +155,40 @@ if __name__ == "__main__":
     num_four_patch_d_and_r_repetitions = 2
     num_two_patch_2_q_pqc_layers = 1
     num_finishing_4q_layers = 1
+    shots = 100
+    n_shadows = 50
+    shadow_type = "pauli"
+    hyperparameters = {
+        "num_single_patch_data_reuploading_layers": num_single_patch_data_reuploading_layers,
+        "num_single_patch_d_and_r_repetitions": num_single_patch_d_and_r_repetitions,
+        "num_four_patch_d_and_r_repetitions": num_four_patch_d_and_r_repetitions,
+        "num_two_patch_2_q_pqc_layers": num_two_patch_2_q_pqc_layers,
+        "num_finishing_4q_layers": num_finishing_4q_layers,
+        "shots": shots,
+        "n_shadows": n_shadows,
+        "shadow_type": shadow_type
+    }
+
     single_patch_encoding_parameter_dim = 6 * num_single_patch_data_reuploading_layers * num_single_patch_d_and_r_repetitions
     single_patch_d_and_r_phase_parameter_dim = num_single_patch_d_and_r_repetitions
     four_patch_d_and_r_phase_parameter_dim = num_four_patch_d_and_r_repetitions
     two_patch_2_q_pqc_parameter_dim = 6 * num_two_patch_2_q_pqc_layers
     finishing_4q_layers_dim = 12 * num_finishing_4q_layers  # finishing_layer_parameter
+
     TOTAL_PARAM_DIM = single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim + two_patch_2_q_pqc_parameter_dim + finishing_4q_layers_dim
+
     print("Total number of parameters:", TOTAL_PARAM_DIM)
-    init_param = np.random.uniform(0, 2 * np.pi, TOTAL_PARAM_DIM)
+
+    curr_t = nowtime()
+    save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_classical_shadow_training_result.json"
+    checkpointfile = None
+    if checkpointfile is not None:
+        with open(checkpointfile, 'r') as f:
+            checkpoint = json.load(f)
+            print("Loaded checkpoint file: " + checkpointfile)
+        params = np.array(checkpoint['params'])
+    else:
+        params = np.random.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
     batch_size = 2
     # Load data
     with open(DATA_FILE, "rb") as f:
@@ -146,7 +196,7 @@ if __name__ == "__main__":
     batches = createBatches(data, batch_size, seed=1701)
     zs = getBatchz(
         batches[0],
-        init_param,
+        params,
         num_single_patch_data_reuploading_layers,
         num_single_patch_d_and_r_repetitions,
         num_four_patch_d_and_r_repetitions,
@@ -154,12 +204,18 @@ if __name__ == "__main__":
         num_finishing_4q_layers,
         device_backend=Aer.get_backend('aer_simulator'),
         simulation = True,
-        shadow_type = "pauli",
-        shots = 100,
-        n_shadows = 50,
+        shadow_type = shadow_type,
+        shots = shots,
+        n_shadows = n_shadows,
         parallel = True,
         seed = 1701
     )
-    print(zs)
+    def train_model(
+            batches,
+            n_epoches,
+            starting_point
+    ):
+        pass
+
 
 
