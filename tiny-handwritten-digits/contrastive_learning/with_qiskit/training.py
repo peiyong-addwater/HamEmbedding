@@ -60,7 +60,38 @@ def complexMatrixSim(A, B):
     distance = 1-np.exp(-norm) # normalise to [0, 1]
     return 1 - distance
 
+def SPSAGradient(x_center,k, f, c=0.2, alpha=0.602, gamma=0.101, A=None, a=None, maxiter=None):
+    """
 
+    :param x_center:
+    :param k:
+    :param f: the cost function. Must only have one argument, which is the parameters, and the output should be a scalar
+    :param c:
+    :param alpha:
+    :param gamma:
+    :param A:
+    :param a:
+    :param maxiter:
+    :return:
+    """
+    if not maxiter and not A:
+        raise TypeError("One of the parameters maxiter or A must be provided.")
+    if not A:
+        A = maxiter * 0.1
+    if not a:
+        a = 0.05 * (A + 1) ** alpha
+    ck = c / k ** gamma
+    delta = np.random.choice([-1, 1], size=x_center.shape)
+    multiplier = ck * delta
+    thetaplus = np.array(x_center) + multiplier
+    thetaminus = np.array(x_center) - multiplier
+    # the output of the cost function should be a scalar
+    yplus = f(thetaplus)
+    yminus = f(thetaminus)
+    grad = [(yplus - yminus) / (2 * ck * di) for di in delta]
+    # Clip gradient
+    grad = np.clip(grad, -np.pi, np.pi)
+    return grad
 
 def createBatches(data, batchSize, seed = 0):
     """
