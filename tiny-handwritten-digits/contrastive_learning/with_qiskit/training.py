@@ -93,6 +93,8 @@ def SPSAGradient(x_center,k, f, c=0.2, alpha=0.602, gamma=0.101, A=None, a=None,
     grad = np.clip(grad, -np.pi, np.pi)
     return grad
 
+
+
 def createBatches(data, batchSize, seed = 0):
     """
     Create batches of data.
