@@ -271,7 +271,7 @@ if __name__ == "__main__":
     save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_classical_shadow_training_result.json"
     checkpointfile = None
     # hyperparameters
-    batch_size = 10
+    batch_size = 50
     val_ratio = 0.2
     n_batches = 10
     num_single_patch_data_reuploading_layers = 1
@@ -280,7 +280,7 @@ if __name__ == "__main__":
     num_two_patch_2_q_pqc_layers = 1
     num_finishing_4q_layers = 1
     shots = 10
-    n_shadows = 20
+    n_shadows = 5
     shadow_type = "clifford"
     init_lr = 1e-1
     beta_1 = 0.9
