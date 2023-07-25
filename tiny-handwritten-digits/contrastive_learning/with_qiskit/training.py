@@ -290,6 +290,7 @@ if __name__ == "__main__":
     alpha=0.602
     gamma=0.101
     maxiter=100
+    simulation = True
     hyperparameters = {
         "num_single_patch_data_reuploading_layers": num_single_patch_data_reuploading_layers,
         "num_single_patch_d_and_r_repetitions": num_single_patch_d_and_r_repetitions,
@@ -299,6 +300,7 @@ if __name__ == "__main__":
         "shots": shots,
         "n_shadows": n_shadows,
         "shadow_type": shadow_type,
+        "simulation": simulation,
         "init_lr": init_lr,
         "beta_1": beta_1,
         "beta_2": beta_2,
@@ -374,9 +376,116 @@ if __name__ == "__main__":
         train_loss_list=[]
         val_loss_list=[]
         test_loss_list=[]
+        all_optimisation_iterations_loss_list = []
         train_start = time.time()
+        lr = init_lr
+        params = starting_point
         for epoch in range(n_epoches):
             epoch_start = time.time()
+            batch_loss_list = []
+            for batchid in len(train_batches):
+                batch_start_time = time.time()
+                batch = train_batches[batchid]
+                costfn = lambda x: batchCost(
+                    x,
+                    batch,
+                    num_single_patch_data_reuploading_layers,
+                    num_single_patch_d_and_r_repetitions,
+                    num_four_patch_d_and_r_repetitions,
+                    num_two_patch_2_q_pqc_layers,
+                    num_finishing_4q_layers,
+                    device_backend,
+                    simulation,
+                    shadow_type,
+                    shots,
+                    n_shadows,
+                    parallel,
+                    seed,
+                    tau
+                )
+                params, current_obj = AdamUpdateWithSPSAGrad(
+                    params,
+                    optimisation_counter,
+                    costfn,
+                    lr,
+                    beta_1,
+                    beta_2,
+                    noise_factor,
+                    eps,
+                    maxiter,
+                    amsgrad,
+                    c,
+                    alpha,
+                    gamma,
+                    A,
+                    a
+                )
+                batch_loss_list.append(current_obj)
+                optimisation_counter += 1
+                batch_end_time = time.time()
+                batch_time = batch_end_time-batch_start_time
+                print(f"----Training at Epoch {epoch+1}, Batch {batchid+1}/{len(train_batches)}, Objective = {np.round(current_obj, 4)}, Batch Time = {np.round(batch_time, 4)}")
+            epoch_end_1 = time.time()
+            epoch_time_1 = epoch_end_1-epoch_start
+            all_optimisation_iterations_loss_list.extend(batch_loss_list)
+            batch_avg_loss = np.mean(batch_loss_list)
+            train_loss_list.append(batch_avg_loss)
+            print(f"Training at Epoch {epoch+1}, Objective = {np.round(batch_avg_loss, 4)}, Train Epoch Time = {np.round(epoch_time_1, 4)}")
+            if val_batches is not None:
+                # concatenate all the batches together
+                val_batch = []
+                for batch in val_batches:
+                    val_batch.extend(batch)
+                val_costfn = lambda x: batchCost(
+                    x,
+                    val_batch,
+                    num_single_patch_data_reuploading_layers,
+                    num_single_patch_d_and_r_repetitions,
+                    num_four_patch_d_and_r_repetitions,
+                    num_two_patch_2_q_pqc_layers,
+                    num_finishing_4q_layers,
+                    device_backend,
+                    simulation,
+                    shadow_type,
+                    shots,
+                    n_shadows,
+                    parallel,
+                    seed,
+                    tau
+                )
+                val_loss = val_costfn(params)
+                val_loss_list.append(val_loss)
+                epoch_time_2 = time.time()-epoch_end_1
+                print(f"Validation at Epoch {epoch+1}, Objective = {np.round(val_loss, 4)}, Val Time = {np.round(epoch_time_2, 4)}")
+            if test_batches is not None:
+                # concatenate all the batches together
+                test_batch = []
+                for batch in test_batches:
+                    test_batch.extend(batch)
+                test_costfn = lambda x: batchCost(
+                    x,
+                    test_batch,
+                    num_single_patch_data_reuploading_layers,
+                    num_single_patch_d_and_r_repetitions,
+                    num_four_patch_d_and_r_repetitions,
+                    num_two_patch_2_q_pqc_layers,
+                    num_finishing_4q_layers,
+                    device_backend,
+                    simulation,
+                    shadow_type,
+                    shots,
+                    n_shadows,
+                    parallel,
+                    seed,
+                    tau
+                )
+                test_loss = test_costfn(params)
+                test_loss_list.append(test_loss)
+                epoch_time_3 = time.time()-epoch_end_1
+                print(f"Testing at Epoch {epoch+1}, Objective = {np.round(test_loss, 4)}, Test Time = {np.round(epoch_time_3, 4)}")
+            epoch_end = time.time()
+            epoch_time = epoch_end-epoch_start
+            print(f"Epoch {epoch+1} Total Time = {np.round(epoch_time, 4)}")
 
 
 
