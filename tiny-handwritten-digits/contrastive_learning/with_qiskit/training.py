@@ -226,9 +226,47 @@ def L(res_dict, tau = 1):
     return loss/(2*batch_size)
 
 
+def batchCost(
+        parameters: Union[ParameterVector, np.ndarray],
+        batch,
+        num_single_patch_data_reuploading_layers: int,
+        num_single_patch_d_and_r_repetitions: int,
+        num_four_patch_d_and_r_repetitions: int,
+        num_two_patch_2_q_pqc_layers: int,
+        num_finishing_4q_layers: int,
+        device_backend=Aer.get_backend('aer_simulator'),
+        simulation:bool=True,
+        shadow_type = "pauli",
+        shots = 100,
+        n_shadows = 50,
+        parallel = True,
+        seed = 1701,
+        tau = 1
+):
+    res_dict = getBatchz(
+        batch,
+        parameters,
+        num_single_patch_data_reuploading_layers,
+        num_single_patch_d_and_r_repetitions,
+        num_four_patch_d_and_r_repetitions,
+        num_two_patch_2_q_pqc_layers,
+        num_finishing_4q_layers,
+        device_backend,
+        simulation,
+        shadow_type,
+        shots,
+        n_shadows,
+        parallel,
+        seed
+    )
+    return L(res_dict, tau)
 
 if __name__ == "__main__":
+    curr_t = nowtime()
+    save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_classical_shadow_training_result.json"
+    checkpointfile = None
     # hyperparameters
+    batch_size = 20
     num_single_patch_data_reuploading_layers = 1
     num_single_patch_d_and_r_repetitions = 2
     num_four_patch_d_and_r_repetitions = 2
@@ -237,6 +275,15 @@ if __name__ == "__main__":
     shots = 100
     n_shadows = 50
     shadow_type = "pauli"
+    init_lr = 1e-3
+    beta_1 = 0.9
+    beta_2 = 0.999
+    noise_factor = 1e-8
+    eps = 1e-8
+    c=0.2
+    alpha=0.602
+    gamma=0.101
+    maxiter=100
     hyperparameters = {
         "num_single_patch_data_reuploading_layers": num_single_patch_data_reuploading_layers,
         "num_single_patch_d_and_r_repetitions": num_single_patch_d_and_r_repetitions,
@@ -245,7 +292,19 @@ if __name__ == "__main__":
         "num_finishing_4q_layers": num_finishing_4q_layers,
         "shots": shots,
         "n_shadows": n_shadows,
-        "shadow_type": shadow_type
+        "shadow_type": shadow_type,
+        "init_lr": init_lr,
+        "beta_1": beta_1,
+        "beta_2": beta_2,
+        "noise_factor": noise_factor,
+        "eps": eps,
+        "c": c,
+        "alpha": alpha,
+        "gamma": gamma,
+        "maxiter": maxiter,
+        "previous_checkpoint": checkpointfile,
+        "save_filename": save_filename,
+        "batch_size": batch_size
     }
 
     single_patch_encoding_parameter_dim = 6 * num_single_patch_data_reuploading_layers * num_single_patch_d_and_r_repetitions
@@ -257,10 +316,6 @@ if __name__ == "__main__":
     TOTAL_PARAM_DIM = single_patch_encoding_parameter_dim + single_patch_d_and_r_phase_parameter_dim + four_patch_d_and_r_phase_parameter_dim + two_patch_2_q_pqc_parameter_dim + finishing_4q_layers_dim
 
     print("Total number of parameters:", TOTAL_PARAM_DIM)
-
-    curr_t = nowtime()
-    save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_classical_shadow_training_result.json"
-    checkpointfile = None
     if checkpointfile is not None:
         with open(checkpointfile, 'r') as f:
             checkpoint = json.load(f)
@@ -268,33 +323,42 @@ if __name__ == "__main__":
         params = np.array(checkpoint['params'])
     else:
         params = np.random.uniform(low=-np.pi, high=np.pi, size=TOTAL_PARAM_DIM)
-    batch_size = 2
+
     # Load data
     with open(DATA_FILE, "rb") as f:
         data = pickle.load(f)
     batches = createBatches(data, batch_size, seed=1701)
-    zs = getBatchz(
-        batches[0],
-        params,
-        num_single_patch_data_reuploading_layers,
-        num_single_patch_d_and_r_repetitions,
-        num_four_patch_d_and_r_repetitions,
-        num_two_patch_2_q_pqc_layers,
-        num_finishing_4q_layers,
-        device_backend=Aer.get_backend('aer_simulator'),
-        simulation = True,
-        shadow_type = shadow_type,
-        shots = shots,
-        n_shadows = n_shadows,
-        parallel = True,
-        seed = 1701
-    )
-    def train_model(
-            batches,
+
+    def train_model_adam_spsa(
+            data_batches,
             n_epoches,
-            starting_point
+            starting_point,
+            num_single_patch_data_reuploading_layers: int,
+            num_single_patch_d_and_r_repetitions: int,
+            num_four_patch_d_and_r_repetitions: int,
+            num_two_patch_2_q_pqc_layers: int,
+            num_finishing_4q_layers: int,
+            init_lr: float,
+            beta_1: float,
+            beta_2: float,
+            noise_factor: float,
+            eps: float,
+            amsgrad: bool=True,
+            c=0.2,
+            alpha=0.602,
+            gamma=0.101,
+            A=None,
+            a=None,
+            tau=1,
+            device_backend=Aer.get_backend('aer_simulator'),
+            simulation: bool = True,
+            shadow_type="pauli",
+            shots=100,
+            n_shadows=50,
+            parallel=True,
+            seed=1701
     ):
-        pass
+        maxiter = len(data_batches)*n_epoches
 
 
 
