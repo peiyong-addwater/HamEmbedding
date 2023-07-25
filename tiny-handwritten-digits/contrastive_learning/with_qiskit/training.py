@@ -279,8 +279,8 @@ if __name__ == "__main__":
     num_four_patch_d_and_r_repetitions = 2
     num_two_patch_2_q_pqc_layers = 1
     num_finishing_4q_layers = 1
-    shots = 50
-    n_shadows = 10
+    shots = 100
+    n_shadows = 20
     shadow_type = "pauli"
     init_lr = 1e-1
     beta_1 = 0.9
