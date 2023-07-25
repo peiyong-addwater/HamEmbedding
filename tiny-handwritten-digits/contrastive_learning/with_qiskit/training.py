@@ -279,10 +279,10 @@ if __name__ == "__main__":
     num_four_patch_d_and_r_repetitions = 2
     num_two_patch_2_q_pqc_layers = 1
     num_finishing_4q_layers = 1
-    shots = 100
+    shots = 50
     n_shadows = 10
     shadow_type = "pauli"
-    init_lr = 1e-3
+    init_lr = 1e-1
     beta_1 = 0.9
     beta_2 = 0.999
     noise_factor = 1e-8
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     c=0.2
     alpha=0.602
     gamma=0.101
-    maxiter=10
+    maxiter=1
     simulation = True
     hyperparameters = {
         "num_single_patch_data_reuploading_layers": num_single_patch_data_reuploading_layers,
