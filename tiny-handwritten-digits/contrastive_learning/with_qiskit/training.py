@@ -272,8 +272,8 @@ if __name__ == "__main__":
     checkpointfile = None
     # hyperparameters
     batch_size = 20
-    val_ratio = 0.8
-    n_batches = 1000
+    val_ratio = 0.2
+    n_batches = 100
     num_single_patch_data_reuploading_layers = 1
     num_single_patch_d_and_r_repetitions = 2
     num_four_patch_d_and_r_repetitions = 2
