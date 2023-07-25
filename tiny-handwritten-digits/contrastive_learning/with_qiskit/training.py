@@ -279,7 +279,7 @@ if __name__ == "__main__":
     num_two_patch_2_q_pqc_layers = 1
     num_finishing_4q_layers = 1
     shots = 100
-    n_shadows = 50
+    n_shadows = 10
     shadow_type = "pauli"
     init_lr = 1e-3
     beta_1 = 0.9
@@ -518,8 +518,17 @@ if __name__ == "__main__":
         device_backend=Aer.get_backend('aer_simulator'),
         starting_point=params,
         **train_kwargs
-
     )
+    # save the results
+    with open(save_filename, 'w') as f:
+        json.dump({
+            "hyperparameters": hyperparameters,
+            "train_loss_list": train_loss_list,
+            "val_loss_list": val_loss_list,
+            "test_loss_list": test_loss_list,
+            "all_optimisation_iterations_loss_list": all_optimisation_iterations_loss_list,
+            "params": params
+        }, f, cls=NpEncoder)
 
 
 
