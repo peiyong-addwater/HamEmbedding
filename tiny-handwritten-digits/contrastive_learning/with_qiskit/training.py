@@ -361,8 +361,8 @@ if __name__ == "__main__":
     with open(DATA_FILE, "rb") as f:
         data = pickle.load(f)
     train_val_batches = createBatches(data, batch_size, seed=1701, n_batches=n_batches)
-    train_batches = train_val_batches[:math.floor(len(train_val_batches)*val_ratio)]
-    val_batches = train_val_batches[math.floor(len(train_val_batches)*val_ratio):]
+    train_batches = train_val_batches[:math.floor(len(train_val_batches)*(1-val_ratio))]
+    val_batches = train_val_batches[math.floor(len(train_val_batches)*(1-val_ratio)):]
     test_batches = createBatches(data, batch_size, seed=1701, type="test", n_batches=math.floor(n_batches*val_ratio))
 
     def train_model_adam_spsa(
