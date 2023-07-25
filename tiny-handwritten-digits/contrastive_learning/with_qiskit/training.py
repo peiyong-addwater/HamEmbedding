@@ -271,9 +271,9 @@ if __name__ == "__main__":
     save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_classical_shadow_training_result.json"
     checkpointfile = "20230725-164330_8q_circ_4q_rep_SimCLR_classical_shadow_training_result.json"
     # hyperparameters
-    batch_size = 10
+    batch_size = 300
     val_ratio = 0.2
-    n_batches = 100
+    n_batches = 10
     num_single_patch_data_reuploading_layers = 1
     num_single_patch_d_and_r_repetitions = 2
     num_four_patch_d_and_r_repetitions = 2
