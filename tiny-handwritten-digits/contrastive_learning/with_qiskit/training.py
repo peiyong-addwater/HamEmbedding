@@ -269,11 +269,11 @@ def batchCost(
 if __name__ == "__main__":
     curr_t = nowtime()
     save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_classical_shadow_training_result.json"
-    checkpointfile = None
+    checkpointfile = "20230725-164330_8q_circ_4q_rep_SimCLR_classical_shadow_training_result.json"
     # hyperparameters
     batch_size = 10
     val_ratio = 0.2
-    n_batches = 10
+    n_batches = 100
     num_single_patch_data_reuploading_layers = 1
     num_single_patch_d_and_r_repetitions = 2
     num_four_patch_d_and_r_repetitions = 2
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     c=0.2
     alpha=0.602
     gamma=0.101
-    maxiter=1
+    maxiter=5
     simulation = True
     hyperparameters = {
         "num_single_patch_data_reuploading_layers": num_single_patch_data_reuploading_layers,
@@ -533,7 +533,7 @@ if __name__ == "__main__":
             "test_loss_list": test_loss_list,
             "all_optimisation_iterations_loss_list": all_optimisation_iterations_loss_list,
             "params": params
-        }, f, cls=NpEncoder)
+        }, f, cls=NpEncoder, indent=4)
 
 
 
