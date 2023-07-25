@@ -279,8 +279,8 @@ if __name__ == "__main__":
     num_four_patch_d_and_r_repetitions = 2
     num_two_patch_2_q_pqc_layers = 1
     num_finishing_4q_layers = 1
-    shots = 10
-    n_shadows = 5
+    shots = 5
+    n_shadows = 3
     shadow_type = "clifford"
     init_lr = 1e-1
     beta_1 = 0.9
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     c=0.2
     alpha=0.602
     gamma=0.101
-    maxiter=5
+    maxiter= 10
     simulation = True
     hyperparameters = {
         "num_single_patch_data_reuploading_layers": num_single_patch_data_reuploading_layers,
