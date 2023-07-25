@@ -159,6 +159,7 @@ def createBatches(data, batchSize, seed = 0, type = "train", n_batches = None):
         aug_data = []
         for j in range(len(batch_data_dict)):
             random_chosen_two = rng.choice(batch_data_dict[j]['augmentations'], 2, replace=False)
+            # each batch of batches has 2N augmented images for batch size N
             aug_data.append(random_chosen_two[0])
             aug_data.append(random_chosen_two[1])
         batches.append(aug_data)
@@ -184,7 +185,7 @@ def getBatchz(
         seed = 1701
 
 ):
-    datasize = len(batch) # 2*batch_size
+    datasize = len(batch)
     parallel_args_list = zip(
         batch,
         [parameters] * datasize,
@@ -312,7 +313,9 @@ if __name__ == "__main__":
         "n_epoches": maxiter,
         "previous_checkpoint": checkpointfile,
         "save_filename": save_filename,
-        "batch_size": batch_size
+        "batch_size": batch_size,
+        "A": None,
+        "a": None
     }
     train_kwargs = {
         "num_single_patch_data_reuploading_layers": num_single_patch_data_reuploading_layers,
@@ -332,7 +335,9 @@ if __name__ == "__main__":
         "c": c,
         "alpha": alpha,
         "gamma": gamma,
-        "n_epoches": maxiter
+        "n_epoches": maxiter,
+        "A": None,
+        "a": None
     }
 
     single_patch_encoding_parameter_dim = 6 * num_single_patch_data_reuploading_layers * num_single_patch_d_and_r_repetitions
@@ -361,9 +366,9 @@ if __name__ == "__main__":
     test_batches = createBatches(data, batch_size, seed=1701, type="test", n_batches=math.floor(n_batches*val_ratio))
 
     def train_model_adam_spsa(
-            train_batches:List[np.ndarray],
-            val_batches:Optional[List[np.ndarray]]=None,
-            test_batches:Optional[List[np.ndarray]]=None,
+            train_batches:List[List[np.ndarray]],
+            val_batches:Optional[List[List[np.ndarray]]]=None,
+            test_batches:Optional[List[List[np.ndarray]]]=None,
             n_epoches=100,
             starting_point=params,
             num_single_patch_data_reuploading_layers: int=1,
