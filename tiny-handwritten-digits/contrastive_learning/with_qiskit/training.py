@@ -4,7 +4,7 @@ import math
 import numpy as np
 import dill
 from multiprocessing import Process, Queue
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Callable
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit import Aer
 from qiskit.compiler import transpile
@@ -60,7 +60,17 @@ def complexMatrixSim(A, B):
     distance = 1-np.exp(-norm) # normalise to [0, 1]
     return 1 - distance
 
-def SPSAGradient(x_center,k, f, c=0.2, alpha=0.602, gamma=0.101, A=None, a=None, maxiter=None):
+def SPSAGradient(
+        x_center:np.ndarray,
+        k:int,
+        f:Callable[[np.ndarray], float],
+        c=0.2,
+        alpha=0.602,
+        gamma=0.101,
+        A=None,
+        a=None,
+        maxiter=None
+):
     """
 
     :param x_center:
@@ -93,7 +103,43 @@ def SPSAGradient(x_center,k, f, c=0.2, alpha=0.602, gamma=0.101, A=None, a=None,
     grad = np.clip(grad, -np.pi, np.pi)
     return grad
 
-
+def AdamUpdateWithSPSAGrad(
+        x_center:np.ndarray,
+        t:int,
+        f:Callable[[np.ndarray], float],
+        lr:float,
+        beta_1:float,
+        beta_2:float,
+        noise_factor:float,
+        eps:float,
+        maxiter:Union[int, None] = None,
+        amsgrad=True,
+        c=0.2,
+        alpha=0.602,
+        gamma=0.101,
+        A=None,
+        a=None,
+):
+    m = np.zeros_like(x_center)
+    v = np.zeros_like(x_center)
+    if amsgrad:
+        v_eff = np.zeros_like(x_center)
+    params = params_new = x_center
+    derivative = SPSAGradient(params, t, f, c, alpha, gamma, A, a, maxiter)
+    m = beta_1 * m + (1 - beta_1) * derivative
+    v = beta_2 * v + (1 - beta_2) * (derivative ** 2)
+    lr_eff = lr * np.sqrt(1 - beta_2 ** t) / (1 - beta_1 ** t)
+    if not amsgrad:
+        params_new = params-lr_eff*m.flatten()/(
+            np.sqrt(v.flatten())+noise_factor
+        )
+    else:
+        v_eff = np.maximum(v_eff, v)
+        params_new = params-lr_eff*m.flatten()/(
+            np.sqrt(v_eff.flatten())+noise_factor
+        )
+    current_obj = f(params)
+    return params_new, current_obj
 
 def createBatches(data, batchSize, seed = 0):
     """
