@@ -4,7 +4,7 @@ import math
 import numpy as np
 import dill
 from multiprocessing import Process, Queue
-from typing import List, Tuple, Union, Callable
+from typing import List, Tuple, Union, Callable, Optional
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit import Aer
 from qiskit.compiler import transpile
@@ -141,7 +141,7 @@ def AdamUpdateWithSPSAGrad(
     current_obj = f(params)
     return params_new, current_obj
 
-def createBatches(data, batchSize, seed = 0):
+def createBatches(data, batchSize, seed = 0, type = "train", n_batches = None):
     """
     Create batches of data.
 
@@ -150,9 +150,10 @@ def createBatches(data, batchSize, seed = 0):
     :param seed: The random seed.
     :return: A list of batches.
     """
-    train_data = data["train"]
+    train_data = data[type]
     batches = []
     rng = np.random.default_rng(seed)
+    np.random.shuffle(train_data)
     for i in range(0, len(train_data), batchSize):
         batch_data_dict = train_data[i:i+batchSize]
         aug_data = []
@@ -161,6 +162,9 @@ def createBatches(data, batchSize, seed = 0):
             aug_data.append(random_chosen_two[0])
             aug_data.append(random_chosen_two[1])
         batches.append(aug_data)
+        if n_batches is not None:
+            if len(batches) == n_batches:
+                break
     return batches
 
 def getBatchz(
@@ -267,6 +271,8 @@ if __name__ == "__main__":
     checkpointfile = None
     # hyperparameters
     batch_size = 20
+    val_ratio = 0.8
+    n_batches = 100
     num_single_patch_data_reuploading_layers = 1
     num_single_patch_d_and_r_repetitions = 2
     num_four_patch_d_and_r_repetitions = 2
@@ -327,22 +333,27 @@ if __name__ == "__main__":
     # Load data
     with open(DATA_FILE, "rb") as f:
         data = pickle.load(f)
-    batches = createBatches(data, batch_size, seed=1701)
+    train_val_batches = createBatches(data, batch_size, seed=1701, n_batches=n_batches)
+    train_batches = train_val_batches[:math.floor(len(train_val_batches)*val_ratio)]
+    val_batches = train_val_batches[math.floor(len(train_val_batches)*val_ratio):]
+    test_batches = createBatches(data, batch_size, seed=1701, type="test", n_batches=math.floor(n_batches*val_ratio))
 
     def train_model_adam_spsa(
-            data_batches,
-            n_epoches,
-            starting_point,
-            num_single_patch_data_reuploading_layers: int,
-            num_single_patch_d_and_r_repetitions: int,
-            num_four_patch_d_and_r_repetitions: int,
-            num_two_patch_2_q_pqc_layers: int,
-            num_finishing_4q_layers: int,
-            init_lr: float,
-            beta_1: float,
-            beta_2: float,
-            noise_factor: float,
-            eps: float,
+            train_batches:List[np.ndarray],
+            val_batches:Optional[List[np.ndarray]]=None,
+            test_batches:Optional[List[np.ndarray]]=None,
+            n_epoches=100,
+            starting_point=params,
+            num_single_patch_data_reuploading_layers: int=1,
+            num_single_patch_d_and_r_repetitions: int=2,
+            num_four_patch_d_and_r_repetitions: int=2,
+            num_two_patch_2_q_pqc_layers: int=1,
+            num_finishing_4q_layers: int=1,
+            init_lr: float=1e-3,
+            beta_1: float=0.9,
+            beta_2: float=0.999,
+            noise_factor: float=1e-8,
+            eps: float=1e-8,
             amsgrad: bool=True,
             c=0.2,
             alpha=0.602,
@@ -358,7 +369,14 @@ if __name__ == "__main__":
             parallel=True,
             seed=1701
     ):
-        maxiter = len(data_batches)*n_epoches
+        maxiter = len(train_batches)*n_epoches
+        optimisation_counter = 1 # k in spsa, t in adam
+        train_loss_list=[]
+        val_loss_list=[]
+        test_loss_list=[]
+        train_start = time.time()
+        for epoch in range(n_epoches):
+            epoch_start = time.time()
 
 
 
