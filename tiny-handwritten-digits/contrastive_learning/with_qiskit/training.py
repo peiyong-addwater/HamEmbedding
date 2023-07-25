@@ -309,10 +309,30 @@ if __name__ == "__main__":
         "c": c,
         "alpha": alpha,
         "gamma": gamma,
-        "maxiter": maxiter,
+        "n_epoches": maxiter,
         "previous_checkpoint": checkpointfile,
         "save_filename": save_filename,
         "batch_size": batch_size
+    }
+    train_kwargs = {
+        "num_single_patch_data_reuploading_layers": num_single_patch_data_reuploading_layers,
+        "num_single_patch_d_and_r_repetitions": num_single_patch_d_and_r_repetitions,
+        "num_four_patch_d_and_r_repetitions": num_four_patch_d_and_r_repetitions,
+        "num_two_patch_2_q_pqc_layers": num_two_patch_2_q_pqc_layers,
+        "num_finishing_4q_layers": num_finishing_4q_layers,
+        "shots": shots,
+        "n_shadows": n_shadows,
+        "shadow_type": shadow_type,
+        "simulation": simulation,
+        "init_lr": init_lr,
+        "beta_1": beta_1,
+        "beta_2": beta_2,
+        "noise_factor": noise_factor,
+        "eps": eps,
+        "c": c,
+        "alpha": alpha,
+        "gamma": gamma,
+        "n_epoches": maxiter
     }
 
     single_patch_encoding_parameter_dim = 6 * num_single_patch_data_reuploading_layers * num_single_patch_d_and_r_repetitions
@@ -383,7 +403,7 @@ if __name__ == "__main__":
         for epoch in range(n_epoches):
             epoch_start = time.time()
             batch_loss_list = []
-            for batchid in len(train_batches):
+            for batchid in range(len(train_batches)):
                 batch_start_time = time.time()
                 batch = train_batches[batchid]
                 costfn = lambda x: batchCost(
@@ -486,6 +506,20 @@ if __name__ == "__main__":
             epoch_end = time.time()
             epoch_time = epoch_end-epoch_start
             print(f"Epoch {epoch+1} Total Time = {np.round(epoch_time, 4)}")
+        train_end = time.time()
+        train_time = train_end-train_start
+        print(f"Training Total Time = {np.round(train_time, 4)}")
+        return params, train_loss_list, val_loss_list, test_loss_list, all_optimisation_iterations_loss_list
+
+    params, train_loss_list, val_loss_list, test_loss_list, all_optimisation_iterations_loss_list = train_model_adam_spsa(
+        train_batches=train_batches,
+        val_batches=val_batches,
+        test_batches=test_batches,
+        device_backend=Aer.get_backend('aer_simulator'),
+        starting_point=params,
+        **train_kwargs
+
+    )
 
 
 
