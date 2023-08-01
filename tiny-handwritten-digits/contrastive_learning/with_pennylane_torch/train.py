@@ -67,9 +67,9 @@ WIRES = [0, 1, 2, 3, 4, 5, 6, 7]
 dev = qml.device("default.mixed", wires=WIRES)
 
 @qml.qnode(dev, interface="torch")
-@qml.transforms.merge_rotations(atol=1e-8, include_gates=None)
-@qml.transforms.cancel_inverses
-@qml.transforms.commute_controlled(direction="right")
+#@qml.transforms.merge_rotations(atol=1e-8, include_gates=None)
+#@qml.transforms.cancel_inverses
+#@qml.transforms.commute_controlled(direction="right")
 def get_z(
         patched_img: torch.Tensor,
         single_patch_encoding_parameter: torch.Tensor,
@@ -163,9 +163,9 @@ if __name__ == "__main__":
     save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_probs_z_training_result.json"
     checkpointfile = None
     # hyperparameters
-    batch_size = 5 # Memory occupied: ~14 GB when just finished the first batch, then rise up to ~21 GB and stay there
+    batch_size = 5 # Memory occupied: ~14.9 GB when just finished the first batch, then rise up to ~23 GB and stay there
     val_ratio = 0.2
-    n_batches = 100
+    n_batches = 50
     init_lr = 1e-1
     maxiter = 100
     n_data_reuploading_layers = 1
@@ -230,6 +230,7 @@ if __name__ == "__main__":
                 loss = batch_cost(params, batch)
                 loss.backward()
                 opt.step()
+                #print(params)
                 batch_loss_list.append(loss.item())
                 batch_end_time = time.time()
                 batch_time = batch_end_time - batch_start_time
@@ -263,7 +264,7 @@ if __name__ == "__main__":
                     test_loss_list.append(batch_avg_loss)
                     print(f"Testing at Epoch {epoch + 1}, Objective = {np.round(batch_avg_loss, 4)}")
             epoch_end_2 = time.time()
-            epoch_time_2 = epoch_end_2 - epoch_end_1
+            epoch_time_2 = epoch_end_2 - train_start
             print(f"Epoch {epoch + 1} Time = {np.round(epoch_time_2, 4)}")
         train_end = time.time()
         train_time = train_end - train_start
@@ -301,6 +302,7 @@ if __name__ == "__main__":
     }
     with open(save_filename, 'w') as f:
         json.dump(res_dict, f, cls=NpEncoder, indent=4)
+    print("Saved training result to: " + save_filename)
 
 
 
