@@ -47,6 +47,18 @@ def layer(params, j):
 dev = qml.device("default.mixed", wires=3)
 
 @qml.qnode(dev, interface="torch")
+def circuit(x):
+     qml.RX(x, wires=0)
+     return qml.probs(0)
+x = torch.tensor([np.pi / 6, np.pi * 3 / 4, np.pi * 7 / 6])
+print(circuit(x))
+
+
+
+
+
+
+@qml.qnode(dev, interface="torch")
 def circuit(params, A):
 
     # repeatedly apply each layer in the circuit
