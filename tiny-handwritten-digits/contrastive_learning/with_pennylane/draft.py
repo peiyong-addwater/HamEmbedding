@@ -19,9 +19,9 @@ bloch_v = Variable(
 
 # array of Pauli matrices (will be useful later)
 Paulis = Variable(torch.zeros([3, 2, 2], dtype=torch.complex128), requires_grad=False).to(device=torch.device('cuda'))
-Paulis[0] = torch.tensor([[0, 1], [1, 0]]).to(device=torch.device('cuda'))
-Paulis[1] = torch.tensor([[0, -1j], [1j, 0]]).to(device=torch.device('cuda'))
-Paulis[2] = torch.tensor([[1, 0], [0, -1]]).to(device=torch.device('cuda'))
+Paulis[0] = torch.tensor([[0, 1], [1, 0]])
+Paulis[1] = torch.tensor([[0, -1j], [1j, 0]])
+Paulis[2] = torch.tensor([[1, 0], [0, -1]])
 
 # number of qubits in the circuit
 nr_qubits = 3
@@ -29,9 +29,10 @@ nr_qubits = 3
 nr_layers = 2
 
 # randomly initialize parameters from a normal distribution
-params = np.random.normal(0, np.pi, (nr_qubits, nr_layers, 3))
-params = Variable(torch.tensor(params), requires_grad=True)
-
+#params = np.random.normal(0, np.pi, (nr_qubits, nr_layers, 3))
+#params = Variable(torch.tensor(params), requires_grad=True)
+params = torch.randn((nr_qubits, nr_layers, 3), requires_grad=True,  device="cuda")
+print(params.is_leaf)
 # a layer of the circuit ansatz
 def layer(params, j):
     for i in range(nr_qubits):
@@ -43,8 +44,8 @@ def layer(params, j):
     qml.CNOT(wires=[0, 2])
     qml.CNOT(wires=[1, 2])
 
-
 dev = qml.device("default.mixed", wires=3)
+
 @qml.qnode(dev, interface="torch")
 def circuit(params, A):
 
@@ -74,7 +75,7 @@ steps = 200
 # the best parameters along the way
 best_cost = cost_fn(params)
 best_params = np.zeros((nr_qubits, nr_layers, 3))
-params = params.to(device=torch.device('cuda'))
+
 print("Cost after 0 steps is {:.4f}".format(cost_fn(params)))
 
 # optimization begins
