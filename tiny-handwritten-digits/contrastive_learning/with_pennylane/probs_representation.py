@@ -13,13 +13,12 @@ WIRES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 dev = qml.device("default.mixed", wires=WIRES)
 
 @qml.qnode(dev, interface="torch")
-def single_obs_circuit(
+def probs_z(
         patched_img: Union[np.ndarray, torch.Tensor, pnp.ndarray],
         encode_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
         single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
         local_patches_phase_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
-        final_layer_parameters:Optional[Union[np.ndarray, torch.Tensor, pnp.ndarray]] = None,
-        final_layer_type: Optional[str] = "generic"
+        final_layer_parameters:Optional[Union[np.ndarray, torch.Tensor, pnp.ndarray]],
 ):
     """
     The circuit for generating a single snapshot of the Pauli shadow
@@ -38,7 +37,7 @@ def single_obs_circuit(
         single_patch_phase_parameters=single_patch_phase_parameters,
         local_patches_phase_parameters=local_patches_phase_parameters,
         final_layer_parameters=final_layer_parameters,
-        final_layer_type=final_layer_type,
+        final_layer_type='generic',
         wires=WIRES
     )
     return qml.probs(wires=[0,1,2,3])
@@ -64,4 +63,4 @@ if __name__ == '__main__':
     phi = torch.tensor(np.random.randn(4))
     psi = torch.tensor(np.random.randn(2))
     eta = torch.tensor(np.random.rand(12))
-    print(single_obs_circuit(multi_img, theta, phi, psi, eta))
+    print(probs_z(multi_img, theta, phi, psi, eta))
