@@ -164,8 +164,8 @@ if __name__ == "__main__":
     checkpointfile = None
     # hyperparameters
     batch_size = 10 # for 32G total memory, batch size 10 is the maximum, 20.6 sec per batch
-    val_ratio = 0.8
-    n_batches = 300
+    val_ratio = 0.2
+    n_batches = 100
     init_lr = 1e-1
     maxiter = 100
     n_data_reuploading_layers = 1
@@ -219,7 +219,7 @@ if __name__ == "__main__":
         val_loss_list = []
         test_loss_list = []
         all_optimisation_iterations_loss_list = []
-        opt = torch.optim.Adam([params], lr=init_lr)
+        opt = torch.optim.Adam([params], lr=learning_rate)
         for epoch in range(n_epochs):
             epoch_start = time.time()
             batch_loss_list = []
