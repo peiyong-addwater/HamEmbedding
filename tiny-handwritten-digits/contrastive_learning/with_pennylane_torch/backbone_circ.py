@@ -112,7 +112,7 @@ if __name__ == '__main__':
     @qml.qnode(dev, interface='torch')
     def circuit():
         SSLCircFourQubitZ(
-            patches,
+            torch.stack([patches, patches, patches]),
             single_patch_encoding_parameter,
             single_patch_d_and_r_phase_parameter,
             phase_parameter,
