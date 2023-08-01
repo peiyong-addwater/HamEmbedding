@@ -129,15 +129,45 @@ def get_batch_z_serial(
         ))
     return torch.stack(batch_z)
 
+def lij(batch_z, i, j, tau = 1):
+    """
+    :param batch_z: (2*batch_size, 16)
+    :param i: index, starting from 1, according to the SimCLR paper
+    :param j: index, starting from 1, according to the SimCLR paper
+    :param tau: temperature
+    :return:
+    """
+    zi = batch_z[i-1]
+    zj = batch_z[j-1]
+    numerator = torch.exp(prob_z_sim(zi, zj)/tau)
+    denominator = 0
+    for k in range(1, batch_z.shape[0]+1):
+        if k != i:
+            zk = batch_z[k-1]
+            denominator += torch.exp(prob_z_sim(zi, zk)/tau)
+    return -torch.log(numerator/denominator)
+
+def L(batch_z, tau=1):
+    loss = 0
+    batch_size = batch_z.shape[0]//2
+    for k in range(1, batch_size+1):
+        loss += lij(batch_z, 2*k-1, 2*k, tau)
+        loss += lij(batch_z, 2*k, 2*k-1, tau)
+    return loss/(2*batch_size)
+
 
 if __name__ == "__main__":
     import pickle
     import math
     curr_t = nowtime()
-    save_filename = curr_t + "_" + "10q_circ_4q_rep_SimCLR_probs_z_training_result.json"
-    batch_size = 10 # for 32G total memory, batch size 10 is the maximum, 20 sec per batch
+    save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_probs_z_training_result.json"
+    checkpointfile = None
+    # hyperparameters
+    batch_size = 10 # for 32G total memory, batch size 10 is the maximum, 20.6 sec per batch
     val_ratio = 0.8
     n_batches = 300
+    init_lr = 1e-1
+    maxiter = 100
     n_data_reuploading_layers = 1
     n_theta = 6 * n_data_reuploading_layers*2
     n_phi = 2
@@ -145,30 +175,133 @@ if __name__ == "__main__":
     n_xi = 15
     n_eta = 39
     n_params = n_theta + n_phi + n_psai + n_xi + n_eta
+    if checkpointfile is not None:
+        with open(checkpointfile, 'r') as f:
+            checkpoint = json.load(f)
+            print("Loaded checkpoint file: " + checkpointfile)
+        params = torch.tensor(checkpoint['params'], requires_grad=True)
+        n_data_reuploading_layers = checkpoint['n_data_reuploading_layers']
+        n_theta = 6 * n_data_reuploading_layers*2
+        n_params = n_theta + n_phi + n_psai + n_xi + n_eta
+    else:
+        params = torch.randn(n_params, requires_grad=True)
     print("n_params: ", n_params)
-    theta = torch.randn(n_theta, requires_grad=True)
-    phi = torch.randn(n_phi, requires_grad=True)
-    psai = torch.randn(n_psai, requires_grad=True)
-    xi = torch.randn(n_xi, requires_grad=True)
-    eta = torch.randn(n_eta, requires_grad=True)
+
+    def batch_cost(params, batch):
+        output = get_batch_z_serial(
+            batch,
+            params[0:n_theta],
+            params[n_theta:n_theta+n_phi],
+            params[n_theta+n_phi:n_theta+n_phi+n_psai],
+            params[n_theta+n_phi+n_psai:n_theta+n_phi+n_psai+n_xi],
+            params[n_theta+n_phi+n_psai+n_xi:n_theta+n_phi+n_psai+n_xi+n_eta]
+        )
+        return L(output, tau=1)
+
     with open(DATA_FILE, "rb") as f:
         data = pickle.load(f)
     train_val_batches = createBatches(data, batch_size, seed=1701, n_batches=n_batches)
-    print(train_val_batches[0].shape)
     train_batches = train_val_batches[:math.floor(len(train_val_batches)*(1-val_ratio))]
     val_batches = train_val_batches[math.floor(len(train_val_batches)*(1-val_ratio)):]
     test_batches = createBatches(data, batch_size, seed=1701, type="test", n_batches=math.floor(n_batches*val_ratio))
 
-    start_time = time.time()
-    batch_z = get_batch_z_serial(
-            train_val_batches[0],
-            theta,
-            phi,
-            psai,
-            xi,
-            eta
-        )
-    end = time.time()
-    print(batch_z)
-    print(batch_z.shape)
-    print("time elapsed: ", end - start_time)
+    def train_model_autodiff(
+            train_batches: List[torch.Tensor],
+            val_batches: List[torch.Tensor],
+            test_batches: List[torch.Tensor],
+            starting_point: torch.Tensor=params,
+            n_epochs: int=maxiter,
+            learning_rate: float=init_lr
+    ):
+        params = starting_point
+        train_start = time.time()
+        train_loss_list = []
+        val_loss_list = []
+        test_loss_list = []
+        all_optimisation_iterations_loss_list = []
+        opt = torch.optim.Adam([params], lr=init_lr)
+        for epoch in range(n_epochs):
+            epoch_start = time.time()
+            batch_loss_list = []
+            for batchid in range(len(train_batches)):
+                batch_start_time = time.time()
+                batch = train_batches[batchid]
+                opt.zero_grad()
+                loss = batch_cost(params, batch)
+                loss.backward()
+                opt.step()
+                batch_loss_list.append(loss.item())
+                batch_end_time = time.time()
+                batch_time = batch_end_time - batch_start_time
+                print(
+                    f"----Training at Epoch {epoch + 1}, Batch {batchid + 1}/{len(train_batches)}, Objective = {np.round(batch_loss_list[-1], 4)}, Batch Time = {np.round(batch_time, 4)}")
+            epoch_end_1 = time.time()
+            epoch_time_1 = epoch_end_1 - epoch_start
+            all_optimisation_iterations_loss_list.extend(batch_loss_list)
+            batch_avg_loss = np.mean(batch_loss_list)
+            train_loss_list.append(batch_avg_loss)
+            print(
+                f"Training at Epoch {epoch + 1}, Objective = {np.round(batch_avg_loss, 4)}, Train Epoch Time = {np.round(epoch_time_1, 4)}")
+            if val_batches is not None:
+                with torch.no_grad():
+                    batch_loss_list = []
+                    for batchid in range(len(val_batches)):
+                        batch = val_batches[batchid]
+                        loss = batch_cost(params, batch)
+                        batch_loss_list.append(loss.item())
+                    batch_avg_loss = np.mean(batch_loss_list)
+                    val_loss_list.append(batch_avg_loss)
+                    print(f"Validation at Epoch {epoch + 1}, Objective = {np.round(batch_avg_loss, 4)}")
+            if test_batches is not None:
+                with torch.no_grad():
+                    batch_loss_list = []
+                    for batchid in range(len(test_batches)):
+                        batch = test_batches[batchid]
+                        loss = batch_cost(params, batch)
+                        batch_loss_list.append(loss.item())
+                    batch_avg_loss = np.mean(batch_loss_list)
+                    test_loss_list.append(batch_avg_loss)
+                    print(f"Testing at Epoch {epoch + 1}, Objective = {np.round(batch_avg_loss, 4)}")
+            epoch_end_2 = time.time()
+            epoch_time_2 = epoch_end_2 - epoch_end_1
+            print(f"Epoch {epoch + 1} Time = {np.round(epoch_time_2, 4)}")
+        train_end = time.time()
+        train_time = train_end - train_start
+        print(f"Training Time = {np.round(train_time, 4)}")
+        params = params.detach().cpu().numpy()
+        return params, train_loss_list, val_loss_list, test_loss_list, all_optimisation_iterations_loss_list, train_time
+
+    params, train_loss_list, val_loss_list, test_loss_list, all_optimisation_iterations_loss_list, train_time = train_model_autodiff(
+        train_batches,
+        val_batches,
+        test_batches,
+        starting_point=params,
+        n_epochs=maxiter,
+        learning_rate=init_lr
+    )
+    res_dict = {
+        "params": params,
+        "train_loss_list": train_loss_list,
+        "val_loss_list": val_loss_list,
+        "test_loss_list": test_loss_list,
+        "all_optimisation_iterations_loss_list": all_optimisation_iterations_loss_list,
+        "train_time": train_time,
+        "n_data_reuploading_layers": n_data_reuploading_layers,
+        "n_theta": n_theta,
+        "n_phi": n_phi,
+        "n_psai": n_psai,
+        "n_xi": n_xi,
+        "n_eta": n_eta,
+        "n_params": n_params,
+        "init_lr": init_lr,
+        "maxiter": maxiter,
+        "batch_size": batch_size,
+        "n_batches": n_batches,
+        "val_ratio": val_ratio
+    }
+    with open(save_filename, 'w') as f:
+        json.dump(res_dict, f, cls=NpEncoder, indent=4)
+
+
+
+
