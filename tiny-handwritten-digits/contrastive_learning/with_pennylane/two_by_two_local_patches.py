@@ -1,18 +1,18 @@
 import pennylane as qml
 from pennylane import numpy as pnp
-import jax.numpy as jnp
 import numpy as np
 from typing import List, Tuple, Union
 from pennylane.wires import Wires
+import torch
 import sys
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 from two_by_two_patch_D_and_R import FourPixelDepositAndReset, FourPixelDepositAndResetFixed
 
 def TwoByTwoLocalPatches(
-        img_patches: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        single_patch_encode_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
-        single_patch_d_and_r_parameter: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
+        img_patches: Union[np.ndarray, pnp.ndarray, torch.Tensor],
+        single_patch_encode_parameters: Union[torch.Tensor, np.ndarray, pnp.ndarray],
+        single_patch_d_and_r_parameter: Union[torch.Tensor, np.ndarray, pnp.ndarray],
         wires: Union[List[int], Wires]
 ):
     """
@@ -36,9 +36,9 @@ def TwoByTwoLocalPatches(
             patch_count += 1
 
 def TwoByTwoLocalPatches2(
-        img_patches: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        encode_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
+        img_patches: Union[np.ndarray, pnp.ndarray, torch.Tensor],
+        encode_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
+        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
         wires: Union[List[int], Wires]
 ):
     """

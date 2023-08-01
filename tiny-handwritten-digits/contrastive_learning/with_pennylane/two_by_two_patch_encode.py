@@ -1,6 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as pnp
-import jax.numpy as jnp
+import torch
 import numpy as np
 from typing import List, Tuple, Union
 from pennylane.wires import Wires
@@ -10,8 +10,8 @@ sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 
 def FourPixelEncodeTwoQubits(
-        pixels: Union[jnp.ndarray, np.ndarray, pnp.array],
-        parameters: Union[jnp.ndarray, np.ndarray, pnp.array],
+        pixels: Union[torch.Tensor, np.ndarray, pnp.array],
+        parameters: Union[torch.Tensor, np.ndarray, pnp.array],
         wires: Union[List[int], Wires]
 ):
     """

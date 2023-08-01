@@ -1,11 +1,10 @@
 import pennylane as qml
 from pennylane import numpy as pnp
-import jax.numpy as jnp
 import numpy as np
 from typing import List, Tuple, Union
 from pennylane.wires import Wires
 
-def su4_gate(params:Union[np.ndarray, jnp.ndarray, pnp.ndarray], wires:Union[Wires, List[int]]):
+def su4_gate(params:Union[np.ndarray, torch.Tensor, pnp.ndarray], wires:Union[Wires, List[int]]):
     """
     A 15-parameter, most generic 2-qubit gate
     :param params:
@@ -23,7 +22,7 @@ def su4_gate(params:Union[np.ndarray, jnp.ndarray, pnp.ndarray], wires:Union[Wir
     qml.U3(params[9], params[10], params[11], wires=wires[0])
     qml.U3(params[12], params[13], params[14], wires=wires[1])
 
-def beheaded_su4_gate(params:Union[np.ndarray, jnp.ndarray, pnp.ndarray], wires:Union[Wires, List[int]]):
+def beheaded_su4_gate(params:Union[np.ndarray, torch.Tensor, pnp.ndarray], wires:Union[Wires, List[int]]):
     """
 
     :param params:

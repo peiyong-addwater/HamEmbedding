@@ -1,7 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as pnp
-import jax.numpy as jnp
-import jax
+import torch
 import numpy as np
 from typing import List, Tuple, Union, Optional
 from pennylane.wires import Wires
@@ -18,13 +17,13 @@ UNITARY_ENSEMBLE = {
 WIRES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 dev = qml.device("default.mixed", wires=WIRES, shots=1)
 
-@qml.qnode(dev, interface="jax")
+@qml.qnode(dev, interface="torch")
 def single_obs_circuit(
-        patched_img: Union[np.ndarray, jnp.ndarray, pnp.ndarray],
-        encode_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        local_patches_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        final_layer_parameters:Optional[Union[np.ndarray, jnp.ndarray, pnp.ndarray]] = None,
+        patched_img: Union[np.ndarray, torch.Tensor, pnp.ndarray],
+        encode_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
+        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
+        local_patches_phase_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
+        final_layer_parameters:Optional[Union[np.ndarray, torch.Tensor, pnp.ndarray]] = None,
         final_layer_type: Optional[str] = "generic",
         observables: List = None
 ):
@@ -55,8 +54,6 @@ def single_obs_circuit(
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    jax.config.update('jax_platform_name', 'cpu')
-    jax.config.update("jax_enable_x64", True)
 
     qml.drawer.use_style("black_white")
 
@@ -70,9 +67,9 @@ if __name__ == '__main__':
         return patches
     img = np.arange(64).reshape(8, 8)
     patches = cut_8x8_to_2x2(img)
-    theta = jnp.asarray(np.random.randn(24))
-    phi = jnp.asarray(np.random.randn(4))
-    psi = jnp.asarray(np.random.randn(2))
-    eta = jnp.asarray(np.random.rand(12))
+    theta = torch.tensor(np.random.randn(24))
+    phi = torch.tensor(np.random.randn(4))
+    psi = torch.tensor(np.random.randn(2))
+    eta = torch.tensor(np.random.rand(12))
     obs = [qml.PauliZ(0), qml.PauliZ(1), qml.PauliZ(2), qml.PauliZ(3)]
     print(single_obs_circuit(patches, theta, phi, psi, eta, observables=obs))

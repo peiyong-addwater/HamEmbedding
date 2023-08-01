@@ -1,6 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as pnp
-import jax.numpy as jnp
+import torch
 import numpy as np
 from typing import List, Tuple, Union
 from utils import Reset0
@@ -12,8 +12,8 @@ from two_by_two_patch_encode import FourPixelEncodeTwoQubits
 
 def FourPixelDepositAndReset(
         pixels: Union[list, np.ndarray, pnp.array],
-        encode_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
-        phase_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
+        encode_parameters: Union[torch.Tensor, np.ndarray, pnp.ndarray],
+        phase_parameters: Union[torch.Tensor, np.ndarray, pnp.ndarray],
         wires: Union[List[int], Wires]
 ):
     """
@@ -32,8 +32,8 @@ def FourPixelDepositAndReset(
 
 def FourPixelDepositAndResetFixed(
         pixels: Union[list, np.ndarray, pnp.array],
-        encode_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
-        phase_parameters: Union[jnp.ndarray, np.ndarray, pnp.ndarray],
+        encode_parameters: Union[torch.Tensor, np.ndarray, pnp.ndarray],
+        phase_parameters: Union[torch.Tensor, np.ndarray, pnp.ndarray],
         wires: Union[List[int], Wires]
 ):
     """

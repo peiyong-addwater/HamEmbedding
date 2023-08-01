@@ -1,9 +1,9 @@
 import pennylane as qml
 from pennylane import numpy as pnp
-import jax.numpy as jnp
 import numpy as np
 from typing import List, Tuple, Union, Optional
 from pennylane.wires import Wires
+import torch
 from utils import Reset0
 import sys
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
@@ -12,10 +12,10 @@ from two_by_two_local_patches import TwoByTwoLocalPatches2, TwoByTwoLocalPatches
 from four_qubit_token_mixing import FourQubitParameterisedLayer, PermutationInvariantFourQLayer, QFTTokenMixing
 
 def LocalPatchesFixedDRWithQFTMixingDR(
-        img_patches: Union[np.ndarray, jnp.ndarray, pnp.ndarray],
-        encode_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        local_patches_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
+        img_patches: Union[np.ndarray,  pnp.ndarray, torch.Tensor],
+        encode_parameters: Union[np.ndarray, pnp.ndarray,  torch.Tensor],
+        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray,  torch.Tensor],
+        local_patches_phase_parameters: Union[np.ndarray, pnp.ndarray,  torch.Tensor],
         wires: Union[List[int], Wires]
 ):
     """
@@ -53,11 +53,11 @@ def LocalPatchesFixedDRWithQFTMixingDR(
     qml.Barrier()
 
 def backboneQFTMixing(
-        patched_img: Union[np.ndarray, jnp.ndarray, pnp.ndarray],
-        encode_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        local_patches_phase_parameters: Union[np.ndarray, pnp.ndarray, jnp.ndarray],
-        final_layer_parameters:Optional[Union[np.ndarray, jnp.ndarray, pnp.ndarray]] = None,
+        patched_img: Union[np.ndarray, torch.Tensor, pnp.ndarray],
+        encode_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
+        single_patch_phase_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
+        local_patches_phase_parameters: Union[np.ndarray, pnp.ndarray, torch.Tensor],
+        final_layer_parameters:Optional[Union[np.ndarray, torch.Tensor, pnp.ndarray]] = None,
         final_layer_type: Optional[str] = None,
         wires: Union[List[int], Wires] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 ):

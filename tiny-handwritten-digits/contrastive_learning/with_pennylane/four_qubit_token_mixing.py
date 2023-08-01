@@ -1,6 +1,6 @@
 import pennylane as qml
 from pennylane import numpy as pnp
-import jax.numpy as jnp
+import torch
 import numpy as np
 from typing import List, Tuple, Union
 from pennylane.wires import Wires
@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 def FourQubitParameterisedLayer(
-        parameters: Union[np.ndarray, pnp.array, jnp.ndarray],
+        parameters: Union[np.ndarray, pnp.array, torch.Tensor],
         wires: Union[List[int], Wires]
 ):
     """
@@ -29,7 +29,7 @@ def FourQubitParameterisedLayer(
 
 
 def PermutationInvariantFourQLayer(
-        parameters: Union[np.ndarray, pnp.array, jnp.ndarray],
+        parameters: Union[np.ndarray, pnp.array, torch.Tensor],
         wires: Union[List[int], Wires]
 ):
     """
