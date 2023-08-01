@@ -163,7 +163,7 @@ if __name__ == "__main__":
     save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_probs_z_training_result.json"
     checkpointfile = None
     # hyperparameters
-    batch_size = 10 # for 32G total memory, batch size 10 is the maximum, 20.6 sec per batch
+    batch_size = 5 # Memory occupied: ~14 GB when just finished the first batch, then rise up to ~21 GB and stay there
     val_ratio = 0.2
     n_batches = 100
     init_lr = 1e-1
