@@ -3,6 +3,7 @@ from pennylane import numpy as pnp
 import numpy as np
 from typing import List, Tuple, Union
 from pennylane.wires import Wires
+import torch
 
 def su4_gate(params:Union[np.ndarray, torch.Tensor, pnp.ndarray], wires:Union[Wires, List[int]]):
     """
