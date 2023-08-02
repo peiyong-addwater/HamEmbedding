@@ -161,7 +161,7 @@ if __name__ == "__main__":
     import math
     curr_t = nowtime()
     save_filename = curr_t + "_" + "8q_circ_4q_rep_SimCLR_probs_z_training_result.json"
-    checkpointfile = None
+    checkpointfile = "20230802-043150_8q_circ_4q_rep_SimCLR_probs_z_training_result.json"
     # hyperparameters
     # For default diff method: batch size=5, Memory occupied: ~14.9 GB when just finished the first batch, then rise up to ~23 GB and stay there
     batch_size = 100
@@ -299,7 +299,8 @@ if __name__ == "__main__":
         "maxiter": maxiter,
         "batch_size": batch_size,
         "n_batches": n_batches,
-        "val_ratio": val_ratio
+        "val_ratio": val_ratio,
+        "last_checkpoint": checkpointfile
     }
     with open(save_filename, 'w') as f:
         json.dump(res_dict, f, cls=NpEncoder, indent=4)
