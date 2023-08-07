@@ -8,15 +8,19 @@ import sys
 
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
-def FourPixelsOnTwoQubits(
-        pixels: torch.Tensor,
-        parameters: torch.Tensor,
-        wires:Union[List[int], Wires]
+def FourByFourPatchDataCirc(
+        data: torch.Tensor,
+        loc: torch.Tensor,
+        wires: Union[Wires, List[int]],
 ):
     """
-
-    :param pixels:
-    :param parameters:
+    This function uses a modified SU(4) gate to encode 16 pixels into 3 qubits
+    Since we are dealing with 8 by 8 images and we want to encode 4 by 4 patches,
+    the location tensor is a 2D tensor of shape (batchsize, 2),
+    the location
+    :param data: (batchsize, 16) tensor, containing the pixel values
+    :param loc:  (batchsize, 2) tensor, containing the location of the patch.
     :param wires:
     :return:
     """
+    assert len(wires) == 3
