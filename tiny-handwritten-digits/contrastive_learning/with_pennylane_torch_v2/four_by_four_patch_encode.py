@@ -222,7 +222,7 @@ if __name__ == '__main__':
     # see https://docs.pennylane.ai/en/stable/code/api/pennylane.enable_return.html#pennylane.enable_return
 
     dev2q = qml.device('default.mixed', wires=2)
-    dev4q = qml.device('default.mixed', wires=4)
+    dev4q = qml.device('default.mixed', wires=4, shots=10)
     # print(dev2q.capabilities()["supports_broadcasting"]) # False for default.mixed
 
     L1 = 2
@@ -243,10 +243,12 @@ if __name__ == '__main__':
         #ResetZeroState([0,1,2,3])
         return qml.probs()
 
+
+    @qml.shadows.shadow_state(wires=[0, 1], diffable=True)
     @qml.qnode(dev4q, interface='torch')
     def patch_encode2(inputs, four_pix_params, sixteen_reupload_params):
         FourByFourPatchWithPosEncoding.compute_decomposition(inputs, four_pix_params, sixteen_reupload_params, [0,1,2,3], L1, L2, 2)
-        return qml.probs([0,1,2,3][:2+1])
+        return qml.classical_shadow(wires=[0, 1])
 
     pixels = torch.randn(3,4)
     pixels_16 = torch.randn(3,16)
@@ -257,12 +259,12 @@ if __name__ == '__main__':
     patch_rot_crot_params = torch.randn(L2, 21)
 
 
-    print(four_pixel_encode(pixels[0], four_pixel_encode_params, L1))
+    #print(four_pixel_encode(pixels[0], four_pixel_encode_params, L1))
     fig, ax = qml.draw_mpl(four_pixel_encode, style='sketch')(pixels[0], four_pixel_encode_params, L1, True)
     fig.savefig('four_pixel_reupload.png')
     plt.close(fig)
 
-    print(patch_encode(pixels_16[0], patch_encode_params, patch_rot_crot_params))
+    #print(patch_encode(pixels_16[0], patch_encode_params, patch_rot_crot_params))
     fig, ax = qml.draw_mpl(patch_encode, style='sketch')(pixels_16[0], patch_encode_params, patch_rot_crot_params)
     fig.savefig('four_by_four_patch_reupload.png')
     plt.close(fig)
