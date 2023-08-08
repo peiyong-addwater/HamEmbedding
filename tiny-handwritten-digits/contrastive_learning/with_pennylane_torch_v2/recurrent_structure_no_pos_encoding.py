@@ -174,8 +174,121 @@ class RecurrentCircV1(Operation):
     7- (Optional) Reset the first memory qubit to zero state.
     Repeat 2-7 for 2 by 2 = 4 times for a 8 by 8 images with 4 by 4 patch size.
     The input image data is assumed to be of shape (..., 4, 16), each 16-element vector is a 4 by 4 patch.
-
+    structural parameters: L1, L2, L_MC
+    input parameters (including the data):
+        data, four_pixel_encode_parameters, sixteen_pixel_parameters, mem_init_params, mem_patch_interact_params,
+        mem_computation_params, wires(total), L1, L2, L_MC, Optional_reset_first_mem_qubit
     """
+    num_wires = 4+4
+    grad_method = None
+
+    def __init__(
+            self,
+            data,
+            four_pixel_encode_parameters,
+            sixteen_pixel_parameters,
+            mem_init_params,
+            mem_patch_interact_params,
+            mem_computation_params,
+            wires,
+            L1,
+            L2,
+            L_MC,
+            Optional_reset_first_mem_qubit=False,
+            do_queue=None,
+            id=None
+            ):
+        """
+
+        :param data:
+        :param four_pixel_encode_parameters:
+        :param sixteen_pixel_parameters:
+        :param mem_init_params:
+        :param mem_patch_interact_params:
+        :param mem_computation_params:
+        :param wires:
+        :param L1:
+        :param L2:
+        :param L_MC:
+        :param Optional_reset_first_mem_qubit:
+        """
+        interface = qml.math.get_interface(four_pixel_encode_parameters)
+        data = qml.math.asarray(data, like=interface)
+        four_pixel_encode_parameters = qml.math.asarray(four_pixel_encode_parameters, like=interface)
+        sixteen_pixel_parameters = qml.math.asarray(sixteen_pixel_parameters, like=interface)
+        mem_init_params = qml.math.asarray(mem_init_params, like=interface)
+        mem_patch_interact_params = qml.math.asarray(mem_patch_interact_params, like=interface)
+        mem_computation_params = qml.math.asarray(mem_computation_params, like=interface)
+
+        data_shape = qml.math.shape(data)
+        if not (len(data_shape)==2 or len(data_shape)==3): # 3 when is batching, 2 when not
+            raise ValueError(f"data must be a 2D or 3D array, got shape {data_shape}")
+        if data_shape[-1] != 16 or data_shape[-2] != 4:
+            raise ValueError(f"data must be an array of shape (..., 4, 16), got {data_shape}")
+
+        self._hyperparameters = {"L1": L1, "L2": L2, "L_MC": L_MC, "Optional_reset_first_mem_qubit": Optional_reset_first_mem_qubit}
+        super().__init__(
+            data,
+            four_pixel_encode_parameters,
+            sixteen_pixel_parameters,
+            mem_init_params,
+            mem_patch_interact_params,
+            mem_computation_params,
+            wires=wires,
+            do_queue=do_queue,
+            id=id,
+        )
+
+    @property
+    def num_params(self):
+        return 6
+
+    @staticmethod
+    def compute_decomposition(
+            data,
+            four_pixel_encode_parameters,
+            sixteen_pixel_parameters,
+            mem_init_params,
+            mem_patch_interact_params,
+            mem_computation_params,
+            wires,
+            L1,
+            L2,
+            L_MC,
+            Optional_reset_first_mem_qubit
+    ):
+        op_list = []
+        MB = wires[:4]
+        PE = wires[4:]
+        op_list.append(InitialiseMemState(mem_init_params, wires=MB))
+        op_list.append(qml.Barrier())
+        for i in range(4):
+            # encode the 4x4 patch to the bottom 4 qubits
+            op_list.append(FourByFourPatchReUpload(
+                data[..., i, :],
+                four_pixel_encode_parameters,
+                sixteen_pixel_parameters,
+                L1,
+                L2,
+                wires=PE))
+            op_list.append(qml.Barrier())
+            # Reset the last two patch qubits to zero state.
+            op_list.append(ResetZeroState(wires=PE[2:]))
+            op_list.append(qml.Barrier())
+            # Interaction between the last two of memory qubits and the first two patch qubits
+            op_list.append(MemPatchInteract2to2(mem_patch_interact_params, wires=MB[4-2:]+PE[:2]))
+            op_list.append(qml.Barrier())
+            # Reset the first two patch qubits to zero state.
+            op_list.append(ResetZeroState(wires=PE[:2]))
+            op_list.append(qml.Barrier())
+            # Computation on the memory qubits.
+            op_list.append(MemComputation(mem_computation_params, wires=MB, L_MC=L_MC))
+            op_list.append(qml.Barrier())
+            # Reset the first memory qubit to zero state.
+            if Optional_reset_first_mem_qubit:
+                op_list.append(ResetZeroState(wires=MB[0]))
+                op_list.append(qml.Barrier())
+        return op_list
 
 
 if __name__ == '__main__':
@@ -183,18 +296,46 @@ if __name__ == '__main__':
 
     qml.disable_return()  # Turn of the experimental return feature,
     # see https://docs.pennylane.ai/en/stable/code/api/pennylane.enable_return.html#pennylane.enable_return
+    mem_qubits = 4
+    dev_mem = qml.device('default.mixed', wires=mem_qubits)
     dev4q = qml.device('default.mixed', wires=4)
-    dev5q = qml.device('default.mixed', wires=5)
-    dev6q = qml.device('default.mixed', wires=6)
+    devfull = qml.device('default.mixed', wires=mem_qubits+4)
 
-    mem_init_params = torch.randn( 12 * 6 - 9)
+    mem_init_params = torch.randn( 12 * mem_qubits - 9)
     mem_patch_interact_params = torch.randn(36)
     L_MC = 2
-    mem_computation_params = torch.randn(L_MC, 12 * 6 - 9)
+    mem_computation_params = torch.randn(L_MC, 12 * mem_qubits - 9)
+    L1 = 2
+    L2 = 2
+    data = torch.randn(4, 16)
+    patch_encode_params = torch.randn(L2, L1 * 6 * 4)
+    patch_rot_crot_params = torch.randn(L2, 21)
 
-    @qml.qnode(dev6q)
+    @qml.qnode(devfull)
+    def rec_circ_v1():
+        RecurrentCircV1.compute_decomposition(
+            data,
+            patch_encode_params,
+            patch_rot_crot_params,
+            mem_init_params,
+            mem_patch_interact_params,
+            mem_computation_params,
+            wires=list(range(mem_qubits+4)),
+            L1=L1,
+            L2=L2,
+            L_MC=L_MC,
+            Optional_reset_first_mem_qubit=False
+        )
+        return qml.probs(wires=range(mem_qubits))
+
+    print(rec_circ_v1().shape)
+    fig, ax = qml.draw_mpl(rec_circ_v1, style = 'sketch')()
+    fig.savefig('rec_circ_v1.png')
+
+
+    @qml.qnode(dev_mem)
     def mem_init(params):
-        InitialiseMemState.compute_decomposition(params, wires=range(6))
+        InitialiseMemState.compute_decomposition(params, wires=range(mem_qubits))
         return qml.probs()
 
     print(mem_init(mem_init_params).shape)
@@ -212,14 +353,16 @@ if __name__ == '__main__':
     fig.savefig('mem_patch_interact.png')
     plt.close(fig)
 
-    @qml.qnode(dev6q)
+    @qml.qnode(dev_mem)
     def mem_computation(params):
-        MemComputation.compute_decomposition(params, wires=range(6), L_MC=L_MC)
+        MemComputation.compute_decomposition(params, wires=range(mem_qubits), L_MC=L_MC)
         return qml.probs()
 
     print(mem_computation(mem_computation_params).shape)
     fig, ax = qml.draw_mpl(mem_computation, style = 'sketch', expand='device')(mem_computation_params)
     fig.savefig('mem_computation.png')
+
+
 
 
 
