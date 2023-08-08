@@ -6,6 +6,7 @@ from typing import List, Tuple, Union
 from pennylane.wires import Wires
 import sys
 from pennylane.operation import Operation, AnyWires
+from reset_gate import ResetZeroState
 
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
@@ -75,7 +76,7 @@ class FourByFourPatchReUpload(Operation):
     Plus a layer of Rot gates and CRot gates, giving us 4*3+3*3=21 parameters per layer of FourByFourPatchReUpload;
     Then the shape of sixteen_pixel_parameters should be (...,L2, 21)
     """
-    num_wires = 2
+    num_wires = 4
     grad_method = None
 
     def __init__(self, pixels_len_16, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, wires, do_queue=None, id=None):
@@ -144,9 +145,15 @@ if __name__ == '__main__':
     from scipy.stats import unitary_group
     import matplotlib.pyplot as plt
 
+    qml.disable_return() # Turn of the experimental return feature, see https://docs.pennylane.ai/en/stable/code/api/pennylane.enable_return.html#pennylane.enable_return
+
     dev2q = qml.device('default.mixed', wires=2)
     dev4q = qml.device('default.mixed', wires=4)
-    print(dev2q.capabilities()["supports_broadcasting"])
+    # print(dev2q.capabilities()["supports_broadcasting"]) # False for default.mixed
+
+    L1 = 2
+    L2 = 2
+
     @qml.qnode(dev2q, interface='torch')
     def four_pixel_encode(pixels, encode_params, L1, expand=False):
         if not expand:
@@ -156,25 +163,34 @@ if __name__ == '__main__':
         return qml.probs()
 
     @qml.qnode(dev4q, interface='torch')
-    def patch_encode(pixels_16, four_pix_params, sixteen_reupload_params, L1, L2):
-        FourByFourPatchReUpload.compute_decomposition(pixels_16, four_pix_params, sixteen_reupload_params, [0,1,2,3],L1, L2)
+    def patch_encode(inputs, four_pix_params, sixteen_reupload_params):
+        FourByFourPatchReUpload(inputs, four_pix_params, sixteen_reupload_params, L1, L2, [0,1,2,3])
+        ResetZeroState([0,1,2,3])
         return qml.probs()
 
     pixels = torch.randn(3,4)
     pixels_16 = torch.randn(3,16)
-    L1 = 2
-    L2=  2
     four_pixel_encode_params = torch.randn(L1*6)
 
     patch_encode_params = torch.randn(L2, L1*6*4)
     patch_rot_crot_params = torch.randn(L2, 21)
 
 
-    print(four_pixel_encode(pixels[0], four_pixel_encode_params, L1))
-    fig, ax = qml.draw_mpl(four_pixel_encode, style='sketch')(pixels[0], four_pixel_encode_params, L1, True)
-    fig.savefig('four_pixel_reupload.png')
-    plt.close(fig)
+    #print(four_pixel_encode(pixels[0], four_pixel_encode_params, L1))
+    #fig, ax = qml.draw_mpl(four_pixel_encode, style='sketch')(pixels[0], four_pixel_encode_params, L1, True)
+    #fig.savefig('four_pixel_reupload.png')
+    #plt.close(fig)
 
-    print(patch_encode(pixels_16[0], patch_encode_params, patch_rot_crot_params, L1, L2))
-    fig, ax = qml.draw_mpl(patch_encode, style='sketch')(pixels_16[0], patch_encode_params, patch_rot_crot_params, L1, L2)
-    fig.savefig('four_by_four_patch_reupload.png')
+    #print(patch_encode(pixels_16[0], patch_encode_params, patch_rot_crot_params))
+    #fig, ax = qml.draw_mpl(patch_encode, style='sketch')(pixels_16[0], patch_encode_params, patch_rot_crot_params)
+    #fig.savefig('four_by_four_patch_reupload.png')
+
+    # let's try to convert the qnode into a pytorch layer
+    weight_shapes = {
+        "four_pix_params": (L2,L1*6*4),
+        "sixteen_reupload_params": (L2, 21),
+    }
+    qlayer = qml.qnn.TorchLayer(patch_encode, weight_shapes)
+    clayer = torch.nn.Linear(16, 2)
+    model = torch.nn.Sequential(qlayer, clayer)
+    print(model(pixels_16))
