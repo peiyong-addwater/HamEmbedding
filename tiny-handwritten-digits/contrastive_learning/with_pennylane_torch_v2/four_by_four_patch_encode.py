@@ -62,7 +62,7 @@ class FourPixelReUpload(Operation):
             op_list.append(qml.Rot(encode_params[...,6 * i], encode_params[...,6 * i + 1], encode_params[...,6 * i + 2], wires=wires[0]))
             op_list.append(qml.Rot(encode_params[...,6 * i + 3], encode_params[...,6 * i + 4], encode_params[...,6 * i + 5], wires=wires[1]))
             op_list.append(qml.CZ(wires=[wires[0], wires[1]]))
-            #qml.Barrier()
+            qml.Barrier()
         return op_list
 
 class FourByFourPatchReUpload(Operation):
@@ -164,8 +164,9 @@ if __name__ == '__main__':
 
     @qml.qnode(dev4q, interface='torch')
     def patch_encode(inputs, four_pix_params, sixteen_reupload_params):
-        FourByFourPatchReUpload(inputs, four_pix_params, sixteen_reupload_params, L1, L2, [0,1,2,3])
-        ResetZeroState([0,1,2,3])
+        #FourByFourPatchReUpload(inputs, four_pix_params, sixteen_reupload_params, L1, L2, [0,1,2,3])
+        FourByFourPatchReUpload.compute_decomposition(inputs, four_pix_params, sixteen_reupload_params, [0,1,2,3], L1, L2)
+        #ResetZeroState([0,1,2,3])
         return qml.probs()
 
     pixels = torch.randn(3,4)
@@ -176,14 +177,14 @@ if __name__ == '__main__':
     patch_rot_crot_params = torch.randn(L2, 21)
 
 
-    #print(four_pixel_encode(pixels[0], four_pixel_encode_params, L1))
-    #fig, ax = qml.draw_mpl(four_pixel_encode, style='sketch')(pixels[0], four_pixel_encode_params, L1, True)
-    #fig.savefig('four_pixel_reupload.png')
-    #plt.close(fig)
+    print(four_pixel_encode(pixels[0], four_pixel_encode_params, L1))
+    fig, ax = qml.draw_mpl(four_pixel_encode, style='sketch')(pixels[0], four_pixel_encode_params, L1, True)
+    fig.savefig('four_pixel_reupload.png')
+    plt.close(fig)
 
-    #print(patch_encode(pixels_16[0], patch_encode_params, patch_rot_crot_params))
-    #fig, ax = qml.draw_mpl(patch_encode, style='sketch')(pixels_16[0], patch_encode_params, patch_rot_crot_params)
-    #fig.savefig('four_by_four_patch_reupload.png')
+    print(patch_encode(pixels_16[0], patch_encode_params, patch_rot_crot_params))
+    fig, ax = qml.draw_mpl(patch_encode, style='sketch')(pixels_16[0], patch_encode_params, patch_rot_crot_params)
+    fig.savefig('four_by_four_patch_reupload.png')
 
     # let's try to convert the qnode into a pytorch layer
     weight_shapes = {
