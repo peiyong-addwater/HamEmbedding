@@ -173,7 +173,7 @@ class RecurrentCircV1(Operation):
     6- Reset the first two patch qubits to zero state.
     7- (Optional) Reset the first memory qubit to zero state.
     Repeat 2-7 for 2 by 2 = 4 times for a 8 by 8 images with 4 by 4 patch size.
-    The input image data is assumed to be of shape (..., 4, 16), each 16-element vector is a 4 by 4 patch.
+    The input image data is assumed to be of shape (...,  64), each 16-element segment is a 4 by 4 patch.
     structural parameters: L1, L2, L_MC
     input parameters (including the data):
         data, four_pixel_encode_parameters, sixteen_pixel_parameters, mem_init_params, mem_patch_interact_params,
@@ -221,10 +221,10 @@ class RecurrentCircV1(Operation):
         mem_computation_params = qml.math.asarray(mem_computation_params, like=interface)
 
         data_shape = qml.math.shape(data)
-        if not (len(data_shape)==2 or len(data_shape)==3): # 3 when is batching, 2 when not
+        if not (len(data_shape)==2 or len(data_shape)==1): # 2 when is batching, 1 when not
             raise ValueError(f"data must be a 2D or 3D array, got shape {data_shape}")
-        if data_shape[-1] != 16 or data_shape[-2] != 4:
-            raise ValueError(f"data must be an array of shape (..., 4, 16), got {data_shape}")
+        if data_shape[-1] != 64 :
+            raise ValueError(f"data must be an array of shape (..., 64), got {data_shape}")
 
         self._hyperparameters = {"L1": L1, "L2": L2, "L_MC": L_MC, "Optional_reset_first_mem_qubit": Optional_reset_first_mem_qubit}
         super().__init__(
@@ -265,7 +265,7 @@ class RecurrentCircV1(Operation):
         for i in range(4):
             # encode the 4x4 patch to the bottom 4 qubits
             op_list.append(FourByFourPatchReUpload(
-                data[..., i, :],
+                data[..., 16*i:16*(i+1)],
                 four_pixel_encode_parameters,
                 sixteen_pixel_parameters,
                 L1,
