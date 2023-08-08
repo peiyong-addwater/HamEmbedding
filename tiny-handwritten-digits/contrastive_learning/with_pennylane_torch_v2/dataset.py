@@ -25,6 +25,7 @@ class TinyHandwrittenDigitsDataset(torch.utils.data.Dataset):
 
 if __name__ == '__main__':
     import warnings
+    from torch.utils.data import DataLoader
 
     warnings.filterwarnings('ignore')
     from image_transform import DEFAULT_TRANSFORM
@@ -35,3 +36,11 @@ if __name__ == '__main__':
     print(img)
     transformed = DEFAULT_TRANSFORM(img)
     print(transformed)
+
+    dataloader = DataLoader(dataset, batch_size=4,
+                            shuffle=True, num_workers=0)
+    for batch, (X, y) in enumerate(dataloader):
+        print(batch, X.shape, y.shape)
+        x = torch.squeeze(X)
+        print(x.shape)
+        break
