@@ -24,7 +24,14 @@ class TinyHandwrittenDigitsDataset(torch.utils.data.Dataset):
         return image, label
 
 if __name__ == '__main__':
+    import warnings
+
+    warnings.filterwarnings('ignore')
+    from image_transform import DEFAULT_TRANSFORM
     img_dir = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/images"
     csv_file="/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/annotated_labels.csv"
     dataset = TinyHandwrittenDigitsDataset(csv_file, img_dir)
-    print(dataset[0][0].shape)
+    img = dataset[0][0]
+    print(img)
+    transformed = DEFAULT_TRANSFORM(img)
+    print(transformed)
