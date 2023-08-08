@@ -138,6 +138,15 @@ class FourByFourPatchReUpload(Operation):
             qml.Barrier()
         return op_list
 
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
     """
     default.mixed device does not support broadcasting
@@ -145,7 +154,8 @@ if __name__ == '__main__':
     from scipy.stats import unitary_group
     import matplotlib.pyplot as plt
 
-    qml.disable_return() # Turn of the experimental return feature, see https://docs.pennylane.ai/en/stable/code/api/pennylane.enable_return.html#pennylane.enable_return
+    qml.disable_return() # Turn of the experimental return feature,
+    # see https://docs.pennylane.ai/en/stable/code/api/pennylane.enable_return.html#pennylane.enable_return
 
     dev2q = qml.device('default.mixed', wires=2)
     dev4q = qml.device('default.mixed', wires=4)
