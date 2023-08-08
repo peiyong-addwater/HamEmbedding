@@ -37,7 +37,7 @@ class SU4(Operation):
         return 1
 
     @staticmethod
-    def decomposition(weights, wires, leading_gate):
+    def compute_decomposition(weights, wires, leading_gate):
         op_list = []
         if leading_gate:
             op_list.append(qml.U3(weights[...,0], weights[...,1], weights[...,2], wires=wires[0]))
@@ -54,3 +54,26 @@ class SU4(Operation):
             op_list.append(qml.U3(weights[...,3], weights[...,4], weights[...,5], wires=wires[0]))
             op_list.append(qml.U3(weights[...,6], weights[...,7], weights[...,8], wires=wires[1]))
         return op_list
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+
+    qml.disable_return()  # Turn of the experimental return feature,
+    # see https://docs.pennylane.ai/en/stable/code/api/pennylane.enable_return.html#pennylane.enable_return
+
+    dev2q = qml.device('default.mixed', wires=2)
+
+    params = torch.randn(15+9)
+
+    def circuit(params):
+        SU4.compute_decomposition(params[:15], wires=[0, 1], leading_gate=True)
+        qml.Barrier()
+        SU4.compute_decomposition(params[15:], wires=[0, 1], leading_gate=False)
+        return qml.probs()
+
+    circuit = qml.QNode(circuit, dev2q)
+
+    print(circuit(params))
+    fig, ax = qml.draw_mpl(circuit, style='sketch')(params)
+    fig.savefig('su4_two_types.png')
+    plt.close(fig)
