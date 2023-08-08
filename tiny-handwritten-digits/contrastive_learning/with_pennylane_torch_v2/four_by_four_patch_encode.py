@@ -7,6 +7,7 @@ from pennylane.wires import Wires
 import sys
 from pennylane.operation import Operation, AnyWires
 from reset_gate import ResetZeroState
+import math
 
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
@@ -69,11 +70,11 @@ class FourByFourPatchReUpload(Operation):
     """
     Encode 16 pixels into 4 qubits;
     The 16 pixels are divided into 4 groups, each group has 4 pixels;
-    Each group of 4 pixels is encoded into 2 qubits using FourPixelReUpload;
+    Each group of 4 pixels is encoded into 2 qubits using 'FourPixelReUpload';
     And have different parameters for each group of 4 pixels;
-    Then only for the FourPixelReUpload, the total number of parameters is 6*L1*4 for a single layer of FourByFourPatchReUpload;
+    Then only for the 'FourPixelReUpload', the total number of parameters is 6*L1*4 for a single layer of 'FourByFourPatchReUpload';
     Then the total parameter for four_pixel_encode_parameters should be in shape (...,L2, 6*L1*4)
-    Plus a layer of Rot gates and CRot gates, giving us 4*3+3*3=21 parameters per layer of FourByFourPatchReUpload;
+    Plus a layer of Rot gates and CRot gates, giving us 4*3+3*3=21 parameters per layer of 'FourByFourPatchReUpload';
     Then the shape of sixteen_pixel_parameters should be (...,L2, 21)
     """
     num_wires = 4
@@ -139,6 +140,69 @@ class FourByFourPatchReUpload(Operation):
         return op_list
 
 
+class FourByFourPatchWithPosEncoding(Operation):
+    """
+    FourByFourPatchReUpload plus positional encoding.
+    The maximum number of qubits carrying features is 3,
+    since there is always one qubit carrying the pos encoding.
+    The pos encoding is in the form of two integers in {0,1}, in this case,
+    they will be attached at the end of the 16-pixel data vector,
+    making it an 18-element vector for the input (single batch).
+    The trainable parameters remain the same as 'FourByFourPatchReUpload'.
+    All qubits except the feature-carrying qubits will be reset before encoding the pos information
+    """
+    num_wires = 4
+    grad_method = None
+
+    def __init__(self, pixels_whole_patch_with_pos, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, n_feature_qubits, wires, do_queue=None, id=None):
+        interface = qml.math.get_interface(four_pixel_encode_parameters)
+        four_pixel_encode_parameters = qml.math.asarray(four_pixel_encode_parameters, like=interface)
+        pixels_whole_patch_with_pos = qml.math.asarray(pixels_whole_patch_with_pos, like=interface)
+        sixteen_pixel_parameters = qml.math.asarray(sixteen_pixel_parameters, like=interface)
+
+        self._hyperparameters = {"L1": L1, "L2": L2, "n_feature_qubits": n_feature_qubits}
+
+        pixels_whole_patch_with_pos_shape = qml.math.shape(pixels_whole_patch_with_pos)
+        four_pixel_encode_parameters_shape = qml.math.shape(four_pixel_encode_parameters)
+        sixteen_pixel_parameters_shape = qml.math.shape(sixteen_pixel_parameters)
+        if not (len(pixels_whole_patch_with_pos_shape)==1 or len(pixels_whole_patch_with_pos_shape)==2): # 2 is when batching, 1 is not batching
+            raise ValueError(f"pixels must be a 1D or 2D array; got shape {pixels_whole_patch_with_pos_shape}")
+        if pixels_whole_patch_with_pos_shape[-1]!=18:
+            raise ValueError(f"pixels must be a 1D or 2D array with last dimension 18; got shape {pixels_whole_patch_with_pos_shape}")
+        if not (len(four_pixel_encode_parameters_shape)==2 or len(four_pixel_encode_parameters_shape)==3): # 3 is when batching, 2 is not batching
+            raise ValueError(f"four_pixel_encode_parameters must be a 2D or 3D array; got shape {four_pixel_encode_parameters_shape}")
+        if four_pixel_encode_parameters_shape[-1]!=6*L1*4 or four_pixel_encode_parameters_shape[-2]!=L2:
+            raise ValueError(f"four_pixel_encode_parameters must be a 2D or 3D array with dimension (...,{L2}, 6*{L1}*4); got shape {four_pixel_encode_parameters_shape}")
+        if not (len(sixteen_pixel_parameters_shape)==2 or len(sixteen_pixel_parameters_shape)==3): # 3 is when batching, 2 is not batching
+            raise ValueError(f"sixteen_pixel_parameters must be a 2D or 3D array with shape (...,{L2}, 21); got shape {sixteen_pixel_parameters_shape}")
+        if sixteen_pixel_parameters_shape[-2]!=L2 or sixteen_pixel_parameters_shape[-1]!=21:
+            raise ValueError(f"sixteen_pixel_parameters must be a 2D or 3D array with shape (...,{L2}, 21); got shape {sixteen_pixel_parameters_shape}")
+        if n_feature_qubits>=4:
+            raise ValueError(f"The number of feature qubits should not be more than 3, got {n_feature_qubits}")
+
+        super().__init__(pixels_whole_patch_with_pos, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, n_feature_qubits, wires=wires, do_queue=do_queue, id=id)
+
+    @property
+    def num_params(self):
+        return 3
+
+    @staticmethod
+    def compute_decomposition(pixels_whole_patch_with_pos, four_pixel_encode_parameters, sixteen_pixel_parameters, wires, L1, L2, n_feature_qubits):
+        op_list = []
+        pos_encoding_wire = wires[n_feature_qubits]
+        reset_wires = wires[n_feature_qubits:]
+        data_pixels = pixels_whole_patch_with_pos[...,:-2]
+        pos_encoding = pixels_whole_patch_with_pos[...,-2:]
+        op_list.append(
+            FourByFourPatchReUpload(data_pixels, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, wires)
+        )
+        op_list.append(ResetZeroState(wires=reset_wires))
+        op_list.append(qml.RX(pos_encoding[...,0]*(math.pi), wires=pos_encoding_wire))
+        op_list.append(qml.RY(pos_encoding[...,1]*(math.pi), wires=pos_encoding_wire))
+        return op_list
+
+
+
 
 
 
@@ -179,8 +243,14 @@ if __name__ == '__main__':
         #ResetZeroState([0,1,2,3])
         return qml.probs()
 
+    @qml.qnode(dev4q, interface='torch')
+    def patch_encode2(inputs, four_pix_params, sixteen_reupload_params):
+        FourByFourPatchWithPosEncoding.compute_decomposition(inputs, four_pix_params, sixteen_reupload_params, [0,1,2,3], L1, L2, 2)
+        return qml.probs([0,1,2,3][:2+1])
+
     pixels = torch.randn(3,4)
     pixels_16 = torch.randn(3,16)
+    pixels_18 = torch.randn(3,18)
     four_pixel_encode_params = torch.randn(L1*6)
 
     patch_encode_params = torch.randn(L2, L1*6*4)
@@ -195,6 +265,16 @@ if __name__ == '__main__':
     print(patch_encode(pixels_16[0], patch_encode_params, patch_rot_crot_params))
     fig, ax = qml.draw_mpl(patch_encode, style='sketch')(pixels_16[0], patch_encode_params, patch_rot_crot_params)
     fig.savefig('four_by_four_patch_reupload.png')
+    plt.close(fig)
+
+    print(patch_encode2(pixels_18[0], patch_encode_params, patch_rot_crot_params))
+    fig, ax = qml.draw_mpl(patch_encode2, style='sketch')(pixels_18[0], patch_encode_params, patch_rot_crot_params)
+    fig.savefig('four_by_four_patch_reupload_with_pos_encoding.png')
+    plt.close(fig)
+
+
+
+
 
     # let's try to convert the qnode into a pytorch layer
     weight_shapes = {
