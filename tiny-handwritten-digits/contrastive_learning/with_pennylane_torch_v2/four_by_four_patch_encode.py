@@ -138,11 +138,15 @@ class FourByFourPatchReUpload(Operation):
         return op_list
 
 if __name__ == '__main__':
+    """
+    default.mixed device does not support broadcasting
+    """
     from scipy.stats import unitary_group
     import matplotlib.pyplot as plt
 
-    dev2q = qml.device('default.qubit', wires=2)
-    dev4q = qml.device('default.qubit', wires=4)
+    dev2q = qml.device('default.mixed', wires=2)
+    dev4q = qml.device('default.mixed', wires=4)
+    print(dev2q.capabilities()["supports_broadcasting"])
     @qml.qnode(dev2q, interface='torch')
     def four_pixel_encode(pixels, encode_params, L1, expand=False):
         if not expand:
@@ -166,13 +170,11 @@ if __name__ == '__main__':
     patch_rot_crot_params = torch.randn(L2, 21)
 
 
-
-
-    print(four_pixel_encode(pixels, four_pixel_encode_params, L1))
+    print(four_pixel_encode(pixels[0], four_pixel_encode_params, L1))
     fig, ax = qml.draw_mpl(four_pixel_encode, style='sketch')(pixels[0], four_pixel_encode_params, L1, True)
     fig.savefig('four_pixel_reupload.png')
     plt.close(fig)
 
-    print(patch_encode(pixels_16, patch_encode_params, patch_rot_crot_params, L1, L2))
+    print(patch_encode(pixels_16[0], patch_encode_params, patch_rot_crot_params, L1, L2))
     fig, ax = qml.draw_mpl(patch_encode, style='sketch')(pixels_16[0], patch_encode_params, patch_rot_crot_params, L1, L2)
     fig.savefig('four_by_four_patch_reupload.png')
