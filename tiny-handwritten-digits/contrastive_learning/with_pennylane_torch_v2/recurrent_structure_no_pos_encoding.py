@@ -162,7 +162,20 @@ class MemComputation(Operation):
         return op_list
 
 
+class RecurrentCircV1(Operation):
+    """
+    Recurrent circ with the following structure:
+    1- Initialise the memory qubits.
+    2- Encode the 4x4 patch to the bottom 4 qubits with 'FourByFourPatchReUpload'.
+    3- Interaction between the last two of memory qubits and the first two patch qubits with 'MemPatchInteract2to2'.
+    4- Reset the last two patch qubits to zero state.
+    5- Computation on the memory qubits.
+    6- Reset the first two patch qubits to zero state.
+    7- (Optional) Reset the first memory qubit to zero state.
+    Repeat 2-7 for 2 by 2 = 4 times for a 8 by 8 images with 4 by 4 patch size.
+    The input image data is assumed to be of shape (..., 4, 16), each 16-element vector is a 4 by 4 patch.
 
+    """
 
 
 if __name__ == '__main__':
