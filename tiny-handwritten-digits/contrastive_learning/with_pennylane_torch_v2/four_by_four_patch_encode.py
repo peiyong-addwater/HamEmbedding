@@ -244,11 +244,11 @@ if __name__ == '__main__':
         return qml.probs()
 
 
-    @qml.shadows.shadow_state(wires=[0, 1], diffable=True)
+    #@qml.shadows.shadow_state(wires=[0, 1], diffable=True)
     @qml.qnode(dev4q, interface='torch')
     def patch_encode2(inputs, four_pix_params, sixteen_reupload_params):
         FourByFourPatchWithPosEncoding.compute_decomposition(inputs, four_pix_params, sixteen_reupload_params, [0,1,2,3], L1, L2, 2)
-        return qml.classical_shadow(wires=[0, 1])
+        return [qml.expval(qml.PauliZ(i)) for i in range(2)]
 
     pixels = torch.randn(3,4)
     pixels_16 = torch.randn(3,16)
@@ -283,7 +283,7 @@ if __name__ == '__main__':
         "four_pix_params": (L2,L1*6*4),
         "sixteen_reupload_params": (L2, 21),
     }
-    qlayer = qml.qnn.TorchLayer(patch_encode, weight_shapes)
+    qlayer = qml.qnn.TorchLayer(patch_encode2, weight_shapes)
     clayer = torch.nn.Linear(16, 2)
-    model = torch.nn.Sequential(qlayer, clayer)
-    print(model(pixels_16))
+    model = torch.nn.Sequential(qlayer)
+    print(model(pixels_18))
