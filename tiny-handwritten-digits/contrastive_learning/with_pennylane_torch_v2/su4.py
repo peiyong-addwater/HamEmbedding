@@ -16,7 +16,7 @@ class SU4(Operation):
     If the gate is leading gate (15 params), it will start with U3 gates, otherwise (9 params) it will start with the entangling gate.
     """
     num_wires = 2
-    grad_method = None
+    grad_method = 'A'
 
     def __init__(self, weights, wires, leading_gate = True, do_queue = None, id=None):
         # interface = qml.math.get_interface(weights)

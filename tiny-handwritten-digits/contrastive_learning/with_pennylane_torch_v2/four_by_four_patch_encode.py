@@ -19,7 +19,7 @@ class FourPixelReUpload(Operation):
     Trainable parameters are the rotation parameters of Rot gates
     """
     num_wires = 2
-    grad_method = None
+    grad_method = 'A'
 
     def __init__(self, pixels, encode_params, L1, wires,do_queue=None, id=None):
         """
@@ -78,7 +78,7 @@ class FourByFourPatchReUpload(Operation):
     Then the shape of sixteen_pixel_parameters should be (...,L2, 21)
     """
     num_wires = 4
-    grad_method = None
+    grad_method = 'A'
 
     def __init__(self, pixels_len_16, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, wires, do_queue=None, id=None):
         interface = qml.math.get_interface(four_pixel_encode_parameters)
@@ -152,7 +152,7 @@ class FourByFourPatchWithPosEncoding(Operation):
     All qubits except the feature-carrying qubits will be reset before encoding the pos information
     """
     num_wires = 4
-    grad_method = None
+    grad_method = 'A'
 
     def __init__(self, pixels_whole_patch_with_pos, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, n_feature_qubits, wires, do_queue=None, id=None):
         interface = qml.math.get_interface(four_pixel_encode_parameters)
