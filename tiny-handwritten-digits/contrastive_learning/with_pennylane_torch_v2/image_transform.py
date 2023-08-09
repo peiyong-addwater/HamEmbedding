@@ -12,3 +12,5 @@ DEFAULT_TRANSFORM = T.Compose(
         T.RandomResizedCrop(size=(8,8),scale=((1-0.125)*(1-0.125),1.0))
     ]
 )
+
+#TODO: Rescale the pixel values to [0, Pi/2]
