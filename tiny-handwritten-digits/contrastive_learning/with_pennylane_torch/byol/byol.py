@@ -224,6 +224,7 @@ class BYOL(nn.Module):
 
     @singleton('target_encoder')
     def _get_target_encoder(self):
+        #TODO: Instead of deepcopying, just input the online encoder and the target encoder models at the same time.
         target_encoder = self.online_encoder.detach()
         #target_encoder = copy.deepcopy(self.online_encoder)
         set_requires_grad(target_encoder, False)
