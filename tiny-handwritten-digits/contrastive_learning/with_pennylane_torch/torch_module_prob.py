@@ -2,7 +2,7 @@
 QNNs with probability vector as output.
 Wrapped for use with PyTorch.
 """
-from qnns import RecurrentCircV1
+from .qnns import RecurrentCircV1
 import pennylane as qml
 
 qml.disable_return()
@@ -60,6 +60,9 @@ class RecurentQNNNoPosCodeV1(nn.Module):
         self.qlayer = qml.qnn.TorchLayer(qnn_probs, weight_shapes=weight_shapes, init_method=init_method)
 
     def forward(self, inputs):
+        # the input will have shape (batchsize, 1, 8, 8)
+        inputs = torch.squeeze(inputs)
+        inputs = inputs.reshape(inputs.shape[0], 64)
         return self.qlayer(inputs)
 
 if __name__ == '__main__':
@@ -68,6 +71,6 @@ if __name__ == '__main__':
     L1 = 2
     L2 = 2
     L_MC = 2
-    data = torch.randn(4, 64)
+    data = torch.randn(4, 1, 8, 8)
     model = RecurentQNNNoPosCodeV1(L1, L2, L_MC, mem_qubits, patch_qubits)
     print(model(data))

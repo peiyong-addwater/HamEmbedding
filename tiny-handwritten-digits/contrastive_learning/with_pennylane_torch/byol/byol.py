@@ -220,11 +220,12 @@ class BYOL(nn.Module):
         self.to(device)
 
         # send a mock image tensor to instantiate singleton parameters
-        self.forward(torch.randn(2, 3, image_size, image_size, device=device))
+        self.forward(torch.randn(2, 1, image_size, image_size, device=device))
 
     @singleton('target_encoder')
     def _get_target_encoder(self):
-        target_encoder = copy.deepcopy(self.online_encoder)
+        target_encoder = self.online_encoder.detach()
+        #target_encoder = copy.deepcopy(self.online_encoder)
         set_requires_grad(target_encoder, False)
         return target_encoder
 
