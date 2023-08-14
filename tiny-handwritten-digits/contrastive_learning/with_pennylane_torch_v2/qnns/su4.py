@@ -8,7 +8,7 @@ import sys
 from pennylane.operation import Operation, AnyWires
 from reset_gate import ResetZeroState
 
-sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
+# sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 class SU4(Operation):
     """

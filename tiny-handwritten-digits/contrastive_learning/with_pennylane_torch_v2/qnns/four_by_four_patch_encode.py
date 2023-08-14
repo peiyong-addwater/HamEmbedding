@@ -9,7 +9,7 @@ from pennylane.operation import Operation, AnyWires
 from reset_gate import ResetZeroState
 import math
 
-sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
+# sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 
 class FourPixelReUpload(Operation):

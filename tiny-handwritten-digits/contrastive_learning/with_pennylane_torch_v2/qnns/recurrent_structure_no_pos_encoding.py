@@ -11,7 +11,7 @@ import math
 from four_by_four_patch_encode import FourByFourPatchReUpload
 from su4 import SU4
 
-sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
+# sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')
 
 class InitialiseMemState(Operation):
     """
