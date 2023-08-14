@@ -5,6 +5,8 @@ Wrapped for use with PyTorch.
 from qnns import RecurrentCircV1
 import pennylane as qml
 
+qml.disable_return()
+
 import torch
 import torch.nn as nn
 
@@ -59,3 +61,12 @@ class RecurentQNNNoPosCodeV1(nn.Module):
     def forward(self, inputs):
         return self.qlayer(inputs)
 
+if __name__ == '__main__':
+    mem_qubits = 4
+    patch_qubits = 4
+    L1 = 2
+    L2 = 2
+    L_MC = 2
+    data = torch.randn(4, 64)
+    model = RecurentQNNNoPosCodeV1(L1, L2, L_MC, mem_qubits, patch_qubits)
+    print(model(data))
