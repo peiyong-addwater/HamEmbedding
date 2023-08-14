@@ -6,7 +6,7 @@ from typing import List, Tuple, Union
 from pennylane.wires import Wires
 import sys
 from pennylane.operation import Operation, AnyWires
-from reset_gate import ResetZeroState
+from .reset_gate import ResetZeroState
 import math
 
 # sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageClassification')

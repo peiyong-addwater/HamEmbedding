@@ -99,7 +99,7 @@ def SimSiamMLP(dim, projection_size, hidden_size=4096):
 
 # a wrapper class for the base neural network
 # will manage the interception of the hidden layer output
-# and pipe it into the projecter and predictor nets
+# and pipe it into the projector and predictor nets
 
 class NetWrapper(nn.Module):
     def __init__(self, net, projection_size, projection_hidden_size, layer = -2, use_simsiam_mlp = False):
