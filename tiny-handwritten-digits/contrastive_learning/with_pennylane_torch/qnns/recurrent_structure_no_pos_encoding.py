@@ -200,7 +200,7 @@ class RecurrentCircV1(Operation):
             ):
         """
 
-        :param data:
+        :param data: of shape (...,  64), each 16-element segment is a 4 by 4 patch.
         :param four_pixel_encode_parameters:
         :param sixteen_pixel_parameters:
         :param mem_init_params:
