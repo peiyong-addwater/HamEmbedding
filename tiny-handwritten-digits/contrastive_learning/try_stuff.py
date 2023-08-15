@@ -16,13 +16,20 @@ if __name__ == '__main__':
 
     mem_init_params = torch.randn( 12 * mem_qubits - 9)
     mem_patch_interact_params = torch.randn(36)
-    L_MC = 1
-    mem_computation_params = torch.randn(L_MC, 12 * mem_qubits - 9)
-    L1 = 1
-    L2 = 1
-    data = torch.randn(4, 64)
+    L_MC = 2
+    mem_computation_params = torch.randn(L_MC*( 12 * mem_qubits - 9))
+    L1 = 2
+    L2 = 2
+    data = torch.randn(2, 64)
     patch_encode_params = torch.randn(L2*L1 * 6 * 4)
     patch_rot_crot_params = torch.randn(L2* 21)
+
+    #sizes
+    print(L2*L1 * 6 * 4)
+    print(L2* 21)
+    print( 12 * mem_qubits - 9)
+    print(36)
+    print(L_MC*( 12 * mem_qubits - 9))
 
     @batch_input(argnum=0)
     @qml.qnode(devfull, interface="torch", diff_method='spsa')

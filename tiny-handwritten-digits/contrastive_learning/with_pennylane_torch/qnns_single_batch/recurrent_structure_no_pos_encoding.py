@@ -115,7 +115,7 @@ class MemComputation(Operation):
     def __init__(self, params, wires, L_MC, do_queue=None, id=None):
         """
 
-        :param params: shape of (..., L_MC, 3 * num_wires + 9 * (num_wires-1))
+        :param params: shape of (..., L_MC*( 3 * num_wires + 9 * (num_wires-1)))
         :param wires:
         :param L_MC:
         :param do_queue:
@@ -123,6 +123,7 @@ class MemComputation(Operation):
         """
         n_wires = len(wires)
         params_shape = qml.math.shape(params)
+        self.n_single_layer_params = 3 * n_wires + 9 * (n_wires - 1)
 
 
         self._hyperparameters = {"L_MC": L_MC}
@@ -135,11 +136,12 @@ class MemComputation(Operation):
     @staticmethod
     def compute_decomposition(params, wires, L_MC):
         n_wires = len(wires)
+        n_single_layer_params = 3 * n_wires + 9 * (n_wires - 1)
         op_list = []
         for i in range(1, n_wires):
             op_list.append(qml.CZ(wires=[wires[-i], wires[-i-1]]))
         for i in range(L_MC):
-            layer_params = params[...,i,:]
+            layer_params = params[...,i*n_single_layer_params:(i+1)*n_single_layer_params]
             u3_params = layer_params[..., :3 * n_wires]
             su4_params = layer_params[..., 3 * n_wires:]
             for i in range(n_wires):

@@ -66,7 +66,7 @@ def batch_input(
     for i in range(batch_size):
         batch = []
         for idx, param in enumerate(all_parameters):
-            #print(idx, param)
+            print(idx, param.shape)
             if idx in argnum:
                 param = param[i]
             batch.append(param)
