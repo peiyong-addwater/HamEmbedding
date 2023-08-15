@@ -1,4 +1,4 @@
-from with_pennylane_torch.qnns import RecurrentCircV1
+from with_pennylane_torch.qnns_single_batch import RecurrentCircV1
 import pennylane as qml
 from with_pennylane_torch.torch_layer import TorchLayer, batch_input
 import torch
