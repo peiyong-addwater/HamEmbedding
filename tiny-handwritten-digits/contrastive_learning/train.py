@@ -107,6 +107,7 @@ if __name__ == '__main__':
     for epoch in range(EPOCHS):
         epoch_start = time.time()
         total_loss = 0
+        n_train_batches = len(train_loader)
         for i, (x, _) in enumerate(train_loader):
             batch_start = time.time()
             x = x.to(device)
@@ -117,7 +118,7 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
             batch_end = time.time()
-            print(f"Epoch {epoch} batch {i} loss: {loss.item()} time: {batch_end - batch_start}")
+            print(f"Epoch {epoch} batch {i}/{n_train_batches} loss: {loss.item()} time: {batch_end - batch_start}")
             batch_iters += 1
         writer.add_scalar('Loss/train_epoch', total_loss / len(train_loader), epoch)
         print(f"Epoch {epoch} train loss: {total_loss / len(train_loader)}, train time: {time.time() - epoch_start}")
