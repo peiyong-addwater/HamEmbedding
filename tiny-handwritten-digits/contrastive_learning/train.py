@@ -27,17 +27,20 @@ if __name__ == '__main__':
     from with_pennylane_torch.torch_module_prob import RecurentQNNNoPosCodeV1
     from with_pennylane_torch.byol import BYOL
     from torch.utils.tensorboard import SummaryWriter
+    import json
     import os
 
     log_dir = f"logs-{nowtime()}"
-
+    checkpoint_dir = f"checkpoint/checkpoints-{nowtime()}"
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
     writer = SummaryWriter(os.path.join('runs', log_dir))
 
     # data paths
     img_dir = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/images"
     csv_file = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/annotated_labels.csv"
 
-    BATCH_SIZE = 4
+    BATCH_SIZE = 100
     EPOCHS = 100
 
     # structural parameters
@@ -58,6 +61,15 @@ if __name__ == '__main__':
         "forget_gate": RESET_FIRST_MEM_QUBIT
     }
 
+    training_hyperparams = {
+        "batch_size": BATCH_SIZE,
+        "epochs": EPOCHS,
+        "model_hyperparams": model_hyperparams
+    }
+
+    with open(os.path.join(checkpoint_dir, 'training_hyperparams.json'), 'w') as f:
+        json.dump(training_hyperparams, f, indent=4)
+
     device = 'cpu'
 
     base_model = RecurentQNNNoPosCodeV1(L1, L2, L_MC, N_MEM_QUBITS, N_PATCH_QUBITS, RESET_FIRST_MEM_QUBIT)
@@ -66,7 +78,7 @@ if __name__ == '__main__':
 
     ssl_model = ssl_model.to(device)
 
-    optimizer = torch.optim.SGD(ssl_model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = torch.optim.Adagrad(ssl_model.parameters(), lr=0.01, momentum=0.9)
 
     dataset = TinyHandwrittenDigitsDataset(csv_file, img_dir)
 
@@ -75,18 +87,38 @@ if __name__ == '__main__':
     test_size = len(dataset) - train_size- val_size
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size, test_size])
     train_loader, val_loader, test_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10), \
-                                            DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10), \
-                                            DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10)
+                                            DataLoader(val_dataset, batch_size=1, shuffle=True, num_workers=10), \
+                                            DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=10)
 
+    batch_iters = 0
     for epoch in range(EPOCHS):
         total_loss = 0
         for i, (x, _) in enumerate(train_loader):
             x = x.to(device)
             loss = ssl_model(x)
-            print(loss)
+            writer.add_scalar('Loss/train_batch', loss.item(), batch_iters)
             total_loss = total_loss + loss.item()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            batch_iters += 1
+        writer.add_scalar('Loss/train_epoch', total_loss / len(train_loader), epoch)
+        print(f"Epoch {epoch} train loss: {total_loss / len(train_loader)}")
+        for name, weight in ssl_model.named_parameters():
+            writer.add_histogram(name, weight, epoch)
+            writer.add_histogram(f'{name}.grad', weight.grad, epoch)
+        if (epoch) % 10 == 0:
+            torch.save(ssl_model.state_dict(), os.path.join(checkpoint_dir, f"epoch-{epoch}.pth"))
+            print(f"Epoch {epoch} model saved")
+        if (epoch) % 10 == 0:
+            total_loss = 0
+            for i, (x, _) in enumerate(val_loader):
+                x = x.to(device)
+                loss = ssl_model(x)
+                total_loss = total_loss + loss.item()
+            writer.add_scalar('Loss/val_epoch', total_loss / len(val_loader), epoch)
+            print(f"Epoch {epoch} val loss: {total_loss / len(val_loader)}")
+
+
 
 
