@@ -28,6 +28,15 @@ L2 = 2
 L_MC = 1
 RESET_FIRST_MEM_QUBIT = False
 
+model_hyperparams = {
+    "L1": L1,
+    "L2": L2,
+    "L_MC": L_MC,
+    "n_mem_qubits": N_MEM_QUBITS,
+    "n_patch_qubits": N_PATCH_QUBITS,
+    "forget_gate": RESET_FIRST_MEM_QUBIT
+}
+
 # Training parameters
 BATCH_SIZE = 10
 N_EPOCHS = 100
@@ -37,10 +46,12 @@ DEVICE = 'gpu'
 model = RecurentQNNNoPosCodeV1(L1, L2, L_MC, N_MEM_QUBITS, N_PATCH_QUBITS)
 dataset = TinyHandwrittenDigitsDataset(csv_file, img_dir)
 
-print(model)
+#print(model)
 
 learner = BYOL(
     model,
+    net_class=RecurentQNNNoPosCodeV1,
+    net_hyperparam_dict=model_hyperparams,
     image_size=8,
     projection_size = 16,
     projection_hidden_size=128,

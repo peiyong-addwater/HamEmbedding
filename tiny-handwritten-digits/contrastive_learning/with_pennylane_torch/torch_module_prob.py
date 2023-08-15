@@ -73,4 +73,4 @@ if __name__ == '__main__':
     L_MC = 2
     data = torch.randn(4, 1, 8, 8)
     model = RecurentQNNNoPosCodeV1(L1, L2, L_MC, mem_qubits, patch_qubits)
-    print(model(data))
+    #print(model(data))

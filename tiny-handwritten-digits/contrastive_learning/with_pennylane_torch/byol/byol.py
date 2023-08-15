@@ -60,7 +60,7 @@ def loss_fn(x, y):
 
 # exponential moving average
 
-class EMA():
+class EMA:
     def __init__(self, beta):
         super().__init__()
         self.beta = beta
@@ -137,6 +137,7 @@ class NetWrapper(nn.Module):
 
     @singleton('projector')
     def _get_projector(self, hidden):
+        #print(hidden)
         _, dim = hidden.shape
         create_mlp_fn = MLP if not self.use_simsiam_mlp else SimSiamMLP
         projector = create_mlp_fn(dim, self.projection_size, self.projection_hidden_size)
@@ -173,6 +174,8 @@ class BYOL(nn.Module):
     def __init__(
         self,
         net,
+        net_class,
+        net_hyperparam_dict,
         image_size,
         hidden_layer = -2,
         projection_size = 256,
@@ -184,6 +187,7 @@ class BYOL(nn.Module):
     ):
         super().__init__()
         self.net = net
+        self.img_size = image_size
 
         # default SimCLR augmentation
 
@@ -208,12 +212,17 @@ class BYOL(nn.Module):
         self.augment2 = default(augment_fn2, self.augment1)
 
         self.online_encoder = NetWrapper(net, projection_size, projection_hidden_size, layer=hidden_layer, use_simsiam_mlp=not use_momentum)
+        self.projection_size = projection_size
+        self.projection_hidden_size = projection_hidden_size
+        self.hidden_layer = hidden_layer
 
         self.use_momentum = use_momentum
         self.target_encoder = None
         self.target_ema_updater = EMA(moving_average_decay)
 
         self.online_predictor = MLP(projection_size, projection_size, projection_hidden_size)
+        self.net_class = net_class
+        self.net_hyperparam_dict = net_hyperparam_dict
 
         # get device of network and make wrapper same device
         device = get_module_device(net)
@@ -222,10 +231,18 @@ class BYOL(nn.Module):
         # send a mock image tensor to instantiate singleton parameters
         self.forward(torch.randn(2, 1, image_size, image_size, device=device))
 
+
+
     @singleton('target_encoder')
     def _get_target_encoder(self):
-        #TODO: Instead of deepcopying, just input the online encoder and the target encoder models at the same time.
-        target_encoder = self.online_encoder.detach()
+        online_encoder_dict = self.online_encoder.state_dict() # probably only suitable for small models
+        #print(online_encoder_dict)
+        target_encoder_net = self.net_class(**self.net_hyperparam_dict)
+        target_encoder = NetWrapper(target_encoder_net, self.projection_size, self.projection_hidden_size, layer=self.hidden_layer, use_simsiam_mlp=not self.use_momentum)
+        # send a mock image tensor to instantiate singleton parameters for target encoder
+        target_encoder(torch.randn(2, 1, self.img_size, self.img_size, device=get_module_device(self.net)))
+        #print(target_encoder.state_dict())
+        target_encoder.load_state_dict(online_encoder_dict)
         #target_encoder = copy.deepcopy(self.online_encoder)
         set_requires_grad(target_encoder, False)
         return target_encoder
