@@ -13,6 +13,7 @@ from with_pennylane_torch.dataset import TinyHandwrittenDigitsDataset
 from with_pennylane_torch.byol import BYOL
 from with_pennylane_torch.torch_module_prob import RecurentQNNNoPosCodeV1
 from with_pennylane_torch.image_transform import DEFAULT_TRANSFORM
+import time
 
 # data paths
 img_dir = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/images"
@@ -64,8 +65,9 @@ dataloader = DataLoader(dataset, batch_size=4,
 opt = torch.optim.Adam(learner.parameters(), lr=3e-4)
 
 for batch, (X, y) in enumerate(dataloader):
-
+    start = time.time()
     loss = learner(X)
-    print(loss)
+    end = time.time()
+    print(loss, end - start)
 
     break

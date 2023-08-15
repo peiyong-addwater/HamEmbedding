@@ -4,6 +4,7 @@ Wrapped for use with PyTorch.
 """
 from .qnns import RecurrentCircV1
 import pennylane as qml
+from .torch_layer import TorchLayerMPCPU
 
 qml.disable_return()
 
@@ -20,7 +21,7 @@ class RecurentQNNNoPosCodeV1(nn.Module):
         super().__init__()
         wires = list(range(n_mem_qubits+ n_patch_qubits))
         dev = qml.device("default.mixed", wires=wires)
-        @qml.qnode(dev, interface="torch")
+        @qml.qnode(dev, interface="torch", diff_method="parameter-shift")
         def qnn_probs(
                 inputs,
                 four_pixel_encode_params,
