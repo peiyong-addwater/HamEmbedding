@@ -53,8 +53,8 @@ if __name__ == '__main__':
     csv_file = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/annotated_labels.csv"
 
     BATCH_SIZE = 4
-    TRAIN_BATCHES = 2
-    EPOCHS = 100
+    TRAIN_BATCHES = 100
+    EPOCHS = 50
 
     # structural parameters
     N_MEM_QUBITS = 4  # don't change this unless change the model structure
