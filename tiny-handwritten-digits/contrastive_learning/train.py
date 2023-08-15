@@ -53,7 +53,7 @@ if __name__ == '__main__':
     csv_file = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/annotated_labels.csv"
 
     BATCH_SIZE = 4
-    TRAIN_BATCHES = 50
+    TRAIN_BATCHES = 2
     EPOCHS = 100
 
     # structural parameters
@@ -119,14 +119,16 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
             batch_end = time.time()
-            print(f"Epoch {epoch} batch {i}/{n_train_batches} loss: {loss.item()} time: {batch_end - batch_start}")
+            print(f"Epoch {epoch} batch {i+1}/{n_train_batches} loss: {loss.item()} time: {batch_end - batch_start}")
             batch_iters += 1
         writer.add_scalar('Loss/train_epoch', total_loss / len(train_loader), epoch)
         print(f"Epoch {epoch} train loss: {total_loss / len(train_loader)}, train time: {time.time() - epoch_start}")
         for name, weight in ssl_model.named_parameters():
             writer.add_histogram(name, weight, epoch)
-            writer.add_histogram(f'{name}.grad', weight.grad, epoch)
-        if (epoch) % 10 == 0:
+            if weight.grad is not None:
+                writer.add_histogram(f'{name}.grad', weight.grad, epoch)
+
+        if (epoch) % 5 == 0:
             checkpoint = {
                 'epoch': epoch,
                 'model': ssl_model.state_dict(),

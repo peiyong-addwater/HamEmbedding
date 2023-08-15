@@ -68,6 +68,7 @@ class RecurentQNNNoPosCodeV1(nn.Module):
         inputs = inputs.reshape(inputs.shape[0], 64)
         return self.qlayer(inputs)
 
+
 if __name__ == '__main__':
     mem_qubits = 4
     patch_qubits = 4

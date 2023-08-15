@@ -62,8 +62,9 @@ class RecurentQNNNoPosCodeV1(nn.Module):
         #self.qlayer = TorchLayer(qnn_probs, weight_shapes=weight_shapes, init_method=init_method)
 
     def forward(self, inputs):
-        # the input will have shape (batchsize, 1, 8, 8)
-        inputs = torch.squeeze(inputs)
+        # the input will have shape (batchsize, 1, 8, 8) for training
+        # for testing, after squeeze, it will have shape (1, 8, 8)
+        inputs = torch.squeeze(inputs, 1) # only squeeze the channel dimension
         inputs = inputs.reshape(inputs.shape[0], 64)
         return self.qlayer(inputs)
 
