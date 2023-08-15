@@ -10,7 +10,7 @@ except RuntimeError:
 
 qml.disable_return()
 
-class TorchLayerMPCPU(qml.qnn.TorchLayer):
+class TorchLayer(qml.qnn.TorchLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.n_cpus = mp.cpu_count()
@@ -26,8 +26,9 @@ class TorchLayerMPCPU(qml.qnn.TorchLayer):
         if not qml.active_return() and has_batch_dim:
 
 
-            reconstructor = [self._evaluate_qnode(x) for x in torch.unbind(inputs)]
-            results = torch.stack(reconstructor)
+            #reconstructor = [self._evaluate_qnode(x) for x in torch.unbind(inputs)]
+            #results = torch.stack(reconstructor)
+            results = self._evaluate_qnode(inputs)
         else:
             # calculate the forward pass as usual
             results = self._evaluate_qnode(inputs)

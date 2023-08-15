@@ -4,7 +4,7 @@ Wrapped for use with PyTorch.
 """
 from .qnns import RecurrentCircV1
 import pennylane as qml
-from .torch_layer import TorchLayerMPCPU
+from .torch_layer import TorchLayer
 
 qml.disable_return()
 
@@ -59,6 +59,7 @@ class RecurentQNNNoPosCodeV1(nn.Module):
             "mem_computation_params": nn.init.normal_
         }
         self.qlayer = qml.qnn.TorchLayer(qnn_probs, weight_shapes=weight_shapes, init_method=init_method)
+        #self.qlayer = TorchLayer(qnn_probs, weight_shapes=weight_shapes, init_method=init_method)
 
     def forward(self, inputs):
         # the input will have shape (batchsize, 1, 8, 8)
