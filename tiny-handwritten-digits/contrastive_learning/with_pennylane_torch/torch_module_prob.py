@@ -21,7 +21,7 @@ class RecurentQNNNoPosCodeV1(nn.Module):
         super().__init__()
         wires = list(range(n_mem_qubits+ n_patch_qubits))
         dev = qml.device("default.mixed", wires=wires)
-        @qml.qnode(dev, interface="torch", diff_method="spsa")
+        @qml.qnode(dev, interface="torch", diff_method="parameter-shift")
         def qnn_probs(
                 inputs,
                 four_pixel_encode_params,
