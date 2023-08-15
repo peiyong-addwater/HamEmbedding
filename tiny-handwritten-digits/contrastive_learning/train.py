@@ -94,8 +94,8 @@ if __name__ == '__main__':
 
     dataset = TinyHandwrittenDigitsDataset(csv_file, img_dir)
 
-    train_size = int(0.6 * len(dataset))
-    val_size = int(0.2 * len(dataset))
+    train_size = int(0.6 * len(dataset)//10) # reduce the train size
+    val_size = int(0.2 * len(dataset)//10) # reduce the val size
     test_size = len(dataset) - train_size- val_size
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size, test_size])
     train_loader, val_loader, test_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10), \
