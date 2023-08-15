@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     ssl_model = ssl_model.to(device)
 
-    optimizer = torch.optim.Adagrad(ssl_model.parameters(), lr=0.01, momentum=0.9)
+    optimizer = torch.optim.Adam(ssl_model.parameters(), lr=0.01, amsgrad=True)
 
     dataset = TinyHandwrittenDigitsDataset(csv_file, img_dir)
 
@@ -108,8 +108,12 @@ if __name__ == '__main__':
             writer.add_histogram(name, weight, epoch)
             writer.add_histogram(f'{name}.grad', weight.grad, epoch)
         if (epoch) % 10 == 0:
-            torch.save(ssl_model.state_dict(), os.path.join(checkpoint_dir, f"epoch-{epoch}.pth"))
-            print(f"Epoch {epoch} model saved")
+            checkpoint = {
+                'epoch': epoch,
+                'model': ssl_model.state_dict(),
+                'optimizer': optimizer.state_dict()
+            }
+            torch.save(checkpoint, f'epoch-{str(epoch).zfill(5)}-checkpoint.pth')
         if (epoch) % 10 == 0:
             total_loss = 0
             for i, (x, _) in enumerate(val_loader):
