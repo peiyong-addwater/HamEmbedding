@@ -28,4 +28,3 @@ DEFAULT_TRANSFORM = T.Compose(
     ]
 )
 
-#TODO: Rescale the pixel values to [0, Pi/2]

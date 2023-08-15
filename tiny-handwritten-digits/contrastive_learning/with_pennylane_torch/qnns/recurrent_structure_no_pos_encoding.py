@@ -22,7 +22,7 @@ class InitialiseMemState(Operation):
     Total number of parameters: 3 * num_wires + 9 * (num_wires-1)
     """
     num_wires = AnyWires
-    grad_method = 'A'
+    grad_method = None
 
     def __init__(self, parmas, wires, do_queue=None, id=None):
         """
@@ -71,7 +71,7 @@ class MemPatchInteract2to2(Operation):
     After the SU4 gates, there are also four CZ gates following the interaction map.
     """
     num_wires = 4
-    grad_method = 'A'
+    grad_method = None
 
     def __init__(self, params, wires,do_queue=None, id=None):
         """
@@ -118,7 +118,7 @@ class MemComputation(Operation):
     parameter shape: (..., L_MC, 3 * num_wires + 9 * (num_wires-1))
     """
     num_wires = AnyWires
-    grad_method = 'A'
+    grad_method = None
 
     def __init__(self, params, wires, L_MC, do_queue=None, id=None):
         """
@@ -180,7 +180,7 @@ class RecurrentCircV1(Operation):
         mem_computation_params, wires(total), L1, L2, L_MC, Optional_reset_first_mem_qubit
     """
     num_wires = 4+4
-    grad_method = 'A'
+    grad_method = None # 'A'
 
     def __init__(
             self,

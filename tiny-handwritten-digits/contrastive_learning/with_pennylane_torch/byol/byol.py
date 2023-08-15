@@ -176,7 +176,7 @@ class BYOL(nn.Module):
         net,
         net_class,
         net_hyperparam_dict,
-        image_size,
+        image_size=8,
         hidden_layer = -2,
         projection_size = 256,
         projection_hidden_size = 4096,

@@ -10,64 +10,83 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from with_pennylane_torch.dataset import TinyHandwrittenDigitsDataset
-from with_pennylane_torch.byol import BYOL
-from with_pennylane_torch.torch_module_prob import RecurentQNNNoPosCodeV1
 from with_pennylane_torch.image_transform import DEFAULT_TRANSFORM
 import time
+import pytorch_lightning as pl
 
-# data paths
-img_dir = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/images"
-csv_file="/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/annotated_labels.csv"
 
-# structural parameters
-#TODO: incorporate this into the construction of the PyTorch model, then only import the Pytorch model
-N_MEM_QUBITS = 4 # don't change this unless change the model structure
-N_PATCH_QUBITS = 4
 
-L1 = 2
-L2 = 2
-L_MC = 1
-RESET_FIRST_MEM_QUBIT = False
 
-model_hyperparams = {
-    "L1": L1,
-    "L2": L2,
-    "L_MC": L_MC,
-    "n_mem_qubits": N_MEM_QUBITS,
-    "n_patch_qubits": N_PATCH_QUBITS,
-    "forget_gate": RESET_FIRST_MEM_QUBIT
-}
 
-# Training parameters
-BATCH_SIZE = 10
-N_EPOCHS = 100
-LEARNING_RATE = 0.01
-DEVICE = 'gpu'
+def nowtime():
+    return str(time.strftime("%Y%m%d-%H%M%S", time.localtime()))
 
-model = RecurentQNNNoPosCodeV1(L1, L2, L_MC, N_MEM_QUBITS, N_PATCH_QUBITS)
-dataset = TinyHandwrittenDigitsDataset(csv_file, img_dir)
 
-#print(model)
 
-learner = BYOL(
-    model,
-    net_class=RecurentQNNNoPosCodeV1,
-    net_hyperparam_dict=model_hyperparams,
-    image_size=8,
-    projection_size = 16,
-    projection_hidden_size=128,
-    augment_fn=DEFAULT_TRANSFORM,
-    hidden_layer='qlayer'
-)
-dataloader = DataLoader(dataset, batch_size=4,
-                            shuffle=True, num_workers=0)
+if __name__ == '__main__':
+    from with_pennylane_torch.torch_module_prob import RecurentQNNNoPosCodeV1
+    from with_pennylane_torch.byol import BYOL
+    from torch.utils.tensorboard import SummaryWriter
+    import os
 
-opt = torch.optim.Adam(learner.parameters(), lr=3e-4)
+    log_dir = f"logs-{nowtime()}"
 
-for batch, (X, y) in enumerate(dataloader):
-    start = time.time()
-    loss = learner(X)
-    end = time.time()
-    print(loss, end - start)
+    writer = SummaryWriter(os.path.join('runs', log_dir))
 
-    break
+    # data paths
+    img_dir = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/images"
+    csv_file = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/annotated_labels.csv"
+
+    BATCH_SIZE = 4
+    EPOCHS = 100
+
+    # structural parameters
+    N_MEM_QUBITS = 4  # don't change this unless change the model structure
+    N_PATCH_QUBITS = 4
+
+    L1 = 2
+    L2 = 2
+    L_MC = 1
+    RESET_FIRST_MEM_QUBIT = True
+
+    model_hyperparams = {
+        "L1": L1,
+        "L2": L2,
+        "L_MC": L_MC,
+        "n_mem_qubits": N_MEM_QUBITS,
+        "n_patch_qubits": N_PATCH_QUBITS,
+        "forget_gate": RESET_FIRST_MEM_QUBIT
+    }
+
+    device = 'cpu'
+
+    base_model = RecurentQNNNoPosCodeV1(L1, L2, L_MC, N_MEM_QUBITS, N_PATCH_QUBITS, RESET_FIRST_MEM_QUBIT)
+
+    ssl_model = BYOL(base_model, RecurentQNNNoPosCodeV1, model_hyperparams, image_size=8, hidden_layer=-1, projection_size=256, projection_hidden_size=4096, augment_fn=DEFAULT_TRANSFORM, augment_fn2=DEFAULT_TRANSFORM, moving_average_decay=0.99, use_momentum=True)
+
+    ssl_model = ssl_model.to(device)
+
+    optimizer = torch.optim.SGD(ssl_model.parameters(), lr=0.001, momentum=0.9)
+
+    dataset = TinyHandwrittenDigitsDataset(csv_file, img_dir)
+
+    train_size = int(0.6 * len(dataset))
+    val_size = int(0.2 * len(dataset))
+    test_size = len(dataset) - train_size- val_size
+    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size, test_size])
+    train_loader, val_loader, test_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10), \
+                                            DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10), \
+                                            DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10)
+
+    for epoch in range(EPOCHS):
+        total_loss = 0
+        for i, (x, _) in enumerate(train_loader):
+            x = x.to(device)
+            loss = ssl_model(x)
+            print(loss)
+            total_loss = total_loss + loss.item()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+
