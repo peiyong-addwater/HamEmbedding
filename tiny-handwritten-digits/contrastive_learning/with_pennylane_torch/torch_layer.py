@@ -43,6 +43,7 @@ def batch_input(
     argnum = tuple(argnum) if isinstance(argnum, (list, tuple)) else (int(argnum),)
 
     all_parameters = tape.get_parameters(trainable_only=False)
+    #print(all_parameters)
     argnum_params = [all_parameters[i] for i in argnum]
 
     if any(num in tape.trainable_params for num in argnum):
@@ -65,8 +66,9 @@ def batch_input(
     for i in range(batch_size):
         batch = []
         for idx, param in enumerate(all_parameters):
+            #print(idx, param)
             if idx in argnum:
-                param = param[i,:]
+                param = param[i]
             batch.append(param)
         outputs.append(batch)
 

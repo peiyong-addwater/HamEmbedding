@@ -21,10 +21,10 @@ if __name__ == '__main__':
     L1 = 1
     L2 = 1
     data = torch.randn(4, 64)
-    patch_encode_params = torch.randn(L2, L1 * 6 * 4)
-    patch_rot_crot_params = torch.randn(L2, 21)
+    patch_encode_params = torch.randn(L2*L1 * 6 * 4)
+    patch_rot_crot_params = torch.randn(L2* 21)
 
-    @batch_input(argnum=1)
+    @batch_input(argnum=0)
     @qml.qnode(devfull, interface="torch", diff_method='spsa')
     def qnn_probs(
             inputs,

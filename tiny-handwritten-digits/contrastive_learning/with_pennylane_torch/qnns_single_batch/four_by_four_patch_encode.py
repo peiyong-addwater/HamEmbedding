@@ -66,9 +66,9 @@ class FourByFourPatchReUpload(Operation):
     Each group of 4 pixels is encoded into 2 qubits using 'FourPixelReUpload';
     And have different parameters for each group of 4 pixels;
     Then only for the 'FourPixelReUpload', the total number of parameters is 6*L1*4 for a single layer of 'FourByFourPatchReUpload';
-    Then the total parameter for four_pixel_encode_parameters should be in shape (...,L2, 6*L1*4)
+    Then the total parameter for four_pixel_encode_parameters should be in shape (..., L2*6*L1*4)
     Plus a layer of Rot gates and CRot gates, giving us 4*3+3*3=21 parameters per layer of 'FourByFourPatchReUpload';
-    Then the shape of sixteen_pixel_parameters should be (...,L2, 21)
+    Then the shape of sixteen_pixel_parameters should be (...,L2*21)
     """
     num_wires = 4
     grad_method = None
@@ -81,9 +81,7 @@ class FourByFourPatchReUpload(Operation):
 
         self._hyperparameters = {"L1": L1, "L2": L2}
 
-        pixels_len_16_shape = qml.math.shape(pixels_len_16)
-        four_pixel_encode_parameters_shape = qml.math.shape(four_pixel_encode_parameters)
-        sixteen_pixel_parameters_shape = qml.math.shape(sixteen_pixel_parameters)
+
 
 
         super().__init__(pixels_len_16, four_pixel_encode_parameters, sixteen_pixel_parameters, wires=wires, do_queue=do_queue, id=id)
@@ -96,28 +94,29 @@ class FourByFourPatchReUpload(Operation):
     def compute_decomposition(pixels_len_16, four_pixel_encode_parameters, sixteen_pixel_parameters, wires, L1, L2):
         op_list = []
         for i in range(L2):
-            op_list.append(FourPixelReUpload(pixels_len_16[...,0:4], four_pixel_encode_parameters[...,i,0:6*L1], L1, wires=[wires[0], wires[1]]))
+            single_layer_four_pixel_encode_parameters = four_pixel_encode_parameters[...,6*L1*4*i :6*L1*4*(i+1)]
+            op_list.append(FourPixelReUpload(pixels_len_16[...,0:4], single_layer_four_pixel_encode_parameters[...,0:6*L1], L1, wires=[wires[0], wires[1]]))
             op_list.append(
-                FourPixelReUpload(pixels_len_16[..., 4:8], four_pixel_encode_parameters[..., i, 6 * L1:6 * L1*2], L1,
+                FourPixelReUpload(pixels_len_16[..., 4:8], single_layer_four_pixel_encode_parameters[..., 6 * L1:6 * L1*2], L1,
                                   wires=[wires[2], wires[3]]))
             op_list.append(qml.CZ(wires=[wires[0], wires[2]]))
             op_list.append(qml.CZ(wires=[wires[1], wires[3]]))
             op_list.append(
-                FourPixelReUpload(pixels_len_16[..., 8:12], four_pixel_encode_parameters[..., i, 6 * L1*2:6 * L1 * 3], L1,
+                FourPixelReUpload(pixels_len_16[..., 8:12], single_layer_four_pixel_encode_parameters[...,  6 * L1*2:6 * L1 * 3], L1,
                                   wires=[wires[0], wires[1]]))
             op_list.append(
-                FourPixelReUpload(pixels_len_16[..., 12:16], four_pixel_encode_parameters[..., i, 6 * L1*3:6 * L1  *4], L1,
+                FourPixelReUpload(pixels_len_16[..., 12:16], single_layer_four_pixel_encode_parameters[...,  6 * L1*3:6 * L1  *4], L1,
                                   wires=[wires[2], wires[3]]))
             op_list.append(qml.CZ(wires=[wires[0], wires[2]]))
             op_list.append(qml.CZ(wires=[wires[1], wires[3]]))
-            op_list.append(qml.Rot(sixteen_pixel_parameters[..., i, 0], sixteen_pixel_parameters[..., i, 1],sixteen_pixel_parameters[..., i, 2], wires=wires[0]))
-            op_list.append(qml.Rot(sixteen_pixel_parameters[..., i, 3], sixteen_pixel_parameters[..., i, 4],sixteen_pixel_parameters[..., i, 5], wires=wires[1]))
-            op_list.append(qml.Rot(sixteen_pixel_parameters[..., i, 6], sixteen_pixel_parameters[..., i, 7],sixteen_pixel_parameters[..., i, 8], wires=wires[2]))
-            op_list.append(qml.Rot(sixteen_pixel_parameters[..., i, 9], sixteen_pixel_parameters[..., i, 10],sixteen_pixel_parameters[..., i, 11], wires=wires[3]))
+            op_list.append(qml.Rot(sixteen_pixel_parameters[..., 21*i+ 0], sixteen_pixel_parameters[..., 21*i+ 1],sixteen_pixel_parameters[..., 21*i+ 2], wires=wires[0]))
+            op_list.append(qml.Rot(sixteen_pixel_parameters[..., 21*i+ 3], sixteen_pixel_parameters[...,21*i+ 4],sixteen_pixel_parameters[..., 21*i+ 5], wires=wires[1]))
+            op_list.append(qml.Rot(sixteen_pixel_parameters[..., 21*i+ 6], sixteen_pixel_parameters[..., 21*i+ 7],sixteen_pixel_parameters[..., 21*i+ 8], wires=wires[2]))
+            op_list.append(qml.Rot(sixteen_pixel_parameters[..., 21*i+ 9], sixteen_pixel_parameters[..., 21*i+ 10],sixteen_pixel_parameters[..., 21*i+ 11], wires=wires[3]))
             # CRot direction: 3->2, 2->1, 1->0
-            op_list.append(qml.CRot(sixteen_pixel_parameters[..., i, 12], sixteen_pixel_parameters[..., i, 13],sixteen_pixel_parameters[..., i, 14], wires=[wires[3], wires[2]]))
-            op_list.append(qml.CRot(sixteen_pixel_parameters[..., i, 15], sixteen_pixel_parameters[..., i, 16],sixteen_pixel_parameters[..., i, 17], wires=[wires[2], wires[1]]))
-            op_list.append(qml.CRot(sixteen_pixel_parameters[..., i, 18], sixteen_pixel_parameters[..., i, 19],sixteen_pixel_parameters[..., i, 20], wires=[wires[1], wires[0]]))
+            op_list.append(qml.CRot(sixteen_pixel_parameters[..., 21*i+ 12], sixteen_pixel_parameters[..., 21*i+ 13],sixteen_pixel_parameters[..., 21*i+ 14], wires=[wires[3], wires[2]]))
+            op_list.append(qml.CRot(sixteen_pixel_parameters[..., 21*i+ 15], sixteen_pixel_parameters[..., 21*i+ 16],sixteen_pixel_parameters[..., 21*i+ 17], wires=[wires[2], wires[1]]))
+            op_list.append(qml.CRot(sixteen_pixel_parameters[..., 21*i+ 18], sixteen_pixel_parameters[..., 21*i+ 19],sixteen_pixel_parameters[..., 21*i+ 20], wires=[wires[1], wires[0]]))
             qml.Barrier()
         return op_list
 
