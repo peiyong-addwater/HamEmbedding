@@ -108,7 +108,7 @@ if __name__ == '__main__':
             print(f"Epoch {epoch} batch {i} loss: {loss.item()} time: {batch_end - batch_start}")
             batch_iters += 1
         writer.add_scalar('Loss/train_epoch', total_loss / len(train_loader), epoch)
-        print(f"Epoch {epoch} train loss: {total_loss / len(train_loader)}")
+        print(f"Epoch {epoch} train loss: {total_loss / len(train_loader)}, train time: {time.time() - epoch_start}")
         for name, weight in ssl_model.named_parameters():
             writer.add_histogram(name, weight, epoch)
             writer.add_histogram(f'{name}.grad', weight.grad, epoch)
@@ -127,7 +127,7 @@ if __name__ == '__main__':
                 loss = ssl_model(x)
                 total_loss = total_loss + loss.item()
             writer.add_scalar('Loss/val_epoch', total_loss / len(val_loader), epoch)
-            print(f"Epoch {epoch} val loss: {total_loss / len(val_loader)}")
+            print(f"Epoch {epoch} val loss: {total_loss / len(val_loader)}, train + val time: {time.time() - epoch_start}")
 
 
 
