@@ -91,9 +91,12 @@ if __name__ == '__main__':
                                             DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=10)
 
     batch_iters = 0
+    all_start = time.time()
     for epoch in range(EPOCHS):
+        epoch_start = time.time()
         total_loss = 0
         for i, (x, _) in enumerate(train_loader):
+            batch_start = time.time()
             x = x.to(device)
             loss = ssl_model(x)
             writer.add_scalar('Loss/train_batch', loss.item(), batch_iters)
@@ -101,6 +104,8 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            batch_end = time.time()
+            print(f"Epoch {epoch} batch {i} loss: {loss.item()} time: {batch_end - batch_start}")
             batch_iters += 1
         writer.add_scalar('Loss/train_epoch', total_loss / len(train_loader), epoch)
         print(f"Epoch {epoch} train loss: {total_loss / len(train_loader)}")
@@ -114,6 +119,7 @@ if __name__ == '__main__':
                 'optimizer': optimizer.state_dict()
             }
             torch.save(checkpoint, f'epoch-{str(epoch).zfill(5)}-checkpoint.pth')
+            print(f"Epoch {epoch} checkpoint saved")
         if (epoch) % 10 == 0:
             total_loss = 0
             for i, (x, _) in enumerate(val_loader):
