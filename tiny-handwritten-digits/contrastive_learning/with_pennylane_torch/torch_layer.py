@@ -45,6 +45,7 @@ def batch_input(
     all_parameters = tape.get_parameters(trainable_only=False)
     #print(all_parameters)
     argnum_params = [all_parameters[i] for i in argnum]
+    #print(argnum_params)
 
     if any(num in tape.trainable_params for num in argnum):
         if (qml.math.get_interface(*argnum_params) != "jax" and qml.math.get_interface(*argnum_params) != "torch"):
@@ -66,7 +67,7 @@ def batch_input(
     for i in range(batch_size):
         batch = []
         for idx, param in enumerate(all_parameters):
-            print(idx, param.shape)
+            #print(idx, param.shape)
             if idx in argnum:
                 param = param[i]
             batch.append(param)
@@ -147,60 +148,15 @@ class TorchLayer(Module):
             raise ValueError("Must specify a shape for every non-input parameter in the QNode")
 
     def forward(self, inputs):  # pylint: disable=arguments-differ
-        """Evaluates a forward pass through the QNode based upon input data and the initialized
-        weights.
-
-        Args:
-            inputs (tensor): data to be processed
-
-        Returns:
-            tensor: output data
-        """
-        has_batch_dim = len(inputs.shape) > 1
-
-        # in case the input has more than one batch dimension
-        if has_batch_dim:
-            batch_dims = inputs.shape[:-1]
-            inputs = torch.reshape(inputs, (-1, inputs.shape[-1]))
-
-        if not qml.active_return() and has_batch_dim:
-            # If the input has a batch dimension and we want to execute each data point separately,
-            # unstack the input along its first dimension, execute the QNode on each of the yielded
-            # tensors, and then stack the outputs back into the correct shape
-            reconstructor = [self._evaluate_qnode(x) for x in torch.unbind(inputs)]
-            results = torch.stack(reconstructor)
-        else:
-            # calculate the forward pass as usual
-            results = self._evaluate_qnode(inputs)
-
-        # reshape to the correct number of batch dims
-        if has_batch_dim:
-            results = torch.reshape(results, (*batch_dims, *results.shape[1:]))
+        kwargs = {
+            **{self.input_arg: inputs},
+            **{arg: weight.to(inputs) for arg, weight in self.qnode_weights.items()},
+        }
+        results = self.qnode(**kwargs)
 
         return results
 
-    def _evaluate_qnode(self, x):
-        """Evaluates the QNode for a single input datapoint.
 
-        Args:
-            x (tensor): the datapoint
-
-        Returns:
-            tensor: output datapoint
-        """
-        kwargs = {
-            **{self.input_arg: x},
-            **{arg: weight.to(x) for arg, weight in self.qnode_weights.items()},
-        }
-        res = self.qnode(**kwargs)
-
-        if isinstance(res, torch.Tensor):
-            return res.type(x.dtype)
-
-        if len(x.shape) > 1:
-            res = [torch.reshape(r, (x.shape[0], -1)) for r in res]
-
-        return torch.hstack(res).type(x.dtype)
 
     def construct(self, args, kwargs):
         """Constructs the wrapped QNode on input data using the initialized weights.
