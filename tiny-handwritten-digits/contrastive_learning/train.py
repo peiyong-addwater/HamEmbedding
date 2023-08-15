@@ -52,7 +52,7 @@ if __name__ == '__main__':
     img_dir = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/images"
     csv_file = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/annotated_labels.csv"
 
-    BATCH_SIZE = 100
+    BATCH_SIZE = 500
     EPOCHS = 100
 
     # structural parameters
@@ -99,8 +99,8 @@ if __name__ == '__main__':
     test_size = len(dataset) - train_size- val_size
     train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size, test_size])
     train_loader, val_loader, test_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=10), \
-                                            DataLoader(val_dataset, batch_size=1, shuffle=True, num_workers=10), \
-                                            DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=10)
+                                            DataLoader(val_dataset, batch_size=len(val_dataset), shuffle=True, num_workers=10), \
+                                            DataLoader(test_dataset, batch_size=len(val_dataset), shuffle=True, num_workers=10)
 
     batch_iters = 0
     all_start = time.time()
@@ -134,11 +134,13 @@ if __name__ == '__main__':
             print(f"Epoch {epoch} checkpoint saved")
         if (epoch) % 10 == 0:
             total_loss = 0
+            ssl_model.eval()
             for i, (x, _) in enumerate(val_loader):
                 x = x.to(device)
                 loss = ssl_model(x)
                 total_loss = total_loss + loss.item()
             writer.add_scalar('Loss/val_epoch', total_loss / len(val_loader), epoch)
+            ssl_model.train()
             print(f"Epoch {epoch} val loss: {total_loss / len(val_loader)}, train + val time: {time.time() - epoch_start}")
 
 
