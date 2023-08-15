@@ -40,7 +40,7 @@ if __name__ == '__main__':
     img_dir = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/images"
     csv_file = "/home/peiyongw/Desktop/Research/QML-ImageClassification/data/mini-digits/annotated_labels.csv"
 
-    BATCH_SIZE = 100
+    BATCH_SIZE = 10
     EPOCHS = 100
 
     # structural parameters
