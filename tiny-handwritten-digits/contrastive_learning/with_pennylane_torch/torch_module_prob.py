@@ -16,11 +16,11 @@ class RecurentQNNNoPosCodeV1(nn.Module):
     The input image data is assumed to be of shape (...,  64), each 16-element segment is a 4 by 4 patch.
     Output size is 2 ** n_mem_qubits.
     """
-    def __init__(self, L1, L2, L_MC, n_mem_qubits=4, n_patch_qubits=4, forget_gate=False):
+    def __init__(self, L1, L2, L_MC, n_mem_qubits=4, n_patch_qubits=4, forget_gate=False, diff_method='spsa'):
         super().__init__()
         wires = list(range(n_mem_qubits+ n_patch_qubits))
         dev = qml.device("default.mixed", wires=wires)
-        @qml.qnode(dev, interface="torch", diff_method='spsa')
+        @qml.qnode(dev, interface="torch", diff_method=diff_method)
         def qnn_probs(
                 inputs,
                 four_pixel_encode_params,
