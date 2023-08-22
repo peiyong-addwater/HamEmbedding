@@ -41,3 +41,6 @@ import sys
 sys.path.insert(0, '/scratch/pawsey0419/peiyongw/QML-ImageClassification')
 ```
 Also need to configure the address to the data folder.
+
+## Example Scripts
+
