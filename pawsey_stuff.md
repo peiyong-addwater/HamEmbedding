@@ -32,6 +32,20 @@ Don't forget to purge pip cache after installation (or during installation):
 ```shell
 pip cache purge
 ```
+## CUDA
+### PyTorch
+Maybe GPU on the login node?
+```shell
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+### Qiskit
+Command to install 'qiskit-aer-gpu':
+```shell
+module load gcc/12.1.0
+module load python/3.10.8 py-pip/22.2.2-py3.10.8 py-setuptools/57.4.0-py3.10.8
+module load cudatoolkit/22.3_11.6
+pip install qiskit-aer-gpu
+```
 
 ## Some Configurations
 
@@ -42,5 +56,24 @@ sys.path.insert(0, '/scratch/pawsey0419/peiyongw/QML-ImageClassification')
 ```
 Also need to configure the address to the data folder.
 
+
+
 ## Example Scripts
 
+```shell
+#!/bin/bash -l
+#SBATCH --account=pawsey0419
+#SBATCH --ntasks=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=128
+#SBATCH --mem=230GB
+#SBATCH --time=23:59:00
+
+module load gcc/12.1.0
+module load python/3.10.8 py-pip/22.2.2-py3.10.8 py-setuptools/57.4.0-py3.10.8
+
+export PYTHONUSERBASE=/software/projects/pawsey0419/peiyongw/setonix/python
+export PATH=$PATH:$PYTHONUSERBASE/bin
+
+python3 train_pawsey_cpu.py 
+```
