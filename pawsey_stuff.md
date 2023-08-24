@@ -75,5 +75,5 @@ module load python/3.10.8 py-pip/22.2.2-py3.10.8 py-setuptools/57.4.0-py3.10.8
 export PYTHONUSERBASE=/software/projects/pawsey0419/peiyongw/setonix/python
 export PATH=$PATH:$PYTHONUSERBASE/bin
 
-python3 train_pawsey_cpu.py 
+python3 train_pawsey_cpu.py --img_dir /scratch/pawsey0419/peiyongw/QML-ImageClassification/data/mini-digits/images --csv_file /scratch/pawsey0419/peiyongw/QML-ImageClassification/data/mini-digits/annotated_labels.csv --batch_size 50 --train_batches 20 --epoches 50 --n_mem_qubits 4 --n_patch_qubits 4 --L1 2 --L2 2 --L_MC 1 --reset_first_mem_qubit False --working_dir /scratch/pawsey0419/peiyongw/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning
 ```
