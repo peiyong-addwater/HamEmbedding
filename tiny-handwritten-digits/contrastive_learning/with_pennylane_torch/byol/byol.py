@@ -226,6 +226,7 @@ class BYOL(nn.Module):
 
         # get device of network and make wrapper same device
         device = get_module_device(net)
+        self.device = device
         self.to(device)
 
         # send a mock image tensor to instantiate singleton parameters
@@ -282,8 +283,8 @@ class BYOL(nn.Module):
             target_proj_one.detach_()
             target_proj_two.detach_()
 
-        loss_one = loss_fn(online_pred_one, target_proj_two.detach())
-        loss_two = loss_fn(online_pred_two, target_proj_one.detach())
+        loss_one = loss_fn(online_pred_one, target_proj_two.detach().to(self.device))
+        loss_two = loss_fn(online_pred_two, target_proj_one.detach().to(self.device))
 
         loss = loss_one + loss_two
         return loss.mean()

@@ -31,6 +31,13 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="setonix.pawsey.org.au">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/scratch/pawsey0419/peiyongw/QML-ImageClassification" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
     </serverData>
     <option name="myAutoUpload" value="ALWAYS" />
   </component>
