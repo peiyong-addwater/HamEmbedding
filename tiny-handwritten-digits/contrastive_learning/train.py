@@ -134,9 +134,9 @@ if __name__ == '__main__':
                 'model': ssl_model.state_dict(),
                 'optimizer': optimizer.state_dict()
             }
-            torch.save(checkpoint, f'epoch-{str(epoch).zfill(5)}-checkpoint.pth')
+            torch.save(checkpoint, os.path.join(checkpoint_dir, f'epoch-{str(epoch).zfill(5)}-checkpoint.pth'))
             print(f"Epoch {epoch} checkpoint saved")
-        if (epoch) % 10 == 0:
+        if (epoch) % 5 == 0:
             total_loss = 0
             ssl_model.eval()
             for i, (x, _) in enumerate(val_loader):
@@ -146,7 +146,11 @@ if __name__ == '__main__':
             writer.add_scalar('Loss/val_epoch', total_loss / len(val_loader), epoch)
             ssl_model.train()
             print(f"Epoch {epoch} val loss: {total_loss / len(val_loader)}, train + val time: {time.time() - epoch_start}")
-
+    final_chpt = {
+        'model': ssl_model.state_dict(),
+        'optimizer': optimizer.state_dict()
+    }
+    torch.save(final_chpt, os.path.join(checkpoint_dir, f'final-checkpoint.pth'))
 
 
 
