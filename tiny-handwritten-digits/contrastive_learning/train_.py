@@ -83,7 +83,19 @@ if __name__ == '__main__':
 
     base_model = base_model.to(device)
 
-    ssl_model = BYOL(base_model, RecurentQNNNoPosCodeV1, model_hyperparams, image_size=8, hidden_layer=-1, projection_size=256, projection_hidden_size=4096, augment_fn=DEFAULT_TRANSFORM, augment_fn2=DEFAULT_TRANSFORM, moving_average_decay=0.99, use_momentum=True)
+    ssl_model = BYOL(
+        base_model,
+        RecurentQNNNoPosCodeV1,
+        model_hyperparams,
+        image_size=8,
+        hidden_layer=-1,
+        projection_size=256,
+        projection_hidden_size=4096,
+        augment_fn=DEFAULT_TRANSFORM,
+        augment_fn2=DEFAULT_TRANSFORM,
+        moving_average_decay=0.99,
+        use_momentum=True
+    )
 
     ssl_model = ssl_model.to(device)
 

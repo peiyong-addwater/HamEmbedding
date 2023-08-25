@@ -246,7 +246,7 @@ class BYOL(nn.Module):
         target_encoder.load_state_dict(online_encoder_dict)
         #target_encoder = copy.deepcopy(self.online_encoder)
         set_requires_grad(target_encoder, False)
-        return target_encoder
+        return target_encoder.to(self.device)
 
     def reset_moving_average(self):
         del self.target_encoder
