@@ -144,7 +144,7 @@ if __name__ == '__main__':
             }
             torch.save(checkpoint, os.path.join(checkpoint_dir, f'epoch-{str(epoch).zfill(5)}-checkpoint.pth'))
             print(f"Epoch {epoch} checkpoint saved")
-        if (epoch) % 5 == 0:
+        if (epoch) % 2 == 0:
             total_loss = 0
             ssl_model.eval()
             for i, (x, _) in enumerate(val_loader):
