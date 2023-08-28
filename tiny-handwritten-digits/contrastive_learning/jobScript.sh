@@ -6,8 +6,8 @@
 #SBATCH --mem=230GB
 #SBATCH --time=23:59:00
 
-module load gcc/12.1.0
-module load python/3.10.8 py-pip/22.2.2-py3.10.8 py-setuptools/57.4.0-py3.10.8
+module --ignore-cache load gcc/12.1.0
+module --ignore-cache load python/3.10.8 py-pip/22.2.2-py3.10.8 py-setuptools/57.4.0-py3.10.8
 
 export PYTHONUSERBASE=/software/projects/pawsey0419/peiyongw/setonix/python
 export PATH=$PATH:$PYTHONUSERBASE/bin
