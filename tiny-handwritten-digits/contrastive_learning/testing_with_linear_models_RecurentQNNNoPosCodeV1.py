@@ -82,7 +82,7 @@ def ssl_swap_test(x1, x2):
         trained_params['mem_init_params'],
         trained_params['mem_patch_interact_params'],
         trained_params['mem_computation_params'],
-        x1_wires,
+        x2_wires,
         L1,
         L2,
         L_MC,
