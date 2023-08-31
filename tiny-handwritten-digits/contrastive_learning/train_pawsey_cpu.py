@@ -42,6 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('--L_MC', type=int, required=True, default=1)
     parser.add_argument('--reset_first_mem_qubit', type=bool, required=True, default=True)
     parser.add_argument('--working_dir', type=str, required=True, default='/scratch/pawsey0419/peiyongw/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning')
+    parser.add_argument('--prev_checkpoint', type=str, required=False, default=None)
 
 
     args = parser.parse_args()
@@ -63,6 +64,8 @@ if __name__ == '__main__':
     L2 = args.L2
     L_MC = args.L_MC
     RESET_FIRST_MEM_QUBIT = args.reset_first_mem_qubit
+
+    prev_checkpoint = args.prev_checkpoint
 
     log_dir = f"logs-{nowtime()}"
     checkpoint_dir = f"checkpoint/checkpoints-{nowtime()}"
@@ -96,9 +99,17 @@ if __name__ == '__main__':
                      projection_size=256, projection_hidden_size=4096, augment_fn=DEFAULT_TRANSFORM,
                      augment_fn2=DEFAULT_TRANSFORM, moving_average_decay=0.99, use_momentum=True)
 
-    ssl_model = ssl_model.to(device)
+
 
     optimizer = torch.optim.Adam(ssl_model.parameters(), lr=0.01, amsgrad=True)
+
+    ssl_model = ssl_model.to(device)
+
+    if prev_checkpoint is not None:
+        checkpoint = torch.load(prev_checkpoint)
+        ssl_model.load_state_dict(checkpoint['model'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        print(f"Load from previous checkpoint {prev_checkpoint}")
 
     dataset = TinyHandwrittenDigitsDataset(csv_file, img_dir)
 
@@ -136,7 +147,7 @@ if __name__ == '__main__':
             if weight.grad is not None:
                 writer.add_histogram(f'{name}.grad', weight.grad, epoch)
 
-        if (epoch) % 2 == 0:
+        if (epoch) % 1 == 0:
             checkpoint = {
                 'epoch': epoch,
                 'model': ssl_model.state_dict(),
@@ -155,6 +166,10 @@ if __name__ == '__main__':
             ssl_model.train()
             print(
                 f"Epoch {epoch} val loss: {total_loss / len(val_loader)}, train + val time: {time.time() - epoch_start}")
+
+        print(f"Epoch Total time: {time.time() - epoch_start}")
+        print("=====================================================")
+
     final_chpt = {
                 'model': ssl_model.state_dict(),
                 'optimizer': optimizer.state_dict()
