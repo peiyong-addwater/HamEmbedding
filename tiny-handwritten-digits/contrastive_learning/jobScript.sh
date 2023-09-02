@@ -17,4 +17,4 @@ python3 train_pawsey_cpu.py --img_dir /scratch/pawsey0419/peiyongw/QML-ImageClas
 --batch_size 100 --train_batches 10 --epochs 50 --n_mem_qubits 4 --n_patch_qubits 4 --L1 2 --L2 2 --L_MC 1 \
 --reset_first_mem_qubit False \
 --working_dir /scratch/pawsey0419/peiyongw/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning \
---prev_checkpoint /scratch/pawsey0419/peiyongw/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning/checkpoint/checkpoints-20230830-024824/epoch-00004-checkpoint.pth
+--prev_checkpoint /scratch/pawsey0419/peiyongw/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning/checkpoint/checkpoints-20230831-205751/epoch-00004-checkpoint.pth
