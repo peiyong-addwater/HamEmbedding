@@ -43,6 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--reset_first_mem_qubit', type=bool, required=True, default=True)
     parser.add_argument('--working_dir', type=str, required=True, default='/scratch/pawsey0419/peiyongw/QML-ImageClassification/tiny-handwritten-digits/contrastive_learning')
     parser.add_argument('--prev_checkpoint', type=str, required=False, default=None)
+    parser.add_argument('--diff_method', type=str, required=False, default='spsa')
 
 
     args = parser.parse_args()
@@ -64,6 +65,7 @@ if __name__ == '__main__':
     L2 = args.L2
     L_MC = args.L_MC
     RESET_FIRST_MEM_QUBIT = args.reset_first_mem_qubit
+    diff_method = args.diff_method
 
     prev_checkpoint = args.prev_checkpoint
 
@@ -79,7 +81,8 @@ if __name__ == '__main__':
         "L_MC": L_MC,
         "n_mem_qubits": N_MEM_QUBITS,
         "n_patch_qubits": N_PATCH_QUBITS,
-        "forget_gate": RESET_FIRST_MEM_QUBIT
+        "forget_gate": RESET_FIRST_MEM_QUBIT,
+        "diff_method": diff_method
     }
 
     training_hyperparams = {
@@ -93,7 +96,7 @@ if __name__ == '__main__':
 
     device = 'cpu'
 
-    base_model = RecurentQNNNoPosCodeV1(L1, L2, L_MC, N_MEM_QUBITS, N_PATCH_QUBITS, RESET_FIRST_MEM_QUBIT)
+    base_model = RecurentQNNNoPosCodeV1(L1, L2, L_MC, N_MEM_QUBITS, N_PATCH_QUBITS, RESET_FIRST_MEM_QUBIT, diff_method)
 
     ssl_model = BYOL(base_model, RecurentQNNNoPosCodeV1, model_hyperparams, image_size=8, hidden_layer=-1,
                      projection_size=256, projection_hidden_size=4096, augment_fn=DEFAULT_TRANSFORM,
