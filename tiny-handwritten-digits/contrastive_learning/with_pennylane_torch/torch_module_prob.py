@@ -64,8 +64,18 @@ class RecurentQNNNoPosCodeV1(nn.Module):
         # the input will have shape (batchsize, 1, 8, 8) for training
         # for testing, after squeeze, it will have shape (1, 8, 8)
         inputs = torch.squeeze(inputs, 1) # only squeeze the channel dimension
-        inputs = inputs.reshape(inputs.shape[0], 64)
+        #inputs = inputs.reshape(inputs.shape[0], 64)
+        inputs = self.cut8x8to4x4PatchesNoPos(inputs)
         return self.qlayer(inputs)
+
+    def cut8x8to4x4PatchesNoPos(self, img: torch.Tensor):
+        batchsize = img.shape[0]
+        patches = torch.zeros((batchsize, 64))
+        for i in range(2):
+            for j in range(2):
+                patches[:, 16 * (2 * i + j):16 * (2 * i + j + 1)] = img[:, 4 * i:4 * i + 4, 4 * j:4 * j + 4].flatten(
+                    start_dim=1)
+        return patches
 
 if __name__ == '__main__':
     mem_qubits = 4
