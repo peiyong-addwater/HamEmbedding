@@ -4,8 +4,8 @@
 
 - To install packages, first load:
 ```shell
-module load gcc/12.1.0
-module load python/3.10.8 py-pip/22.2.2-py3.10.8 py-setuptools/57.4.0-py3.10.8
+module load gcc/12.2.0
+module load python/3.10.10 py-pip/23.1.2-py3.10.10 py-setuptools/68.0.0-py3.10.10
 ```
 
 Then do
@@ -41,9 +41,9 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ### Qiskit
 Command to install 'qiskit-aer-gpu':
 ```shell
-module load gcc/12.1.0
-module load python/3.10.8 py-pip/22.2.2-py3.10.8 py-setuptools/57.4.0-py3.10.8
-module load cudatoolkit/22.3_11.6
+module load gcc/12.2.0
+module load python/3.10.10 py-pip/23.1.2-py3.10.10 py-setuptools/68.0.0-py3.10.10
+module load cudatoolkit/22.7_11.7
 pip install qiskit-aer-gpu
 ```
 
