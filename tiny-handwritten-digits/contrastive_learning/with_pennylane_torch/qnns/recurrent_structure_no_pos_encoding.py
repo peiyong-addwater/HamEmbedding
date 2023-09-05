@@ -38,7 +38,7 @@ class InitialiseMemState(Operation):
             raise ValueError(f"params must be a 1D or 2D array, got shape {params_shape}")
         if params_shape[-1] != 12 * n_wires - 9:
             raise ValueError(f"params must be an array of shape (..., 12 * {n_wires} - 9), got {params_shape}")
-        super().__init__(parmas, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(parmas, wires=wires,  id=id)
 
     @property
     def num_params(self):
@@ -87,7 +87,7 @@ class MemPatchInteract2to2(Operation):
             raise ValueError(f"num_wires must be 4, got {n_wires}")
         if params_shape[-1] != 36:
             raise ValueError(f"params must be an array of shape (..., 36), got {params_shape}")
-        super().__init__(params, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(params, wires=wires,  id=id)
 
     @property
     def num_params(self):
@@ -137,7 +137,7 @@ class MemComputation(Operation):
             raise ValueError(f"params must be an array of shape (...,{L_MC}, 12 * {n_wires} - 9), got {params_shape}")
 
         self._hyperparameters = {"L_MC": L_MC}
-        super().__init__(params, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(params, wires=wires,  id=id)
 
     @property
     def num_params(self):
@@ -235,7 +235,6 @@ class RecurrentCircV1(Operation):
             mem_patch_interact_params,
             mem_computation_params,
             wires=wires,
-            do_queue=do_queue,
             id=id,
         )
 

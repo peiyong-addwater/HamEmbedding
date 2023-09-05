@@ -40,7 +40,7 @@ class FourPixelReUpload(Operation):
 
         self._hyperparameters = {"L1": L1}
 
-        super().__init__(pixels,encode_params, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(pixels,encode_params, wires=wires,  id=id)
     @property
     def num_params(self):
         return 2
@@ -84,7 +84,7 @@ class FourByFourPatchReUpload(Operation):
 
 
 
-        super().__init__(pixels_len_16, four_pixel_encode_parameters, sixteen_pixel_parameters, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(pixels_len_16, four_pixel_encode_parameters, sixteen_pixel_parameters, wires=wires, id=id)
 
     @property
     def num_params(self):
@@ -147,7 +147,7 @@ class FourByFourPatchWithPosEncoding(Operation):
         four_pixel_encode_parameters_shape = qml.math.shape(four_pixel_encode_parameters)
         sixteen_pixel_parameters_shape = qml.math.shape(sixteen_pixel_parameters)
 
-        super().__init__(pixels_whole_patch_with_pos, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, n_feature_qubits, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(pixels_whole_patch_with_pos, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, n_feature_qubits, wires=wires,  id=id)
 
     @property
     def num_params(self):

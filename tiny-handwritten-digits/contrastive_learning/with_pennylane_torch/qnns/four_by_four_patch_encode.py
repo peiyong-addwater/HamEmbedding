@@ -47,7 +47,7 @@ class FourPixelReUpload(Operation):
             raise ValueError(f"encode_params must be a 1D or 2D array with last dimension 6*{L1}; got shape {encode_params_shape}")
         self._hyperparameters = {"L1": L1}
 
-        super().__init__(pixels,encode_params, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(pixels,encode_params, wires=wires,  id=id)
     @property
     def num_params(self):
         return 2
@@ -104,7 +104,7 @@ class FourByFourPatchReUpload(Operation):
         if sixteen_pixel_parameters_shape[-2]!=L2 or sixteen_pixel_parameters_shape[-1]!=21:
             raise ValueError(f"sixteen_pixel_parameters must be a 2D or 3D array with shape (...,{L2}, 21); got shape {sixteen_pixel_parameters_shape}")
 
-        super().__init__(pixels_len_16, four_pixel_encode_parameters, sixteen_pixel_parameters, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(pixels_len_16, four_pixel_encode_parameters, sixteen_pixel_parameters, wires=wires,  id=id)
 
     @property
     def num_params(self):
@@ -180,7 +180,7 @@ class FourByFourPatchWithPosEncoding(Operation):
         if n_feature_qubits>=4:
             raise ValueError(f"The number of feature qubits should not be more than 3, got {n_feature_qubits}")
 
-        super().__init__(pixels_whole_patch_with_pos, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, n_feature_qubits, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(pixels_whole_patch_with_pos, four_pixel_encode_parameters, sixteen_pixel_parameters, L1, L2, n_feature_qubits, wires=wires,  id=id)
 
     @property
     def num_params(self):

@@ -30,7 +30,7 @@ class SU4(Operation):
 
         self._hyperparameters = {"leading_gate": leading_gate}
 
-        super().__init__(weights, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(weights, wires=wires,  id=id)
 
     @property
     def num_params(self):

@@ -35,7 +35,7 @@ class InitialiseMemState(Operation):
         n_wires = len(wires)
         params_shape = qml.math.shape(parmas)
 
-        super().__init__(parmas, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(parmas, wires=wires,  id=id)
 
     @property
     def num_params(self):
@@ -79,7 +79,7 @@ class MemPatchInteract2to2(Operation):
         n_wires = len(wires)
         params_shape = qml.math.shape(params)
 
-        super().__init__(params, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(params, wires=wires,  id=id)
 
     @property
     def num_params(self):
@@ -127,7 +127,7 @@ class MemComputation(Operation):
 
 
         self._hyperparameters = {"L_MC": L_MC}
-        super().__init__(params, wires=wires, do_queue=do_queue, id=id)
+        super().__init__(params, wires=wires,  id=id)
 
     @property
     def num_params(self):
@@ -223,7 +223,6 @@ class RecurrentCircV1(Operation):
             mem_patch_interact_params,
             mem_computation_params,
             wires=wires,
-            do_queue=do_queue,
             id=id,
         )
 
