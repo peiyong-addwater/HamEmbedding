@@ -12,7 +12,6 @@ from torch.utils.data import DataLoader
 from with_pennylane_torch.dataset import TinyHandwrittenDigitsDataset
 from with_pennylane_torch.image_transform import DEFAULT_TRANSFORM
 import time
-import pytorch_lightning as pl
 
 
 

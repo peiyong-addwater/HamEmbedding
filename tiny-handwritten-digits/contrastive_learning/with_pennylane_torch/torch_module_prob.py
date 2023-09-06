@@ -2,7 +2,7 @@
 QNNs with probability vector as output.
 Wrapped for use with PyTorch.
 """
-from .qnns import RecurrentCircV1
+from .qnns_pennylane_v031 import RecurrentCircV1
 import pennylane as qml
 
 qml.disable_return()
@@ -20,7 +20,7 @@ class RecurentQNNNoPosCodeV1(nn.Module):
     def __init__(self, L1, L2, L_MC, n_mem_qubits=4, n_patch_qubits=4, forget_gate=False, diff_method='spsa'):
         super().__init__()
         wires = list(range(n_mem_qubits+ n_patch_qubits))
-        dev = qml.device("default.mixed", wires=wires)
+        dev = qml.device("default.qubit", wires=wires)
         @qml.qnode(dev, interface="torch", diff_method=diff_method)
         def qnn_probs(
                 inputs,
