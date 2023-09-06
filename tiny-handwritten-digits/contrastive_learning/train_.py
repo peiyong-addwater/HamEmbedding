@@ -35,7 +35,7 @@ if __name__ == '__main__':
     """
 
 
-    from with_pennylane_torch.torch_module_prob import RecurentQNNNoPosCodeV1
+    from with_pennylane_torch.torch_module_prob_experimental import RecurentQNNNoPosCodeV1
     from with_pennylane_torch.byol import BYOL
     from torch.utils.tensorboard import SummaryWriter
     import json

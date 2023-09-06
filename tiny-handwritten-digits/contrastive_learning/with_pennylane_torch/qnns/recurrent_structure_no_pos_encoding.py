@@ -285,7 +285,7 @@ class RecurrentCircV1(Operation):
             op_list.append(qml.Barrier())
             # Reset the first memory qubit to zero state.
             if Optional_reset_first_mem_qubit:
-                op_list.append(ResetZeroState(wires=MB[0]))
+                op_list.append(ResetZeroState(wires=[MB[0]]))
                 op_list.append(qml.Barrier())
         return op_list
 
