@@ -11,3 +11,5 @@
 /data/mini-digits/augmented_images/
 .idea/deployment.xml
 *.xml
+*.pyc
+*.iml
