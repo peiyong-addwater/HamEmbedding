@@ -128,7 +128,7 @@ if __name__ == '__main__':
             if weight.grad is not None:
                 writer.add_histogram(f'{name}.grad', weight.grad, epoch)
 
-        if (epoch) % 5 == 0:
+        if (epoch) % 5 == 0 or epoch == EPOCHS - 1:
             checkpoint = {
                 'epoch': epoch,
                 'model': ssl_model.state_dict(),
