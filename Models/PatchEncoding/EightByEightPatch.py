@@ -1,5 +1,5 @@
 from pennylane.operation import Operation, AnyWires
-from SU4 import SU4, TailLessSU4, HeadlessSU4
+from .SU4 import SU4, TailLessSU4, HeadlessSU4
 import pennylane as qml
 
 def pqc_64(params, wires):
