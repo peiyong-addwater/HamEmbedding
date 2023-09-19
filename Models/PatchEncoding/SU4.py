@@ -48,6 +48,38 @@ class SU4(Operation):
             op_list.append(qml.U3(weights[...,6], weights[...,7], weights[...,8], wires=wires[1]))
         return op_list
 
+class HeadlessSU4(Operation):
+    """
+    SU4 gate without leading U3 gates.
+    """
+    num_wires = 2
+    grad_method = None
+
+    def __init__(self, weights, wires, id=None):
+        # interface = qml.math.get_interface(weights)
+        shape = qml.math.shape(weights)
+        if not (len(shape)==1 or len(shape)==2): # 2 is when batching, 1 is not batching
+            raise ValueError("Weights tensor must be 1D or 2D.")
+        if shape[-1] != 9:
+            raise ValueError("Weights tensor must have 9 elements.")
+
+        super().__init__(weights, wires=wires,  id=id)
+
+    @property
+    def num_params(self):
+        return 1
+
+    @staticmethod
+    def compute_decomposition(weights, wires):
+        op_list = []
+        op_list.append(qml.IsingXX(weights[...,0], wires=[wires[0], wires[1]]))
+        op_list.append(qml.IsingYY(weights[...,1], wires=[wires[0], wires[1]]))
+        op_list.append(qml.IsingZZ(weights[...,2], wires=[wires[0], wires[1]]))
+        op_list.append(qml.U3(weights[...,3], weights[...,4], weights[...,5], wires=wires[0]))
+        op_list.append(qml.U3(weights[...,6], weights[...,7], weights[...,8], wires=wires[1]))
+        return op_list
+
+
 class TailLessSU4(Operation):
     """
     SU4 gate, but without the tailing U3 gates.

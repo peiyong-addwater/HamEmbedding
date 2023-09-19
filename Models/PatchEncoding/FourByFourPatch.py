@@ -162,7 +162,7 @@ def sixteen_param_circuit(params, wires):
     """
     3-qubit circuit with 16 parameters
     :param params:
-    :param wires:
+    :param wires: 3 qubits
     :return:
     """
     qml.U3(params[...,0], params[...,1], params[...,2], wires=wires[0])
