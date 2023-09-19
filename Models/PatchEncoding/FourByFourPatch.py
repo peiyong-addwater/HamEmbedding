@@ -221,7 +221,7 @@ class FourByFourDirectReUploading(Operation):
 
     @property
     def num_params(self):
-        return 3
+        return 2
 
     @staticmethod
     def compute_decomposition(pixels, params, wires, L2):
