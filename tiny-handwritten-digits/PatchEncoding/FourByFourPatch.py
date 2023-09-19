@@ -235,25 +235,3 @@ class FourByFourDirectReUploading(Operation):
             op_list.append(qml.Barrier(only_visual=True, wires=wires))
         return op_list
 
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    import torch
-
-    dev4q = qml.device('default.qubit', wires=3)
-
-    L2=2
-
-    @qml.qnode(dev4q, interface='torch')
-    def circuit(pixels, params):
-        FourByFourDirectReUploading.compute_decomposition(pixels,params, wires=[0,1,2], L2=L2)
-        return qml.probs(wires=[0,1,2])
-
-
-    pixels_16 = torch.randn(3, 16)
-    params = torch.randn( 9*2*L2)
-    print(circuit(pixels_16, params))
-    fig, ax = qml.draw_mpl(circuit, style='sketch')(pixels_16[0], params)
-    fig.savefig('four_by_four_patch_direct_reuploading.png')
-    plt.close(fig)
