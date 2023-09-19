@@ -1,6 +1,6 @@
 from .FourPixelPatch import FourPixelReUpload, FourPixelAmpEnc
 from pennylane.operation import Operation, AnyWires
-from .SU4 import SU4, TailessSU4
+from .SU4 import SU4, TailLessSU4
 import pennylane as qml
 
 class FourByFourPatchNestedReUpload(Operation):
@@ -108,7 +108,7 @@ class FourByFourPatchAmpEnc(Operation):
     num_wires = 4
     grad_method = None
 
-    def __init__(self, pixels_len_16, u3_parameters, su4_parameters, L2, wires, id=None):
+    def __init__(self, pixels_len_16, u3_parameters, su4_parameters, wires,L2 , id=None):
         interface = qml.math.get_interface(u3_parameters)
         u3_parameters = qml.math.asarray(u3_parameters, like=interface)
         pixels_len_16 = qml.math.asarray(pixels_len_16, like=interface)
@@ -158,3 +158,102 @@ class FourByFourPatchAmpEnc(Operation):
             op_list.append(qml.Barrier(only_visual=True, wires=wires))
         return op_list
 
+def sixteen_param_circuit(params, wires):
+    """
+    3-qubit circuit with 16 parameters
+    :param params:
+    :param wires:
+    :return:
+    """
+    qml.U3(params[...,0], params[...,1], params[...,2], wires=wires[0])
+    qml.U3(params[...,3], params[...,4], params[...,5], wires=wires[1])
+    qml.U3(params[...,6], params[...,7], params[...,8], wires=wires[2])
+    qml.IsingXX(params[...,9], wires=[wires[0], wires[1]])
+    qml.IsingYY(params[...,10], wires=[wires[0], wires[1]])
+    qml.IsingZZ(params[...,11], wires=[wires[0], wires[1]])
+    qml.IsingXX(params[...,12], wires=[wires[1], wires[2]])
+    qml.IsingYY(params[...,13], wires=[wires[1], wires[2]])
+    qml.IsingZZ(params[...,14], wires=[wires[1], wires[2]])
+    qml.IsingXX(params[...,15], wires=[wires[0], wires[2]])
+
+class FourByFourDirectReUploading(Operation):
+    """
+    Encode 16 pixels into 3 qubits;
+    Pixel values are encoded using a 3-qubit, 16-parameter circuit;
+    Then followed by 2 tailless SU4 gates, starting from bottom to the top:  2->1, 1->0
+    The total number of trainable parameters is 9*3*L2
+    where L2 is the number of re-uploading layers
+    """
+    num_wires = 3
+    grad_method = None
+
+    def __init__(self, pixels, params, wires, L2, id=None):
+        """
+
+        :param pixels: input pixel data. 16 element array (flattend from 4 by 4 patch)
+        :param params: trainable parameters for encoding. 9*2*L2 element array
+        :param wires: 3 qubits
+        :param L2: number of re-uploading repetitions
+        :param id:
+        """
+        interface = qml.math.get_interface(params)
+        params = qml.math.asarray(params, like=interface)
+        pixels = qml.math.asarray(pixels, like=interface)
+        params_shape = qml.math.shape(params)
+        pixels_shape = qml.math.shape(pixels)
+
+        if not (len(pixels_shape)==1 or len(pixels_shape)==2):
+            raise ValueError(f"pixels must be a 1D or 2D array; got shape {pixels_shape}")
+
+        if pixels_shape[-1]!=16:
+            raise ValueError(f"pixels must be a 1D or 2D array with last dimension 16; got shape {pixels_shape}")
+
+        if not (len(params_shape)==1 or len(params_shape)==2):
+            raise ValueError(f"params must be a 1D or 2D array; got shape {params_shape}")
+
+        if params_shape[-1]!=9*2*L2:
+
+            raise ValueError(f"params must be a 1D or 2D array with last dimension 9*2*{L2}; got shape {params_shape}")
+
+        self._hyperparameters = {"L2": L2}
+
+        super().__init__(pixels, params, wires=wires,  id=id)
+
+    @property
+    def num_params(self):
+        return 3
+
+    @staticmethod
+    def compute_decomposition(pixels, params, wires, L2):
+        op_list = []
+        for i in range(L2):
+            op_list.append(sixteen_param_circuit(pixels[...,:], wires))
+            op_list.append(qml.Barrier(only_visual=True, wires=wires))
+            op_list.append(TailLessSU4(params[..., 0+18*i:9+18*i], wires=[wires[2], wires[1]]))
+            op_list.append(TailLessSU4(params[..., 9+18*i:18+18*i], wires=[wires[1], wires[0]]))
+            op_list.append(qml.Barrier(only_visual=True, wires=wires))
+            op_list.append(qml.Barrier(only_visual=True, wires=wires))
+        return op_list
+
+
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    import torch
+
+    dev4q = qml.device('default.qubit', wires=3)
+
+    L2=2
+
+    @qml.qnode(dev4q, interface='torch')
+    def circuit(pixels, params):
+        FourByFourDirectReUploading.compute_decomposition(pixels,params, wires=[0,1,2], L2=L2)
+        return qml.probs(wires=[0,1,2])
+
+
+    pixels_16 = torch.randn(3, 16)
+    params = torch.randn( 9*2*L2)
+    print(circuit(pixels_16, params))
+    fig, ax = qml.draw_mpl(circuit, style='sketch')(pixels_16[0], params)
+    fig.savefig('four_by_four_patch_direct_reuploading.png')
+    plt.close(fig)

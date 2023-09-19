@@ -48,7 +48,7 @@ class SU4(Operation):
             op_list.append(qml.U3(weights[...,6], weights[...,7], weights[...,8], wires=wires[1]))
         return op_list
 
-class TailessSU4(Operation):
+class TailLessSU4(Operation):
     """
     SU4 gate, but without the tailing U3 gates.
     """
