@@ -3,7 +3,7 @@ from pennylane.operation import Operation, AnyWires
 from .SU4 import SU4, TailessSU4
 import pennylane as qml
 
-class FourByFourNestedReUpload(Operation):
+class FourByFourPatchNestedReUpload(Operation):
     """
     Encode 16 pixels into 4 qubits;
     The 16 pixels are divided into 4 groups, each group has 4 pixels;
@@ -96,3 +96,65 @@ class FourByFourNestedReUpload(Operation):
                                     sixteen_pixel_parameters[..., i, 20], wires=[wires[1], wires[0]]))
             op_list.append(qml.Barrier(only_visual=True, wires=wires))
         return op_list
+
+class FourByFourPatchAmpEnc(Operation):
+    """
+    Encode 16 pixels with Amplitude encoding.
+    Then followed by a layer of U3 gate on each qubit, 12*L2 parameters
+    Then (repeated) layers of headless SU4 gates, starting from bottom to the top: 3->2, 2->1, 1->0
+    The total number of parameters is 12*L2+9*3*L2
+    If, for some devices, Amplitude encoding can only be the leading layer, then L2=1
+    """
+    num_wires = 4
+    grad_method = None
+
+    def __init__(self, pixels_len_16, u3_parameters, su4_parameters, L2, wires, id=None):
+        interface = qml.math.get_interface(u3_parameters)
+        u3_parameters = qml.math.asarray(u3_parameters, like=interface)
+        pixels_len_16 = qml.math.asarray(pixels_len_16, like=interface)
+        su4_parameters = qml.math.asarray(su4_parameters, like=interface)
+
+        self._hyperparameters = {"L2": L2}
+
+        pixels_len_16_shape = qml.math.shape(pixels_len_16)
+        u3_parameters_shape = qml.math.shape(u3_parameters)
+        su4_parameters_shape = qml.math.shape(su4_parameters)
+
+        if not (len(pixels_len_16_shape) == 1 or len(
+                pixels_len_16_shape) == 2):  # 2 is when batching, 1 is not batching
+            raise ValueError(f"pixels must be a 1D or 2D array; got shape {pixels_len_16_shape}")
+        if pixels_len_16_shape[-1] != 16:
+            raise ValueError(f"pixels must be a 1D or 2D array with last dimension 16; got shape {pixels_len_16_shape}")
+        if not (len(u3_parameters_shape) == 2 or len(u3_parameters_shape) == 1):
+            raise ValueError(f"u3_parameters must be a 1D or 2D array; got shape {u3_parameters_shape}")
+        if u3_parameters_shape[-1] != 12*L2:
+            raise ValueError(f"u3_parameters must be a 1D or 2D array with last dimension 12*{L2}; got shape {u3_parameters_shape}")
+        if not (len(su4_parameters_shape) == 2 or len(su4_parameters_shape) == 1):  # 2 is when batching, 1 is not batching
+            raise ValueError(f"su4_parameters must be a 1D or 2D array; got shape {su4_parameters_shape}")
+        if su4_parameters_shape[-1] != 9*3*L2:
+            raise ValueError(f"su4_parameters must be a 1D or 2D array with last dimension 9*3*{L2}; got shape {su4_parameters_shape}")
+        if L2!=1:
+            raise ValueError(f"Currently only support L2=1; got {L2}")
+
+        super().__init__(pixels_len_16, u3_parameters, su4_parameters, wires=wires,  id=id)
+
+    @property
+    def num_params(self):
+        return 3
+
+    @staticmethod
+    def compute_decomposition(pixels_len_16, u3_parameters, su4_parameters, wires, L2):
+        op_list=[]
+        for i in range(L2):
+            op_list.append(qml.AmplitudeEmbedding(pixels_len_16[...,:], wires=wires,normalize=True))
+            op_list.append(qml.U3(u3_parameters[..., 0+12*i], u3_parameters[..., 1+12*i], u3_parameters[..., 2+12*i], wires=wires[0]))
+            op_list.append(qml.U3(u3_parameters[..., 3+12*i], u3_parameters[..., 4+12*i], u3_parameters[..., 5+12*i], wires=wires[1]))
+            op_list.append(qml.U3(u3_parameters[..., 6+12*i], u3_parameters[..., 7+12*i], u3_parameters[..., 8+12*i], wires=wires[2]))
+            op_list.append(qml.U3(u3_parameters[..., 9+12*i], u3_parameters[..., 10+12*i], u3_parameters[..., 11+12*i], wires=wires[3]))
+            op_list.append(qml.Barrier(only_visual=True, wires=wires))
+            op_list.append(SU4(su4_parameters[..., 0+27*i:9+27*i], wires=[wires[3], wires[2]], leading_gate=False))
+            op_list.append(SU4(su4_parameters[..., 9+27*i:18+27*i], wires=[wires[2], wires[1]], leading_gate=False))
+            op_list.append(SU4(su4_parameters[..., 18+27*i:27+27*i], wires=[wires[1], wires[0]], leading_gate=False))
+            op_list.append(qml.Barrier(only_visual=True, wires=wires))
+        return op_list
+

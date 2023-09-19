@@ -94,6 +94,6 @@ class FourPixelAmpEnc(Operation):
     @staticmethod
     def compute_decomposition(pixels, wires):
         op_list = []
-        op_list.append(qml.AmplitudeEmbedding(pixels[...,:], wires=wires))
+        op_list.append(qml.AmplitudeEmbedding(pixels[...,:], wires=wires,normalize=True))
         op_list.append(qml.Barrier(only_visual=True, wires=wires))
         return op_list
