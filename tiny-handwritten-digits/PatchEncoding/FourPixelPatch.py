@@ -60,3 +60,40 @@ class FourPixelReUpload(Operation):
             op_list.append(qml.CZ(wires=[wires[0], wires[1]]))
             op_list.append(qml.Barrier(only_visual=True, wires=wires))
         return op_list
+
+class FourPixelAmpEnc(Operation):
+    """
+    Encode four pixel values with Amplitude encoding.
+    Only to encode the pixels into real amplitudes, no trainable parameters.
+    """
+    num_wires = 2
+    grad_method = None
+
+    def __init__(self, pixels, wires, id=None):
+        """
+
+        :param pixels: input pixel data. Four element array
+        :param wires: Qubits to be used. Number of qubits: 2
+        :param id:
+        """
+        interface = qml.math.get_interface(pixels)
+        pixels = qml.math.asarray(pixels, like=interface)
+        pixel_shape = qml.math.shape(pixels)
+
+        if not (len(pixel_shape) == 1 or len(pixel_shape) == 2):  # 2 is when batching, 1 is not batching
+            raise ValueError(f"pixels must be a 1D or 2D array; got shape {pixel_shape}")
+        if pixel_shape[-1] != 4:
+            raise ValueError(f"pixels must be a 1D or 2D array with last dimension 4; got shape {pixel_shape}")
+
+        super().__init__(pixels, wires=wires, id=id)
+
+    @property
+    def num_params(self):
+        return 1
+
+    @staticmethod
+    def compute_decomposition(pixels, wires):
+        op_list = []
+        op_list.append(qml.AmplitudeEmbedding(pixels[...,:], wires=wires))
+        op_list.append(qml.Barrier(only_visual=True, wires=wires))
+        return op_list
