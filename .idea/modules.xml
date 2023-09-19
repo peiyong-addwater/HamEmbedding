@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/QML-ImageClassification.iml" filepath="$PROJECT_DIR$/.idea/QML-ImageClassification.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/QML-ImageTask.iml" filepath="$PROJECT_DIR$/.idea/QML-ImageTask.iml" />
     </modules>
   </component>
 </project>
