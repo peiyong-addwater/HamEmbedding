@@ -1,6 +1,12 @@
 import torch
 
-def cut8x8to4x4PatchesNoPos(img:torch.Tensor):
+def cut8x8GreyScaleto4x4PatchesNoPos(img:torch.Tensor):
+    """
+    Cut 8x8 image to 4x4 patches without position encoding
+    Applied to grey scale/binary-valued image
+    :param img: shape (batchsize, 8, 8)
+    :return: patches: shape (batchsize, 64)
+    """
     batchsize = img.shape[0]
     patches = torch.zeros((batchsize, 64))
     for i in range(2):
