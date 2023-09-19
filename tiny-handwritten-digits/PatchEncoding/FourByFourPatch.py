@@ -3,7 +3,7 @@ from pennylane.operation import Operation, AnyWires
 from .SU4 import SU4, TailLessSU4
 import pennylane as qml
 
-class FourByFourPatchNestedReUpload(Operation):
+class FourByFourPatchNestedReUploading(Operation):
     """
     Encode 16 pixels into 4 qubits;
     The 16 pixels are divided into 4 groups, each group has 4 pixels;
