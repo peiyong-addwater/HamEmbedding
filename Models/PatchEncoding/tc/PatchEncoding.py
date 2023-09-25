@@ -51,8 +51,8 @@ if __name__ == '__main__':
     K = tc.set_backend("jax")
     circ = tc.Circuit(2)
     pixels = jnp.array([1, 2, 3, 4])
-    encode_params = jnp.array([1, 2, 3, 4, 5, 6])
-    circ = applyFourPixelReUploadCirc(circ, pixels, encode_params, 1, [0, 1])
+    encode_params = jnp.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+    circ = applyFourPixelReUploadCirc(circ, pixels, encode_params, 2, [0, 1])
     print(circ.to_qiskit())
     print(circ.state())
 
