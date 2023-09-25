@@ -3,6 +3,8 @@ from typing import Any, Callable, Optional, Sequence, Tuple
 
 import numpy as np
 
+from su4 import applySU4Gate, applyHeadlessSU4, applyTaillessSU4
+
 import tensorcircuit as tc
 
 Circuit = tc.Circuit
