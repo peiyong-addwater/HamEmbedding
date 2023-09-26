@@ -8,3 +8,20 @@ from math import pi
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 
+def createMemStateInitCirc(
+        params: QiskitParameter,
+        n_qubits: int
+)->QuantumCircuit:
+    """
+    Initial state of the memory qubits. Trainable.
+    Start with a layer of H gates,
+    then a layer of U3 gates,
+    then a brickwall of Headless SU4 gates.
+    Total number of parameters: 3 * n_qubits + 9 * (n_qubits-1)
+    Args:
+        params:
+        n_qubits:
+
+    Returns:
+        The circuit that initialises the memory qubits.
+    """
