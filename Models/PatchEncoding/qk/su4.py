@@ -1,9 +1,12 @@
 import qiskit
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from qiskit.circuit import Parameter, ParameterVector, ParameterVectorElement
+from qiskit.circuit import Parameter, ParameterVector
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
+from qiskit.circuit.parametervector import ParameterVectorElement
 
-def createSU4Circ(params:Union[ParameterVector, List[Parameter], List[ParameterVectorElement]])->QuantumCircuit:
+QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
+
+def createSU4Circ(params:QiskitParameter)->QuantumCircuit:
     """
     Create the full SU4 circuit with the given parameters.
     Args:
@@ -22,7 +25,7 @@ def createSU4Circ(params:Union[ParameterVector, List[Parameter], List[ParameterV
     su4.u(params[12], params[13], params[14], 1)
     return su4
 
-def createHeadlessSU4(params:Union[ParameterVector, List[Parameter], List[ParameterVectorElement]])->QuantumCircuit:
+def createHeadlessSU4(params:QiskitParameter)->QuantumCircuit:
     """
     Create the headless SU4 circuit with the given parameters.
     HeadlessSU4 is the SU4 circuit without the leading U3 gates.
@@ -40,7 +43,7 @@ def createHeadlessSU4(params:Union[ParameterVector, List[Parameter], List[Parame
     su4.u(params[6], params[7], params[8], 1)
     return su4
 
-def createTaillessSU4(params:Union[ParameterVector, List[Parameter], List[ParameterVectorElement]])->QuantumCircuit:
+def createTaillessSU4(params:QiskitParameter)->QuantumCircuit:
     """
     Create the tailless SU4 circuit with the given parameters.
     TaillessSU4 is the SU4 circuit without the trailing U3 gates.
@@ -58,7 +61,7 @@ def createTaillessSU4(params:Union[ParameterVector, List[Parameter], List[Parame
     su4.rzz(params[8], 0, 1)
     return su4
 
-def createRXXRYYRZZCirc(params:Union[ParameterVector, List[Parameter], List[ParameterVectorElement]])->QuantumCircuit:
+def createRXXRYYRZZCirc(params:QiskitParameter)->QuantumCircuit:
     """
     Create the RXXRYYRZZ circuit with the given parameters.
     Args:
