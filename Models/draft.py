@@ -54,15 +54,54 @@ qnn1 = EstimatorQNN(
 # they are chosen uniformly at random from [-1, 1].
 initial_weights = Tensor([0.1, -0.5, 0.3, -0.7, 0.4, -0.2, 0.6, -0.8])
 model1 = TorchConnector(qnn1, initial_weights=initial_weights)
-print("Initial weights: ", initial_weights)
+#print("Initial weights: ", initial_weights)
 
-print(model1(X_[0, :]))
+#print(model1(X_[0, :]))
 
 model2 = copy.deepcopy(model1)
 
 model2.to("cuda")
 
-print()
+#print()
 
 # looks like the Qiskit TorchConnector model can be deep copied
-print(model2(X_[0, :].to("cuda")))
+#print(model2(X_[0, :].to("cuda")))
+
+from qiskit import QuantumCircuit
+from qiskit.circuit.library import ZZFeatureMap, RealAmplitudes
+
+from qiskit_machine_learning.neural_networks import SamplerQNN
+
+num_qubits = 3
+feature_map = ZZFeatureMap(feature_dimension=num_qubits)
+ansatz = RealAmplitudes(num_qubits=num_qubits, reps=1)
+
+qc = QuantumCircuit(num_qubits, num_qubits-1)
+qc.compose(feature_map, inplace=True)
+qc.compose(ansatz, inplace=True)
+for i in range(num_qubits-1):
+    qc.measure(i, i)
+
+
+def parity(x):
+    return "{:b}".format(x).count("1") % 2
+
+
+qnn = SamplerQNN(
+    circuit=qc,
+    input_params=feature_map.parameters,
+    weight_params=ansatz.parameters,
+    interpret=parity,
+    output_shape=2
+)
+
+res = qnn.forward(input_data=[1, 2, 3], weights=[1, 2, 3, 4, 5, 6])
+print(res)
+
+sampler_qnn_input_grad, sampler_qnn_weight_grad = qnn.backward(
+    [1, 2, 3], [1, 2, 3, 4, 5, 6]
+)
+
+print(sampler_qnn_input_grad)
+print(sampler_qnn_weight_grad)
+print(sampler_qnn_weight_grad.shape)
