@@ -39,6 +39,7 @@ feature_map = ZZFeatureMap(num_inputs)
 ansatz = RealAmplitudes(num_inputs)
 qc = QuantumCircuit(num_inputs)
 qc.compose(feature_map, inplace=True)
+qc.reset(0) # at least EstimatorQNN supports reset
 qc.compose(ansatz, inplace=True)
 
 print(qc)
@@ -51,7 +52,7 @@ qnn1 = EstimatorQNN(
 # Set up PyTorch module
 # Note: If we don't explicitly declare the initial weights
 # they are chosen uniformly at random from [-1, 1].
-initial_weights = 0.1 * (2 * algorithm_globals.random.random(qnn1.num_weights) - 1)
+initial_weights = Tensor([0.1, -0.5, 0.3, -0.7, 0.4, -0.2, 0.6, -0.8])
 model1 = TorchConnector(qnn1, initial_weights=initial_weights)
 print("Initial weights: ", initial_weights)
 
@@ -59,5 +60,9 @@ print(model1(X_[0, :]))
 
 model2 = copy.deepcopy(model1)
 
+model2.to("cuda")
+
+print()
+
 # looks like the Qiskit TorchConnector model can be deep copied
-print(model2(X_[0, :]))
+print(model2(X_[0, :].to("cuda")))
