@@ -126,6 +126,67 @@ def create8x8ReUploading(
         circ.barrier()
     return circ
 
+def createPQC100(
+        params: QiskitParameter
+)->QuantumCircuit:
+    """
+    Creates a 5-qubit circuit that has 100 parameters.
+    Args:
+        params: 100-element list of parameters
+
+    Returns:
+        A 5-qubit circuit that has 100 parameters, "PQC100"
+    """
+    circ = QuantumCircuit(5, name='PQC100')
+    circ.u(params[0], params[1], params[2], 0)
+    circ.u(params[3], params[4], params[5], 1)
+    circ.u(params[6], params[7], params[8], 2)
+    circ.u(params[9], params[10], params[11], 3)
+    circ.u(params[12], params[13], params[14], 4)
+    circ.append(createHeadlessSU4(params[15:24]).to_instruction(), [0,1])
+    circ.append(createHeadlessSU4(params[24:33]).to_instruction(), [2,3])
+    circ.append(createHeadlessSU4(params[33:42]).to_instruction(), [1,2])
+    circ.append(createHeadlessSU4(params[42:51]).to_instruction(), [3,4])
+    circ.append(createHeadlessSU4(params[51:60]).to_instruction(), [0,2])
+    circ.append(createHeadlessSU4(params[60:69]).to_instruction(), [1,3])
+    circ.append(createHeadlessSU4(params[69:78]).to_instruction(), [2,4])
+    circ.append(createHeadlessSU4(params[78:87]).to_instruction(), [0,3])
+    circ.append(createHeadlessSU4(params[87:96]).to_instruction(), [1,4])
+    circ.rxx(params[96], 0, 4)
+    circ.ry(params[97], 0)
+    circ.ry(params[98], 4)
+    circ.rzz(params[99], 0, 4)
+    return circ
+
+def create10x10Reuploading(
+        pixels: QiskitParameter,
+        encoding_params: QiskitParameter
+)->QuantumCircuit:
+    """
+    Creates a 5-qubit circuit that encodes 100 pixels into 5 qubits, with trainable parameters for data re-uploading.
+    Then followed by a chain of TailLessSU4 gates, from bottom up: 4->3, 3->2, 2->1, 1->0.
+    Each TailLessSU4 gate has 9 parameters.
+    Total number of trainable parameters: 36*L
+    Where L is the number of re-uploading layers.
+    Args:
+        pixels: 100-element list of parameters
+        encoding_params: 36*L-element list of parameters, where L is the number of data-reuploading repetitions
+
+    Returns:
+        A 5-qubit circuit that encodes 100 pixels into 5 qubits.
+    """
+    circ = QuantumCircuit(5, name='10x10ReUploading')
+    layers = len(encoding_params)//36
+    for i in range(layers):
+        circ.append(createPQC100(pixels[0:100]).to_instruction(), [0,1,2,3,4])
+        circ.barrier()
+        circ.append(createTaillessSU4(encoding_params[0+36*i:9+36*i]).to_instruction(), [3,4])
+        circ.append(createTaillessSU4(encoding_params[9+36*i:18+36*i]).to_instruction(), [2,3])
+        circ.append(createTaillessSU4(encoding_params[18+36*i:27+36*i]).to_instruction(), [1,2])
+        circ.append(createTaillessSU4(encoding_params[27+36*i:36+36*i]).to_instruction(), [0,1])
+        circ.barrier()
+        circ.barrier()
+    return circ
 
 if __name__ == '__main__':
     pixel = ParameterVector('p', 4)
@@ -138,7 +199,7 @@ if __name__ == '__main__':
     circ2 = fourByFourPatchReupload(pixel2, encoding_param2)
     circ2.draw('mpl', filename='FourByFourPatchReupload.png', style='bw')
 
-    params = ParameterVector('p', 64)
+    params = ParameterVector('$\\theta$', 64)
     circ3 = createPQC64(params)
     circ3.draw('mpl', filename='PQC64.png', style='bw')
 
@@ -146,4 +207,13 @@ if __name__ == '__main__':
     encoding_param4 = ParameterVector('e', 27*2)
     circ4 = create8x8ReUploading(pixel4, encoding_param4)
     circ4.draw('mpl', filename='8x8ReUploading.png', style='bw')
+
+    params5 = ParameterVector('$\\theta$', 100)
+    circ5 = createPQC100(params5)
+    circ5.draw('mpl', filename='PQC100.png', style='bw')
+
+    pixel6 = ParameterVector('p', 100)
+    encoding_param6 = ParameterVector('e', 36*2)
+    circ6 = create10x10Reuploading(pixel6, encoding_param6)
+    circ6.draw('mpl', filename='10x10Reuploading.png', style='bw')
 
