@@ -1,15 +1,14 @@
 from functools import wraps
 from typing import Any, Callable, Optional, Sequence, Tuple
 
-import numpy as np
+from jax import numpy as jnp
 
 from su4 import applySU4Gate, applyHeadlessSU4, applyTaillessSU4
 
 import tensorcircuit as tc
 
 Circuit = tc.Circuit
-Tensor = Any
-Graph = Any
+Tensor = jnp.array
 
 def applyFourPixelReUploadCirc(
         circ:Circuit,
