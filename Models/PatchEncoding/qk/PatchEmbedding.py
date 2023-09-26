@@ -3,6 +3,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit import Parameter, ParameterVector
 from qiskit.circuit.parametervector import ParameterVectorElement
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
+from su4 import createTaillessSU4
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 
@@ -37,9 +38,48 @@ def createFourPixelReupload(
         circ.barrier()
     return circ
 
+def fourByFourPatchReupload(
+        pixels: QiskitParameter,
+        encoding_params: QiskitParameter
+)->QuantumCircuit:
+    """
+    Creates a 3-qubit circuit that encodes 16 pixels into 3 qubits, with trainable parameters for data re-uploading.
+    The trainable layer are two TaillessSU4 layers.
+    Args:
+        pixels: the 16 pixels to encode. 16-element list of parameters.
+        encoding_params: 18*L-element list of parameters, where L is the number of data-reuploading repetitions
+
+    Returns:
+        A 3-qubit circuit that encodes 16 pixels into 3 qubits.
+    """
+    circ = QuantumCircuit(3)
+    layers = len(encoding_params)//18
+    for i in range(layers):
+        circ.u(pixels[0], pixels[1], pixels[2], 0)
+        circ.u(pixels[3], pixels[4], pixels[5], 1)
+        circ.u(pixels[6], pixels[7], pixels[8], 2)
+        circ.rxx(pixels[9], 0, 1)
+        circ.ryy(pixels[10], 0, 1)
+        circ.rzz(pixels[11], 0, 1)
+        circ.rxx(pixels[12], 1, 2)
+        circ.ryy(pixels[13], 1, 2)
+        circ.rzz(pixels[14], 1, 2)
+        circ.rxx(pixels[15], 0, 2)
+        circ.barrier()
+        circ.append(createTaillessSU4(encoding_params[0+18*i:9+18*i]).to_instruction(), [0,1])
+        circ.append(createTaillessSU4(encoding_params[9+18*i:18+18*i]).to_instruction(), [1,2])
+        circ.barrier()
+        circ.barrier()
+    return circ
+
 
 if __name__ == '__main__':
-    pixels = ParameterVector('p', 4)
-    encoding_params = ParameterVector('e', 9*2)
-    circ = createFourPixelReupload(pixels, encoding_params)
+    pixel = ParameterVector('p', 4)
+    encoding_param = ParameterVector('e', 9*2)
+    circ = createFourPixelReupload(pixel, encoding_param)
     circ.draw('mpl', filename='FourPixelReupload.png', style='bw')
+
+    pixel2 = ParameterVector('p', 16)
+    encoding_param2 = ParameterVector('e', 18*2)
+    circ2 = fourByFourPatchReupload(pixel2, encoding_param2)
+    circ2.draw('mpl', filename='FourByFourPatchReupload.png', style='bw')
