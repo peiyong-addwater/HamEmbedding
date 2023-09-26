@@ -4,7 +4,7 @@ from qiskit.circuit import Parameter, ParameterVector
 from qiskit.circuit.parametervector import ParameterVectorElement
 from qiskit.circuit import Qubit
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
-from su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ
+from su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ, createRXXRYYRZZCirc
 from math import pi
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
@@ -91,6 +91,44 @@ def createMemPatchInteract(
             tailless_su4_count += 1
     return circ
 
+def createMemCompCirc(
+        num_mem_qubits: int,
+        params: QiskitParameter
+)->QuantumCircuit:
+    """
+    A variational circuit with interaction starts from the bottom of the memory qubits to the top ones,
+    providing "computation" inside the memory.
+    Starting with a layer of U gates: 3*num_mem_qubits parameters
+    Then a chain of HeadlessSU4+RxxRyyRzz gates starting from the bottom of the memory qubits: 9*(num_mem_qubits-1)+3*(num_mem_qubits-1) parameters
+    Total number of parameters for a single layer: 3*num_mem_qubits + 9*(num_mem_qubits-1) + 3*(num_mem_qubits-1) = 15*num_mem_qubits - 12
+    Number of layers is inferred from the length of the parameter vector and number of qubits.
+    Args:
+        num_mem_qubits: number of the memory qubits
+        params: parameters for the variational circuit
+
+    Returns:
+        The circuit that implements the computation.
+    """
+    n_layers = len(params)//(15*num_mem_qubits-12)
+    qubit_indices = list(range(num_mem_qubits))
+    assert n_layers > 0, "Too few parameters. The number of layers must be positive"
+    assert len(params)%(15*num_mem_qubits-12) == 0, f"The number of parameters must be 15*{num_mem_qubits} - 12"
+
+    circ = QuantumCircuit(num_mem_qubits, name="MemComp")
+    num_single_layer_params = 15*num_mem_qubits-12
+    for i in range(n_layers):
+        single_layer_params = params[num_single_layer_params*i:num_single_layer_params*(i+1)]
+        u3_params = single_layer_params[:3*num_mem_qubits]
+        su4_rxxryyrzz_params = single_layer_params[3*num_mem_qubits:]
+        for j in range(num_mem_qubits):
+            circ.u(*u3_params[3*j:3*(j+1)], j)
+        for j in range(1, num_mem_qubits):
+            single_su4_rxxryyrzz_params = su4_rxxryyrzz_params[12*(j-1):12*j]
+            circ.append(createHeadlessSU4(single_su4_rxxryyrzz_params[:9]).to_instruction(), [qubit_indices[-j],qubit_indices[-j-1]])
+            circ.append(createRXXRYYRZZCirc(single_su4_rxxryyrzz_params[9:]).to_instruction(), [qubit_indices[-j],qubit_indices[-j-1]])
+    return circ
+
+
 
 if __name__ == '__main__':
     n_qubits = 5
@@ -103,4 +141,8 @@ if __name__ == '__main__':
     param_mem_patch_interact = ParameterVector('$\\theta$', 9*n_mem_qubits*n_patch_qubits)
     circ_mem_patch_interact = createMemPatchInteract(n_mem_qubits, n_patch_qubits, param_mem_patch_interact)
     circ_mem_patch_interact.draw('mpl', filename=f'mem_patch_interact_{n_mem_qubits}-to-{n_patch_qubits}.png', style='bw')
+
+    param_mem_comp = ParameterVector('$\\theta$', 15*n_qubits-12)
+    circ_mem_comp = createMemCompCirc(n_qubits, param_mem_comp)
+    circ_mem_comp.draw('mpl', filename=f'mem_comp_{n_qubits}q.png', style='bw')
 
