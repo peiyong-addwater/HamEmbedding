@@ -14,6 +14,8 @@ from qiskit.circuit.library import RealAmplitudes, ZZFeatureMap
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
 from qiskit_machine_learning.connectors import TorchConnector
 import copy
+from qiskit.algorithms.gradients import SPSASamplerGradient
+from qiskit.primitives import BaseSampler, SamplerResult, Sampler
 
 # Set seed for random generators
 algorithm_globals.random_seed = 42
@@ -42,7 +44,7 @@ qc.compose(feature_map, inplace=True)
 qc.reset(0) # at least EstimatorQNN supports reset
 qc.compose(ansatz, inplace=True)
 
-print(qc)
+#print(qc)
 
 # Setup QNN
 qnn1 = EstimatorQNN(
@@ -72,19 +74,52 @@ from qiskit.circuit.library import ZZFeatureMap, RealAmplitudes
 
 from qiskit_machine_learning.neural_networks import SamplerQNN
 
+from qiskit.quantum_info import SparsePauliOp
+
+
+
 num_qubits = 3
 feature_map = ZZFeatureMap(feature_dimension=num_qubits)
 ansatz = RealAmplitudes(num_qubits=num_qubits, reps=1)
 
-qc = QuantumCircuit(num_qubits, num_qubits-1)
+qc = QuantumCircuit(num_qubits, num_qubits)
 qc.compose(feature_map, inplace=True)
 qc.compose(ansatz, inplace=True)
-for i in range(num_qubits-1):
+for i in range(num_qubits):
     qc.measure(i, i)
+
+qc1 = QuantumCircuit(num_qubits, num_qubits-1)
+qc1.compose(feature_map, inplace=True)
+qc1.compose(ansatz, inplace=True)
+observable1 = SparsePauliOp.from_list([("YII" , 1),("XII" , 1),("ZII" , 1)])
+
+from qiskit_machine_learning.neural_networks import EstimatorQNN
+
+estimator_qnn = EstimatorQNN(
+    circuit=qc1, observables=observable1, input_params=feature_map.parameters, weight_params=ansatz.parameters
+)
+print(estimator_qnn)
+estimator_qnn_input = algorithm_globals.random.random(estimator_qnn.num_inputs)
+estimator_qnn_weights = algorithm_globals.random.random(estimator_qnn.num_weights)
+print(
+    f"Number of input features for EstimatorQNN: {estimator_qnn.num_inputs} \nInput: {estimator_qnn_input}"
+)
+print(
+    f"Number of trainable weights for EstimatorQNN: {estimator_qnn.num_weights} \nWeights: {estimator_qnn_weights}"
+)
+estimator_qnn_forward = estimator_qnn.forward(estimator_qnn_input, estimator_qnn_weights)
+
+print(
+    f"Forward pass result for EstimatorQNN: {estimator_qnn_forward}. \nShape: {estimator_qnn_forward.shape}"
+)
+
+
+
 
 
 def parity(x):
-    return "{:b}".format(x).count("1") % 2
+    #print(x)
+    return "{:b}".format(x).count("1")
 
 
 qnn = SamplerQNN(
@@ -92,7 +127,8 @@ qnn = SamplerQNN(
     input_params=feature_map.parameters,
     weight_params=ansatz.parameters,
     interpret=parity,
-    output_shape=2
+    output_shape=4,
+    gradient = SPSASamplerGradient(Sampler(),0.01)
 )
 
 res = qnn.forward(input_data=[1, 2, 3], weights=[1, 2, 3, 4, 5, 6])
