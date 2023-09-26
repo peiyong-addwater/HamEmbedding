@@ -1,9 +1,9 @@
 import qiskit
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from qiskit.circuit import Parameter, ParameterVector
+from qiskit.circuit import Parameter, ParameterVector, ParameterVectorElement
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
 
-def createSU4Circ(params:Union[ParameterVector, List[Parameter]])->QuantumCircuit:
+def createSU4Circ(params:Union[ParameterVector, List[Parameter], List[ParameterVectorElement]])->QuantumCircuit:
     """
     Create the full SU4 circuit with the given parameters.
     Args:
@@ -22,7 +22,7 @@ def createSU4Circ(params:Union[ParameterVector, List[Parameter]])->QuantumCircui
     su4.u(params[12], params[13], params[14], 1)
     return su4
 
-def createHeadlessSU4(params:Union[ParameterVector, List[Parameter]])->QuantumCircuit:
+def createHeadlessSU4(params:Union[ParameterVector, List[Parameter], List[ParameterVectorElement]])->QuantumCircuit:
     """
     Create the headless SU4 circuit with the given parameters.
     HeadlessSU4 is the SU4 circuit without the leading U3 gates.
@@ -40,7 +40,7 @@ def createHeadlessSU4(params:Union[ParameterVector, List[Parameter]])->QuantumCi
     su4.u(params[6], params[7], params[8], 1)
     return su4
 
-def createTaillessSU4(params:Union[ParameterVector, List[Parameter]])->QuantumCircuit:
+def createTaillessSU4(params:Union[ParameterVector, List[Parameter], List[ParameterVectorElement]])->QuantumCircuit:
     """
     Create the tailless SU4 circuit with the given parameters.
     TaillessSU4 is the SU4 circuit without the trailing U3 gates.
@@ -58,7 +58,7 @@ def createTaillessSU4(params:Union[ParameterVector, List[Parameter]])->QuantumCi
     su4.rzz(params[8], 0, 1)
     return su4
 
-def createRXXRYYRZZCirc(params:Union[ParameterVector, List[Parameter]])->QuantumCircuit:
+def createRXXRYYRZZCirc(params:Union[ParameterVector, List[Parameter], List[ParameterVectorElement]])->QuantumCircuit:
     """
     Create the RXXRYYRZZ circuit with the given parameters.
     Args:
