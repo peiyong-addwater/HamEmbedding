@@ -29,10 +29,12 @@ def createBackbone8x8Image(
 )->QuantumCircuit:
     """
     Creates a (num_mem_qubits+3)-qubit circuit that encodes an 8x8 image into num_mem_qubits qubits,
-    with trainable parameters for data re-uploading, and trainable parameters for the memory-related computations
+    with trainable parameters for data re-uploading, and trainable parameters for the memory-related computations.
+    The trainable parameters include:
+
     Args:
-        pixels:
-        params:
+        pixels: flattened 64 pixels of an eight by eight image. first 16 pixels are for the first patch, and so on
+        params: trainable parameters for the backbone qnn.
         num_single_patch_reuploading:
         num_mem_qubits:
         num_mem_interact_qubits:
