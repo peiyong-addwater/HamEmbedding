@@ -15,9 +15,9 @@ from qiskit.quantum_info import SparsePauliOp
 import torch
 from torch import nn
 
-from Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC
-from PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading
-from torch_connector import TorchConnector
+from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC
+from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading
+from .torch_connector import TorchConnector
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 QiskitQubits = Union[List[int], List[Qubit], QuantumRegister]
@@ -101,7 +101,7 @@ def classification8x8Image10ClassesSamplerQNN(
         num_patch_interact_qubits:int = 1,
         num_mem_comp_layers:int=1,
         num_classification_layers:int=1,
-        batchsize:int=100
+        spsa_batchsize:int=1
 )->(SamplerQNN, int, int):
     """
     Creates an EstimatorQNN that classifies an 8x8 image into 10 classes,
@@ -171,7 +171,7 @@ def classification8x8Image10ClassesSamplerQNN(
         weight_params=params,
         interpret=parity,
         output_shape=10,
-        gradient = SPSASamplerGradient(sampler,0.01, batch_size=batchsize) # epsilon is the "c" in SPSA
+        gradient = SPSASamplerGradient(sampler,0.2, batch_size=spsa_batchsize) # epsilon is the "c" in SPSA
     )
 
     return qnn, num_total_params, 64
@@ -184,7 +184,7 @@ class ClassificationSamplerQNN8x8Image(nn.Module):
                  num_patch_interact_qubits: int = 1,
                  num_mem_comp_layers: int = 1,
                  num_classification_layers: int = 1,
-                 batchsize: int = 1
+                 spsa_batchsize: int = 1
                  ):
         super().__init__()
         self.qnn,_,_ = classification8x8Image10ClassesSamplerQNN(
@@ -194,7 +194,7 @@ class ClassificationSamplerQNN8x8Image(nn.Module):
             num_patch_interact_qubits,
             num_mem_comp_layers,
             num_classification_layers,
-            batchsize
+            spsa_batchsize
         )
         self.qnn_torch = TorchConnector(self.qnn)
 
