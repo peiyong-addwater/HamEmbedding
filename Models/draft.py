@@ -12,7 +12,8 @@ from qiskit.utils import algorithm_globals
 from qiskit.circuit import Parameter
 from qiskit.circuit.library import RealAmplitudes, ZZFeatureMap
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
-from qiskit_machine_learning.connectors import TorchConnector
+#from qiskit_machine_learning.connectors import TorchConnector
+from torch_connector import TorchConnector
 import copy
 from qiskit.algorithms.gradients import SPSASamplerGradient
 from qiskit.primitives import BaseSampler, SamplerResult, Sampler
@@ -64,7 +65,7 @@ model2 = copy.deepcopy(model1)
 
 model2.to("cuda")
 
-#print()
+print("="*20)
 
 # looks like the Qiskit TorchConnector model can be deep copied
 #print(model2(X_[0, :].to("cuda")))
@@ -132,12 +133,15 @@ qnn = SamplerQNN(
 )
 
 res = qnn.forward(input_data=[1, 2, 3], weights=[1, 2, 3, 4, 5, 6])
+print("Sampler QNN forward pass result:")
 print(res)
 
 sampler_qnn_input_grad, sampler_qnn_weight_grad = qnn.backward(
     [1, 2, 3], [1, 2, 3, 4, 5, 6]
 )
 
+print("sampler_qnn_input_grad")
 print(sampler_qnn_input_grad)
+print("sampler_qnn_weight_grad")
 print(sampler_qnn_weight_grad)
 print(sampler_qnn_weight_grad.shape)
