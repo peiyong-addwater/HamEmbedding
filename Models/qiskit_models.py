@@ -6,7 +6,7 @@ from qiskit.circuit.parametervector import ParameterVectorElement
 from qiskit.circuit import Qubit
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
 from math import pi
-from Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract
+from Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC
 from PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
 from qiskit_machine_learning.connectors import TorchConnector
@@ -89,6 +89,49 @@ def createBackbone8x8Image(
         circ.reset(patch_qubit_indices)
         circ.barrier(label=f"Patch {i+1} Encoded")
     return circ
+
+def classification8x8Image10ClassesSamplerQNN(
+        num_single_patch_reuploading: int=2,
+        num_mem_qubits:int = 2,
+        num_mem_interact_qubits:int = 1,
+        num_patch_interact_qubits:int = 1,
+        num_mem_comp_layers:int=1,
+        num_classification_layers:int=1,
+        batchsize:int=100
+)->(SamplerQNN, int, int):
+    """
+    Creates an EstimatorQNN that classifies an 8x8 image into 10 classes,
+    with trainable parameters for data re-uploading,
+    and trainable parameters for the memory-related computations,
+    and trainable parameters for the 4-qubit classification layer at the end of the circuit.
+    The classification is performed via measuring the bitstring of the 4-qubit classification layer,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, corresponding to the 10 classes.
+    Any other bitstring is considered as class 9.
+    Classification will be the index of the Pauli string with the largest expectation value.
+    Args:
+        num_single_patch_reuploading: number of re-uploading repetitions for each patch.
+        num_mem_qubits: number of memory qubits
+        num_mem_interact_qubits: number of interaction qubits in memory
+        num_patch_interact_qubits: number of interaction qubits in patch
+        num_mem_comp_layers: number of memory computation layers
+        num_classification_layers: number of classification layers
+        batchsize: batchsize for the SPSASamplerGradient
+
+    Returns:
+        SamplerQNN, number of trainable parameters, input size
+
+    """
+
+    num_classification_qubits = 4
+    num_total_qubits = num_mem_qubits + 3
+    assert num_mem_qubits+3>=num_classification_qubits, "The number of memory qubits plus 3 must be greater than or equal to the number of classification qubits (4)"
+    num_single_patch_reuploading_params = 18 * num_single_patch_reuploading  # using the fourByFourPatchReupload function
+    num_mem_state_init_params = 12 * num_mem_qubits - 9  # using the createMemStateInitCirc function
+    num_mem_patch_interact_params = 9 * (
+            num_mem_interact_qubits * num_patch_interact_qubits)  # using the createMemPatchInteract function
+    num_mem_comp_params = num_mem_comp_layers * (15 * num_mem_qubits - 12)  # using the createMemCompCirc function
+    num_classification_params = num_classification_layers*3*num_classification_qubits  # using the simplePQC function
+    num_total_params = num_single_patch_reuploading_params + num_mem_state_init_params + num_mem_patch_interact_params + num_mem_comp_params + num_classification_params
 
 
 
