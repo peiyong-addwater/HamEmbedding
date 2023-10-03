@@ -142,9 +142,9 @@ def classification8x8Image10ClassesSamplerQNN(
         return res
 
     backend = AerSimulator(method='statevector')
-    exc = ThreadPoolExecutor(max_workers=10)
-    backend.set_options(executor=exc)
-    backend.set_options(max_job_size=1)
+    #exc = ThreadPoolExecutor(max_workers=10)
+    #backend.set_options(executor=exc)
+    #backend.set_options(max_job_size=1)
     sampler = BackendSampler(backend)
 
     num_classification_qubits = 4
@@ -176,7 +176,7 @@ def classification8x8Image10ClassesSamplerQNN(
         interpret=parity,
         output_shape=10,
         #gradient = SPSASamplerGradient(sampler,0.01, batch_size=spsa_batchsize) # epsilon is the "c" in SPSA
-        #gradient = ParamShiftSamplerGradient(sampler)
+        gradient = ParamShiftSamplerGradient(sampler)
     )
 
     return qnn, num_total_params, 64
