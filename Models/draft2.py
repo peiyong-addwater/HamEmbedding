@@ -176,7 +176,7 @@ def classification8x8Image10ClassesSamplerQNN(
         interpret=parity,
         output_shape=10,
         #gradient = SPSASamplerGradient(sampler,0.01, batch_size=spsa_batchsize) # epsilon is the "c" in SPSA
-        gradient = ParamShiftSamplerGradient(sampler)
+        #gradient = ParamShiftSamplerGradient(sampler)
     )
 
     return qnn, num_total_params, 64
