@@ -178,6 +178,7 @@ if __name__ == '__main__':
     num_mem_interact_qubits = 1
     num_patch_interact_qubits = 1
     num_mem_comp_layers = 1
+    num_classification_layers = 1
     num_single_patch_reuploading_params = 18 * num_single_patch_reuploading  # using the fourByFourPatchReupload function
     num_mem_state_init_params = 12 * num_mem_qubits - 9  # using the createMemStateInitCirc function
     num_mem_patch_interact_params = 9 * (
@@ -188,7 +189,15 @@ if __name__ == '__main__':
     backbone_circ = createBackbone8x8Image(flattened_8x8_patch, params, num_single_patch_reuploading, num_mem_qubits, num_mem_interact_qubits, num_patch_interact_qubits, num_mem_comp_layers)
     backbone_circ.draw('mpl', filename=f'backbone_circ_8x8_image_{num_mem_qubits}q_mem_{num_total_params}_params.png', style='bw')
 
-    qnn, num_total_params, input_size = classification8x8Image10ClassesSamplerQNN(num_single_patch_reuploading, num_mem_qubits, num_mem_interact_qubits, num_patch_interact_qubits, num_mem_comp_layers)
+    qnn, num_total_params, input_size = classification8x8Image10ClassesSamplerQNN(
+        num_single_patch_reuploading,
+        num_mem_qubits,
+        num_mem_interact_qubits,
+        num_patch_interact_qubits,
+        num_mem_comp_layers,
+        num_classification_layers,
+        5
+    )
     print(qnn)
     start = time.time()
     params = algorithm_globals.random.random(num_total_params)
@@ -207,3 +216,7 @@ if __name__ == '__main__':
     print(sampler_qnn_weight_grad)
     print(sampler_qnn_weight_grad.shape)
     print(f"Time taken: {end-start}")
+    # 1673.3945541381836 seconds for SPSA gradient with 100 batch
+    # 20.506850719451904 seconds for SPSA gradient with 1 batch,87.28186655044556 for 5 batchsize, 170 seconds for 10 batch, 839.2028388977051 for 50 batchsize
+    # parameter-shift gradient takes forever
+
