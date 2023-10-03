@@ -1,20 +1,23 @@
 # models based on Qiskit and PyTorch
 import qiskit
+from qiskit_aer import AerSimulator
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from qiskit.providers.aer import AerSimulator
 from qiskit.circuit import Parameter, ParameterVector
 from qiskit.circuit.parametervector import ParameterVectorElement
 from qiskit.circuit import Qubit
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
 from math import pi
-from Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC
-from PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
-from qiskit_machine_learning.connectors import TorchConnector
 from qiskit.algorithms.gradients import SPSASamplerGradient
 from qiskit.primitives import BaseSampler, SamplerResult, Sampler, BackendSampler
 from qiskit.utils import algorithm_globals
 from qiskit.quantum_info import SparsePauliOp
+import torch
+from torch import nn
+
+from Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC
+from PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading
+from torch_connector import TorchConnector
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 QiskitQubits = Union[List[int], List[Qubit], QuantumRegister]
@@ -166,6 +169,32 @@ def classification8x8Image10ClassesSamplerQNN(
 
     return qnn, num_total_params, 64
 
+class ClassificationSamplerQNN8x8Image(nn.Module):
+    def __init__(self,
+                 num_single_patch_reuploading: int = 2,
+                 num_mem_qubits: int = 2,
+                 num_mem_interact_qubits: int = 1,
+                 num_patch_interact_qubits: int = 1,
+                 num_mem_comp_layers: int = 1,
+                 num_classification_layers: int = 1,
+                 batchsize: int = 1
+                 ):
+        super().__init__()
+        self.qnn = classification8x8Image10ClassesSamplerQNN(
+            num_single_patch_reuploading,
+            num_mem_qubits,
+            num_mem_interact_qubits,
+            num_patch_interact_qubits,
+            num_mem_comp_layers,
+            num_classification_layers,
+            batchsize
+        )
+        self.qnn_torch = TorchConnector(self.qnn)
+
+    def forward(self, x):
+        # x must be of shape (batchsize, 64)
+        # each 16 elements of x is a 4 by 4 patch of the 8x8 image
+        return self.qnn_torch.forward(x)
 
 
 
