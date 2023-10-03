@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_patch_interact_qubits', type=int, required=False, default=2)
     parser.add_argument('--n_mem_comp_layers', type=int, required=False, default=1)
     parser.add_argument('--n_classification_layers', type=int, required=False, default=2)
-    parser.add_argument('--spsa_batchsize', type=int, required=False, default=1)
+    parser.add_argument('--spsa_batchsize', type=int, required=False, default=10)
     parser.add_argument('--working_dir', type=str, required=False, default='/home/peiyongw/Desktop/Research/QML-ImageTask')
     parser.add_argument('--prev_checkpoint', type=str, required=False, default=None)
     parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=2)
