@@ -103,7 +103,7 @@ if __name__ == '__main__':
         spsa_batchsize=SPSA_BATCHSIZE
     )
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, amsgrad=True)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
 
     criterion = nn.CrossEntropyLoss()
 
