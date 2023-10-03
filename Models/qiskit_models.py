@@ -112,6 +112,13 @@ def classification8x8Image10ClassesSamplerQNN(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, corresponding to the 10 classes.
     Any other bitstring is considered as class 9.
     Classification will be the index of the Pauli string with the largest expectation value.
+    Gradient is calculated via SPSA.
+    1673.3945541381836 seconds for SPSA gradient with batchseize = 100
+    20.506850719451904 seconds for SPSA gradient with batchsize=1,
+    87.28186655044556 for batchsize=5,
+    170 seconds for batchsize=10,
+    839.2028388977051 for batchsize=50
+    parameter-shift gradient takes forever
     Args:
         num_single_patch_reuploading: number of re-uploading repetitions for each patch.
         num_mem_qubits: number of memory qubits
