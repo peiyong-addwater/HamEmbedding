@@ -180,7 +180,7 @@ class ClassificationSamplerQNN8x8Image(nn.Module):
                  batchsize: int = 1
                  ):
         super().__init__()
-        self.qnn = classification8x8Image10ClassesSamplerQNN(
+        self.qnn,_,_ = classification8x8Image10ClassesSamplerQNN(
             num_single_patch_reuploading,
             num_mem_qubits,
             num_mem_interact_qubits,
@@ -200,6 +200,12 @@ class ClassificationSamplerQNN8x8Image(nn.Module):
 
 if __name__ == '__main__':
     import time
+    from data import PatchedDigitsDataset
+    from torch.utils.data import DataLoader
+
+    dataset = PatchedDigitsDataset()
+    dataloader = DataLoader(dataset, batch_size=4,
+                            shuffle=True, num_workers=0)
 
     flattened_8x8_patch = ParameterVector('x', length=64)
     num_single_patch_reuploading = 2
@@ -225,7 +231,7 @@ if __name__ == '__main__':
         num_patch_interact_qubits,
         num_mem_comp_layers,
         num_classification_layers,
-        5
+        1
     )
     print(qnn)
     start = time.time()
@@ -233,7 +239,7 @@ if __name__ == '__main__':
     input = algorithm_globals.random.random((100,input_size))
     res = qnn.forward(input, params)
     print("Sampler QNN forward pass result:")
-    print(res)
+    #print(res)
     print(res.shape)
     sampler_qnn_input_grad, sampler_qnn_weight_grad = qnn.backward(
         input, params
@@ -242,10 +248,19 @@ if __name__ == '__main__':
     print("sampler_qnn_input_grad")
     print(sampler_qnn_input_grad)
     print("sampler_qnn_weight_grad")
-    print(sampler_qnn_weight_grad)
+    #print(sampler_qnn_weight_grad)
     print(sampler_qnn_weight_grad.shape)
     print(f"Time taken: {end-start}")
     # 1673.3945541381836 seconds for SPSA gradient with 100 batch
     # 20.506850719451904 seconds for SPSA gradient with 1 batch,87.28186655044556 for 5 batchsize, 170 seconds for 10 batch, 839.2028388977051 for 50 batchsize
     # parameter-shift gradient takes forever
+    print("Testing the PyTorch model")
+    model = ClassificationSamplerQNN8x8Image()
+    print(model)
+    for batch, (X, y) in enumerate(dataloader):
+        model.train()
+        print(batch, X.shape, y.shape)
+        out = model(X)
+        print(out)
+        break
 

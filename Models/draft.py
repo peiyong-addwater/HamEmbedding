@@ -48,7 +48,7 @@ qc.compose(ansatz, inplace=True)
 #print(qc)
 
 # Setup QNN
-qnn1 = EstimatorQNN(
+qnn1 = SamplerQNN(
     circuit=qc, input_params=feature_map.parameters, weight_params=ansatz.parameters
 )
 
@@ -59,7 +59,7 @@ initial_weights = Tensor([0.1, -0.5, 0.3, -0.7, 0.4, -0.2, 0.6, -0.8])
 model1 = TorchConnector(qnn1, initial_weights=initial_weights)
 #print("Initial weights: ", initial_weights)
 
-#print(model1(X_[0, :]))
+print(model1(X_[0, :]))
 
 model2 = copy.deepcopy(model1)
 
