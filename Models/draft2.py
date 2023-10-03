@@ -8,12 +8,13 @@ from qiskit.circuit import Qubit
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
 from math import pi
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
-from qiskit.algorithms.gradients import SPSASamplerGradient
-from qiskit.primitives import BaseSampler, SamplerResult, Sampler, BackendSampler
+from qiskit.algorithms.gradients import SPSASamplerGradient, ParamShiftSamplerGradient
+from qiskit.primitives import Sampler, BackendSampler, BackendEstimator
 from qiskit.utils import algorithm_globals
 from qiskit.quantum_info import SparsePauliOp
 import torch
 from torch import nn
+from concurrent.futures import ThreadPoolExecutor
 
 from Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC
 from PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading
@@ -141,6 +142,9 @@ def classification8x8Image10ClassesSamplerQNN(
         return res
 
     backend = AerSimulator(method='statevector')
+    exc = ThreadPoolExecutor(max_workers=10)
+    backend.set_options(executor=exc)
+    backend.set_options(max_job_size=1)
     sampler = BackendSampler(backend)
 
     num_classification_qubits = 4
@@ -172,6 +176,7 @@ def classification8x8Image10ClassesSamplerQNN(
         interpret=parity,
         output_shape=10,
         #gradient = SPSASamplerGradient(sampler,0.01, batch_size=spsa_batchsize) # epsilon is the "c" in SPSA
+        gradient = ParamShiftSamplerGradient(sampler)
     )
 
     return qnn, num_total_params, 64
@@ -215,7 +220,7 @@ if __name__ == '__main__':
                             shuffle=True, num_workers=0)
 
     # flattened_8x8_patch = ParameterVector('x', length=64)
-    num_single_patch_reuploading = 2
+    num_single_patch_reuploading = 1
     num_mem_qubits = 2
     num_mem_interact_qubits = 1
     num_patch_interact_qubits = 1
@@ -262,6 +267,7 @@ if __name__ == '__main__':
     # 1673.3945541381836 seconds for SPSA gradient with 100 batch (spsa batch)
     # 20.506850719451904 seconds for SPSA gradient with 1 batch,87.28186655044556 for 5 batchsize, 170 seconds for 10 batch, 839.2028388977051 for 50 batchsize
     # parameter-shift gradient takes forever for input batchsize = 100
+    # 159.21668100357056 for input batchsize = 10
 
 
     print("Testing the PyTorch model")
