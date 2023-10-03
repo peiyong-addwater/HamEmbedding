@@ -16,6 +16,16 @@ def nowtime():
     return str(time.strftime("%Y%m%d-%H%M%S", time.localtime()))
 
 if __name__ == '__main__':
+    """
+    For remote tensorboard:
+    if tensorboard haven't been started:
+    ssh -L 16006:127.0.0.1:6006 peiyongw@10.100.238.77
+    tensorboard --logdir=<log dir> --port=6006
+    Then in local browser: 
+    127.0.0.1:16006
+    or
+    localhost:16006
+    """
     import warnings
     warnings.filterwarnings("ignore")
     import argparse
