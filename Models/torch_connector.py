@@ -309,7 +309,7 @@ class TorchConnector(Module):
         self._weights = weight_param
 
         if initial_weights is None:
-            self._weights.data.uniform_(-1, 1)
+            self._weights.data.uniform_(-torch.pi, torch.pi)
         else:
             #self._weights.data = torch.tensor(initial_weights, dtype=torch.float)
             self._weights.data = initial_weights.clone().detach().requires_grad_(True)
