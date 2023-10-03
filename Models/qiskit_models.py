@@ -211,7 +211,7 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader
 
     dataset = PatchedDigitsDataset()
-    dataloader = DataLoader(dataset, batch_size=4,
+    dataloader = DataLoader(dataset, batch_size=500,
                             shuffle=True, num_workers=0)
 
     flattened_8x8_patch = ParameterVector('x', length=64)
@@ -231,6 +231,7 @@ if __name__ == '__main__':
     backbone_circ = createBackbone8x8Image(flattened_8x8_patch, params, num_single_patch_reuploading, num_mem_qubits, num_mem_interact_qubits, num_patch_interact_qubits, num_mem_comp_layers)
     backbone_circ.draw('mpl', filename=f'backbone_circ_8x8_image_{num_mem_qubits}q_mem_{num_total_params}_params.png', style='bw')
 
+    """
     qnn, num_total_params, input_size = classification8x8Image10ClassesSamplerQNN(
         num_single_patch_reuploading,
         num_mem_qubits,
@@ -261,13 +262,17 @@ if __name__ == '__main__':
     # 1673.3945541381836 seconds for SPSA gradient with 100 batch
     # 20.506850719451904 seconds for SPSA gradient with 1 batch,87.28186655044556 for 5 batchsize, 170 seconds for 10 batch, 839.2028388977051 for 50 batchsize
     # parameter-shift gradient takes forever
+    """
     print("Testing the PyTorch model")
     model = ClassificationSamplerQNN8x8Image()
     print(model)
     for batch, (X, y) in enumerate(dataloader):
+        start = time.time()
         model.train()
         print(batch, X.shape, y.shape)
         out = model(X)
-        print(out)
+        end = time.time()
+        print(out.shape)
+        print("Single forward pass takes: ", end-start)
         break
 
