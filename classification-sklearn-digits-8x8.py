@@ -2,6 +2,7 @@ import sys
 sys.path.insert(0, '/home/peiyongw/Desktop/Research/QML-ImageTask')
 
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
 import time
 from torch.utils.tensorboard import SummaryWriter
@@ -18,6 +19,7 @@ if __name__ == '__main__':
     import warnings
     warnings.filterwarnings("ignore")
     import argparse
+    import torchmetrics
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, required=False, default=100)
@@ -53,8 +55,8 @@ if __name__ == '__main__':
     N_SINGLE_PATCH_REUPLOAD = args.n_single_patch_reupload
 
     nt = nowtime()
-    log_dir = f"logs-{nt}"
-    checkpoint_dir = os.path.join('checkpoint', f'checkpoints-{nt}')
+    log_dir = f"logs-classification-sklearn-digits-8x8-{nt}"
+    checkpoint_dir = os.path.join('checkpoint', f'checkpoints-classification-sklearn-digits-8x8-{nt}')
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
     writer = SummaryWriter(os.path.join('runs', log_dir))
@@ -79,6 +81,108 @@ if __name__ == '__main__':
     with open(os.path.join(checkpoint_dir, 'training_hyperparams.json'), 'w') as f:
         json.dump(training_hyperparams, f, indent=4)
 
-    model = ClassificationSamplerQNN8x8Image(
+    device = 'cpu'
 
+    model = ClassificationSamplerQNN8x8Image(
+        num_single_patch_reuploading=N_SINGLE_PATCH_REUPLOAD,
+        num_mem_qubits=N_MEM_QUBITS,
+        num_mem_interact_qubits=N_MEM_INTERACT_QUBITS,
+        num_patch_interact_qubits=N_PATCH_INTERACT_QUBITS,
+        num_mem_comp_layers=N_MEM_COMP_LAYERS,
+        num_classification_layers=N_CLASSIFICATION_LAYERS,
+        spsa_batchsize=SPSA_BATCHSIZE
     )
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, amsgrad=True)
+
+    criterion = nn.CrossEntropyLoss()
+
+    accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=10, top_k=1)
+
+    # load old checkpoint
+    if prev_checkpoint is not None:
+        checkpoint = torch.load(prev_checkpoint)
+        model.load_state_dict(checkpoint['model'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        print(f"Load from previous checkpoint {prev_checkpoint}")
+
+    # data
+    dataset = PatchedDigitsDataset()
+    train_size = int(TRAIN_BATCHES * BATCH_SIZE) # reduce the train size
+    val_size = int(0.2 * train_size)  # reduce the val size
+    test_size = len(dataset) - train_size - val_size
+    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size, test_size])
+    train_loader, val_loader, test_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True,
+                                                       num_workers=10), \
+        DataLoader(val_dataset, batch_size=len(val_dataset), shuffle=True, num_workers=10), \
+        DataLoader(test_dataset, batch_size=len(val_dataset), shuffle=True, num_workers=10)
+
+    batch_iters = 0
+    all_start = time.time()
+
+    model = model.to(device)
+
+    for epoch in range(EPOCHS):
+        epoch_start = time.time()
+        total_loss = 0
+        total_acc = 0
+        n_train_batches = len(train_loader)
+        for i, (x, y) in enumerate(train_loader):
+            batch_start = time.time()
+            x = x.to(device)
+            y = y.to(device)
+            optimizer.zero_grad()
+            y_pred = model(x)
+            loss = criterion(y_pred, y)
+            acc = accuracy(y_pred, y)
+            writer.add_scalar('Loss/train_batch', loss.item(), batch_iters)
+            writer.add_scalar('Accuracy/train_batch', acc.item(), batch_iters)
+            total_loss = total_loss + loss.item()
+            total_acc = total_acc + acc.item()
+            loss.backward()
+            optimizer.step()
+            batch_end = time.time()
+            print(f"Epoch {epoch} batch {i + 1}/{n_train_batches} loss: {loss.item()} acc: {acc.item()} time: {batch_end - batch_start}")
+            batch_iters += 1
+        writer.add_scalar('Loss/train_epoch', total_loss / len(train_loader), epoch)
+        writer.add_scalar('Accuracy/train_epoch', total_acc / len(train_loader), epoch)
+        print(f"Epoch {epoch} train loss: {total_loss / len(train_loader)}, train acc: {total_acc / len(train_loader)}, train time: {time.time() - epoch_start}")
+        for name, weight in model.named_parameters():
+            writer.add_histogram(name, weight, epoch)
+            if weight.grad is not None:
+                writer.add_histogram(f'{name}.grad', weight.grad, epoch)
+
+        if (epoch) % 5 == 0 or epoch == EPOCHS - 1:
+            checkpoint = {
+                'epoch': epoch,
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict()
+            }
+            torch.save(checkpoint, os.path.join(checkpoint_dir, f'epoch-{str(epoch).zfill(5)}-checkpoint.pth'))
+            print(f"Epoch {epoch} checkpoint saved")
+
+        if (epoch) % 1 == 0:
+            total_loss = 0
+            total_acc = 0
+            model.eval()
+            for i, (x, y) in enumerate(val_loader):
+                x = x.to(device)
+                y= y.to(device)
+                y_pred = model(x)
+                loss = criterion(y_pred, y)
+                acc = accuracy(y_pred, y)
+                total_loss = total_loss + loss.item()
+                total_acc = total_acc + acc.item()
+            writer.add_scalar('Loss/val_epoch', total_loss / len(val_loader), epoch)
+            writer.add_scalar('Accuracy/val_epoch', total_acc / len(val_loader), epoch)
+            model.train()
+            print(
+                f"Epoch {epoch} val loss: {total_loss / len(val_loader)}, val acc: {total_acc / len(val_loader)}, train + val time: {time.time() - epoch_start}")
+
+        final_chpt = {
+            'model': model.state_dict(),
+            'optimizer': optimizer.state_dict()
+        }
+        torch.save(final_chpt, os.path.join(checkpoint_dir, f'final-checkpoint.pth'))
+
+
