@@ -179,6 +179,8 @@ if __name__ == '__main__':
             print(
                 f"Epoch {epoch} val loss: {total_loss / len(val_loader)}, val acc: {total_acc / len(val_loader)}, train + val time: {time.time() - epoch_start}")
 
+        print("=====================================================")
+
         final_chpt = {
             'model': model.state_dict(),
             'optimizer': optimizer.state_dict()
