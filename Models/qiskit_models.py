@@ -1,6 +1,7 @@
 # models based on Qiskit and PyTorch
 import qiskit
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit.providers.aer import AerSimulator
 from qiskit.circuit import Parameter, ParameterVector
 from qiskit.circuit.parametervector import ParameterVectorElement
 from qiskit.circuit import Qubit
@@ -11,7 +12,7 @@ from PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8Re
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
 from qiskit_machine_learning.connectors import TorchConnector
 from qiskit.algorithms.gradients import SPSASamplerGradient
-from qiskit.primitives import BaseSampler, SamplerResult, Sampler
+from qiskit.primitives import BaseSampler, SamplerResult, Sampler, BackendSampler
 from qiskit.utils import algorithm_globals
 from qiskit.quantum_info import SparsePauliOp
 
@@ -122,6 +123,16 @@ def classification8x8Image10ClassesSamplerQNN(
 
     """
 
+    def parity(x):
+        if x>=9:
+            res = 9
+        else:
+            res = x
+        return res
+
+    backend = AerSimulator(method='statevector')
+    sampler = BackendSampler(backend)
+
     num_classification_qubits = 4
     num_total_qubits = num_mem_qubits + 3
     assert num_mem_qubits+3>=num_classification_qubits, "The number of memory qubits plus 3 must be greater than or equal to the number of classification qubits (4)"
@@ -133,9 +144,33 @@ def classification8x8Image10ClassesSamplerQNN(
     num_classification_params = num_classification_layers*3*num_classification_qubits  # using the simplePQC function
     num_total_params = num_single_patch_reuploading_params + num_mem_state_init_params + num_mem_patch_interact_params + num_mem_comp_params + num_classification_params
 
+    params = ParameterVector('θ', length=num_total_params)
+    inputs = ParameterVector('x', length=64)
+
+    backbone_params = params[:num_single_patch_reuploading_params+num_mem_state_init_params+num_mem_patch_interact_params+num_mem_comp_params]
+    classification_params = params[num_single_patch_reuploading_params+num_mem_state_init_params+num_mem_patch_interact_params+num_mem_comp_params:]
+    circ = QuantumCircuit(num_total_qubits,num_classification_qubits, name='Sampler10ClassQNN')
+    backbone = createBackbone8x8Image(inputs, backbone_params, num_single_patch_reuploading, num_mem_qubits, num_mem_interact_qubits, num_patch_interact_qubits, num_mem_comp_layers)
+    circ.append(backbone.to_instruction(), list(range(num_total_qubits)))
+    circ.append(simplePQC(num_classification_qubits, classification_params).to_instruction(), list(range(num_classification_qubits)))
+    circ.measure(list(range(num_classification_qubits)), list(range(num_classification_qubits)))
+
+    qnn = SamplerQNN(
+        circuit=circ,
+        input_params=inputs,
+        weight_params=params,
+        interpret=parity,
+        output_shape=10,
+        gradient = SPSASamplerGradient(sampler,0.01, batch_size=batchsize) # epsilon is the "c" in SPSA
+    )
+
+    return qnn, num_total_params, 64
+
+
 
 
 if __name__ == '__main__':
+    import time
 
     flattened_8x8_patch = ParameterVector('x', length=64)
     num_single_patch_reuploading = 2
@@ -152,3 +187,23 @@ if __name__ == '__main__':
     params = ParameterVector('θ', length=num_total_params)
     backbone_circ = createBackbone8x8Image(flattened_8x8_patch, params, num_single_patch_reuploading, num_mem_qubits, num_mem_interact_qubits, num_patch_interact_qubits, num_mem_comp_layers)
     backbone_circ.draw('mpl', filename=f'backbone_circ_8x8_image_{num_mem_qubits}q_mem_{num_total_params}_params.png', style='bw')
+
+    qnn, num_total_params, input_size = classification8x8Image10ClassesSamplerQNN(num_single_patch_reuploading, num_mem_qubits, num_mem_interact_qubits, num_patch_interact_qubits, num_mem_comp_layers)
+    print(qnn)
+    start = time.time()
+    params = algorithm_globals.random.random(num_total_params)
+    input = algorithm_globals.random.random((100,input_size))
+    res = qnn.forward(input, params)
+    print("Sampler QNN forward pass result:")
+    print(res)
+    print(res.shape)
+    sampler_qnn_input_grad, sampler_qnn_weight_grad = qnn.backward(
+        input, params
+    )
+    end = time.time()
+    print("sampler_qnn_input_grad")
+    print(sampler_qnn_input_grad)
+    print("sampler_qnn_weight_grad")
+    print(sampler_qnn_weight_grad)
+    print(sampler_qnn_weight_grad.shape)
+    print(f"Time taken: {end-start}")

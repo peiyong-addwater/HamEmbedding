@@ -131,7 +131,7 @@ qnn = SamplerQNN(
     weight_params=ansatz.parameters,
     interpret=parity,
     output_shape=4,
-    gradient = SPSASamplerGradient(Sampler(),0.01)
+    gradient = SPSASamplerGradient(Sampler(),0.01) # epsilon is the "c" in SPSA
 )
 
 res = qnn.forward(input_data=[1, 2, 3], weights=[1, 2, 3, 4, 5, 6])
