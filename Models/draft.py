@@ -116,10 +116,12 @@ print(
 
 
 
-
+print("="*20)
 
 def parity(x):
-    #print(x)
+    print("input to parity function")
+    print(x)
+    #print("{:b}".format(x).count("1"))
     return "{:b}".format(x).count("1")
 
 
@@ -133,13 +135,15 @@ qnn = SamplerQNN(
 )
 
 res = qnn.forward(input_data=[1, 2, 3], weights=[1, 2, 3, 4, 5, 6])
-print("Sampler QNN forward pass result:")
-print(res)
+
 
 sampler_qnn_input_grad, sampler_qnn_weight_grad = qnn.backward(
     [1, 2, 3], [1, 2, 3, 4, 5, 6]
 )
 
+
+print("Sampler QNN forward pass result:")
+print(res)
 print("sampler_qnn_input_grad")
 print(sampler_qnn_input_grad)
 print("sampler_qnn_weight_grad")

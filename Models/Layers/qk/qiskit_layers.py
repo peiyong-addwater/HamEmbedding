@@ -128,7 +128,33 @@ def createMemCompCirc(
             circ.append(createRXXRYYRZZCirc(single_su4_rxxryyrzz_params[9:]).to_instruction(), [qubit_indices[-j],qubit_indices[-j-1]])
     return circ
 
+def simplePQC(
+        num_qubits:int,
+        params: QiskitParameter
+)->QuantumCircuit:
+    """
+    A simple parameterised quantum circuit with U gates and controlled-Z gates in a circular fashion.
+    Number of layers is inferred from number of qubits and length of parameter vector.
+    Args:
+        num_qubits: number of qubits
+        params: number of parameters
 
+    Returns:
+        The circuit that implements the computation.
+    """
+    n_params = len(params)
+    n_layers = n_params//(3*num_qubits)
+    assert n_layers > 0, "Too few parameters. The number of layers must be positive"
+    assert n_params%(3*num_qubits) == 0, f"The number of parameters must be integer times of 3*{num_qubits}"
+    circ = QuantumCircuit(num_qubits, name="SimplePQC-U3CZ")
+    for i in range(n_layers):
+        layer_params = params[3*num_qubits*i:3*num_qubits*(i+1)]
+        for j in range(num_qubits):
+            circ.u(*layer_params[3*j:3*(j+1)], j)
+        for j in range(num_qubits):
+            circ.cz(j, (j+1)%num_qubits)
+        circ.barrier()
+    return circ
 
 if __name__ == '__main__':
     n_qubits = 5
@@ -145,4 +171,8 @@ if __name__ == '__main__':
     param_mem_comp = ParameterVector('$\\theta$', 15*n_qubits-12)
     circ_mem_comp = createMemCompCirc(n_qubits, param_mem_comp)
     circ_mem_comp.draw('mpl', filename=f'mem_comp_{n_qubits}q.png', style='bw')
+
+    pqc_params = ParameterVector('$\\theta$', 3*n_qubits*3)
+    circ_pqc = simplePQC(n_qubits, pqc_params)
+    circ_pqc.draw('mpl', filename=f'pqc_{n_qubits}q_{len(pqc_params)//(3*n_qubits)}_layers.png', style='bw')
 

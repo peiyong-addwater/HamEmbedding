@@ -90,6 +90,8 @@ def createBackbone8x8Image(
         circ.barrier(label=f"Patch {i+1} Encoded")
     return circ
 
+
+
 if __name__ == '__main__':
 
     flattened_8x8_patch = ParameterVector('x', length=64)
