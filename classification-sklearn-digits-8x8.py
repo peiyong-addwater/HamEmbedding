@@ -43,6 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--spsa_batchsize', type=int, required=False, default=1)
     parser.add_argument('--working_dir', type=str, required=False, default='/home/peiyongw/Desktop/Research/QML-ImageTask')
     parser.add_argument('--prev_checkpoint', type=str, required=False, default=None)
+    parser.add_argument('--load_optimizer', type=bool, required=False, default=False)
     parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=1)
 
     args = parser.parse_args()
@@ -103,7 +104,7 @@ if __name__ == '__main__':
         spsa_batchsize=SPSA_BATCHSIZE
     )
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
     criterion = nn.CrossEntropyLoss()
 
@@ -113,7 +114,8 @@ if __name__ == '__main__':
     if prev_checkpoint is not None:
         checkpoint = torch.load(prev_checkpoint)
         model.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
+        if args.load_optimizer:
+            optimizer.load_state_dict(checkpoint['optimizer'])
         print(f"Load from previous checkpoint {prev_checkpoint}")
 
     # data
@@ -162,7 +164,7 @@ if __name__ == '__main__':
             if weight.grad is not None:
                 writer.add_histogram(f'{name}.grad', weight.grad, epoch)
 
-        if (epoch) % 5 == 0 or epoch == EPOCHS - 1:
+        if (epoch) % 20 == 0 or epoch == EPOCHS - 1:
             checkpoint = {
                 'epoch': epoch,
                 'model': model.state_dict(),
