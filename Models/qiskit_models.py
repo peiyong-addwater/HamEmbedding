@@ -101,7 +101,8 @@ def classification8x8Image10ClassesSamplerQNN(
         num_patch_interact_qubits:int = 1,
         num_mem_comp_layers:int=1,
         num_classification_layers:int=1,
-        spsa_batchsize:int=1
+        spsa_batchsize:int=1,
+        spsa_epsilon:float=0.2
 )->(SamplerQNN, int, int):
     """
     Creates an EstimatorQNN that classifies an 8x8 image into 10 classes,
@@ -127,6 +128,7 @@ def classification8x8Image10ClassesSamplerQNN(
         num_mem_comp_layers: number of memory computation layers
         num_classification_layers: number of classification layers
         batchsize: batchsize for the SPSASamplerGradient
+        spsa_epsilon: epsilon for the SPSASamplerGradient, the "c" in SPSA
 
     Returns:
         SamplerQNN, number of trainable parameters, input size
@@ -171,7 +173,7 @@ def classification8x8Image10ClassesSamplerQNN(
         weight_params=params,
         interpret=parity,
         output_shape=10,
-        gradient = SPSASamplerGradient(sampler,0.01, batch_size=spsa_batchsize) # epsilon is the "c" in SPSA
+        gradient = SPSASamplerGradient(sampler,spsa_epsilon, batch_size=spsa_batchsize) # epsilon is the "c" in SPSA
     )
 
     return qnn, num_total_params, 64
@@ -184,7 +186,8 @@ class ClassificationSamplerQNN8x8Image(nn.Module):
                  num_patch_interact_qubits: int = 1,
                  num_mem_comp_layers: int = 1,
                  num_classification_layers: int = 1,
-                 spsa_batchsize: int = 1
+                 spsa_batchsize: int = 1,
+                 spsa_epsilon: float = 0.2
                  ):
         super().__init__()
         self.qnn,_,_ = classification8x8Image10ClassesSamplerQNN(
@@ -194,7 +197,8 @@ class ClassificationSamplerQNN8x8Image(nn.Module):
             num_patch_interact_qubits,
             num_mem_comp_layers,
             num_classification_layers,
-            spsa_batchsize
+            spsa_batchsize,
+            spsa_epsilon
         )
         self.qnn_torch = TorchConnector(self.qnn)
 

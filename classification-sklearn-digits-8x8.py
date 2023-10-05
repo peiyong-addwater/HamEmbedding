@@ -30,14 +30,21 @@ if __name__ == '__main__':
     warnings.filterwarnings("ignore")
     import argparse
     import torchmetrics
+    import numpy as np
+    import random
+    seed = 1701
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, required=False, default=200)
     parser.add_argument('--train_batches', type=int, required=False, default=5)
-    parser.add_argument('--epochs', type=int, required=False, default=500)
+    parser.add_argument('--epochs', type=int, required=False, default=2000)
     parser.add_argument('--n_mem_qubits', type=int, required=False, default=2)
-    parser.add_argument('--n_mem_interact_qubits', type=int, required=False, default=1)
-    parser.add_argument('--n_patch_interact_qubits', type=int, required=False, default=1)
+    parser.add_argument('--n_mem_interact_qubits', type=int, required=False, default=2)
+    parser.add_argument('--n_patch_interact_qubits', type=int, required=False, default=2)
     parser.add_argument('--n_mem_comp_layers', type=int, required=False, default=1)
     parser.add_argument('--n_classification_layers', type=int, required=False, default=1)
     parser.add_argument('--spsa_batchsize', type=int, required=False, default=1)
@@ -45,6 +52,8 @@ if __name__ == '__main__':
     parser.add_argument('--prev_checkpoint', type=str, required=False, default=None)
     parser.add_argument('--load_optimizer', type=bool, required=False, default=False)
     parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=1)
+    parser.add_argument('--lr', type=float, required=False, default=0.2)
+    parser.add_argument('--spsa_epsilon', type=float, required=False, default=0.2)
 
     args = parser.parse_args()
     wd = args.working_dir
@@ -64,6 +73,8 @@ if __name__ == '__main__':
     N_CLASSIFICATION_LAYERS = args.n_classification_layers
     SPSA_BATCHSIZE = args.spsa_batchsize
     N_SINGLE_PATCH_REUPLOAD = args.n_single_patch_reupload
+    LR = args.lr
+    SPSA_EPSILON = args.spsa_epsilon
 
     nt = nowtime()
     log_dir = f"logs-classification-sklearn-digits-8x8-{nt}"
@@ -79,14 +90,16 @@ if __name__ == '__main__':
         "n_mem_comp_layers": N_MEM_COMP_LAYERS,
         "n_classification_layers": N_CLASSIFICATION_LAYERS,
         "spsa_batchsize": SPSA_BATCHSIZE,
-        "n_single_patch_reupload": N_SINGLE_PATCH_REUPLOAD
+        "n_single_patch_reupload": N_SINGLE_PATCH_REUPLOAD,
+        "spsa_epsilon": SPSA_EPSILON,
     }
 
     training_hyperparams = {
         "batch_size": BATCH_SIZE,
         "epochs": EPOCHS,
         "train_batches": TRAIN_BATCHES,
-        "model_hyperparams": model_hyperparams
+        "model_hyperparams": model_hyperparams,
+        "lr": LR,
     }
 
     with open(os.path.join(checkpoint_dir, 'training_hyperparams.json'), 'w') as f:
@@ -101,10 +114,11 @@ if __name__ == '__main__':
         num_patch_interact_qubits=N_PATCH_INTERACT_QUBITS,
         num_mem_comp_layers=N_MEM_COMP_LAYERS,
         num_classification_layers=N_CLASSIFICATION_LAYERS,
-        spsa_batchsize=SPSA_BATCHSIZE
+        spsa_batchsize=SPSA_BATCHSIZE,
+        spsa_epsilon=SPSA_EPSILON
     )
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.5)
+    optimizer = torch.optim.SGD(model.parameters(), lr=LR)
 
     criterion = nn.CrossEntropyLoss()
 
