@@ -207,10 +207,10 @@ if __name__ == '__main__':
 
         print("=====================================================")
 
-        final_chpt = {
+    final_chpt = {
             'model': model.state_dict(),
             'optimizer': optimizer.state_dict()
         }
-        torch.save(final_chpt, os.path.join(checkpoint_dir, f'final-checkpoint.pth'))
+    torch.save(final_chpt, os.path.join(checkpoint_dir, f'final-checkpoint.pth'))
 
 
