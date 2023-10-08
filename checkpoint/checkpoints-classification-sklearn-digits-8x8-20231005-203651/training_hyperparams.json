@@ -1,0 +1,16 @@
+{
+    "batch_size": 200,
+    "epochs": 2000,
+    "train_batches": 5,
+    "model_hyperparams": {
+        "n_mem_qubits": 2,
+        "n_mem_interact_qubits": 2,
+        "n_patch_interact_qubits": 2,
+        "n_mem_comp_layers": 1,
+        "n_classification_layers": 1,
+        "spsa_batchsize": 1,
+        "n_single_patch_reupload": 1,
+        "spsa_epsilon": 0.2
+    },
+    "lr": 0.2
+}
