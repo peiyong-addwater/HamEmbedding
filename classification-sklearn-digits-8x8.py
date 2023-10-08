@@ -37,10 +37,10 @@ if __name__ == '__main__':
     task_name = 'classification-sklearn-digits-8x8-samplerQNN-4x4-patch'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, required=False, default=500)
-    parser.add_argument('--train_batches', type=int, required=False, default=2)
+    parser.add_argument('--batch_size', type=int, required=False, default=100)
+    parser.add_argument('--train_batches', type=int, required=False, default=10)
     parser.add_argument('--epochs', type=int, required=False, default=500*2)
-    parser.add_argument('--n_mem_qubits', type=int, required=False, default=3 )
+    parser.add_argument('--n_mem_qubits', type=int, required=False, default=3)
     parser.add_argument('--n_mem_interact_qubits', type=int, required=False, default=2)
     parser.add_argument('--n_patch_interact_qubits', type=int, required=False, default=2)
     parser.add_argument('--n_mem_comp_layers', type=int, required=False, default=1)
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=1)
     parser.add_argument('--lr', type=float, required=False, default=0.1)
     parser.add_argument('--spsa_epsilon', type=float, required=False, default=0.2)
-    parser.add_argument('--seed', type=int, required=False, default=3407)
+    parser.add_argument('--seed', type=int, required=False, default=1701)
 
     args = parser.parse_args()
     seed = args.seed
