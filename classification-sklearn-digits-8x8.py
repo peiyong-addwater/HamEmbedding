@@ -41,8 +41,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, required=False, default=200)
     parser.add_argument('--train_batches', type=int, required=False, default=5)
-    parser.add_argument('--epochs', type=int, required=False, default=2000)
-    parser.add_argument('--n_mem_qubits', type=int, required=False, default=2)
+    parser.add_argument('--epochs', type=int, required=False, default=500)
+    parser.add_argument('--n_mem_qubits', type=int, required=False, default=3 )
     parser.add_argument('--n_mem_interact_qubits', type=int, required=False, default=2)
     parser.add_argument('--n_patch_interact_qubits', type=int, required=False, default=2)
     parser.add_argument('--n_mem_comp_layers', type=int, required=False, default=1)
@@ -207,10 +207,10 @@ if __name__ == '__main__':
 
         print("=====================================================")
 
-        final_chpt = {
+    final_chpt = {
             'model': model.state_dict(),
             'optimizer': optimizer.state_dict()
         }
-        torch.save(final_chpt, os.path.join(checkpoint_dir, f'final-checkpoint.pth'))
+    torch.save(final_chpt, os.path.join(checkpoint_dir, f'final-checkpoint.pth'))
 
 
