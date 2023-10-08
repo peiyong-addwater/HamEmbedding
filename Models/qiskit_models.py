@@ -8,7 +8,7 @@ from qiskit.circuit import Qubit
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
 from math import pi
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
-from qiskit.algorithms.gradients import SPSASamplerGradient
+from qiskit_algorithms.gradients import SPSASamplerGradient
 from qiskit.primitives import BaseSampler, SamplerResult, Sampler, BackendSampler
 from qiskit.utils import algorithm_globals
 from qiskit.quantum_info import SparsePauliOp
