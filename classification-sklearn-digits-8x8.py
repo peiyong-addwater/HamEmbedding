@@ -34,6 +34,7 @@ if __name__ == '__main__':
     import random
     from qiskit_algorithms.utils import algorithm_globals
 
+    task_name = 'classification-sklearn-digits-8x8-samplerQNN-4x4-patch'
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, required=False, default=500)
@@ -81,8 +82,8 @@ if __name__ == '__main__':
     SPSA_EPSILON = args.spsa_epsilon
 
     nt = nowtime()
-    log_dir = f"logs-classification-sklearn-digits-8x8-{nt}"
-    checkpoint_dir = os.path.join('checkpoint', f'checkpoints-classification-sklearn-digits-8x8-{nt}')
+    log_dir = f"logs-{task_name}-{nt}"
+    checkpoint_dir = os.path.join('checkpoint', f'checkpoints-{task_name}-{nt}')
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
     writer = SummaryWriter(os.path.join('runs', log_dir))
@@ -99,6 +100,7 @@ if __name__ == '__main__':
     }
 
     training_hyperparams = {
+        "task_name": task_name,
         "batch_size": BATCH_SIZE,
         "epochs": EPOCHS,
         "train_batches": TRAIN_BATCHES,
