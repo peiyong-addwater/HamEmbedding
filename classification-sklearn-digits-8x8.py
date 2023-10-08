@@ -32,16 +32,13 @@ if __name__ == '__main__':
     import torchmetrics
     import numpy as np
     import random
-    seed = 1701
+    from qiskit_algorithms.utils import algorithm_globals
 
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, required=False, default=500)
     parser.add_argument('--train_batches', type=int, required=False, default=2)
-    parser.add_argument('--epochs', type=int, required=False, default=500)
+    parser.add_argument('--epochs', type=int, required=False, default=500*2)
     parser.add_argument('--n_mem_qubits', type=int, required=False, default=3 )
     parser.add_argument('--n_mem_interact_qubits', type=int, required=False, default=2)
     parser.add_argument('--n_patch_interact_qubits', type=int, required=False, default=2)
@@ -54,8 +51,15 @@ if __name__ == '__main__':
     parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=1)
     parser.add_argument('--lr', type=float, required=False, default=0.2)
     parser.add_argument('--spsa_epsilon', type=float, required=False, default=0.2)
+    parser.add_argument('--seed', type=int, required=False, default=3407)
 
     args = parser.parse_args()
+    seed = args.seed
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    algorithm_globals.random_seed = seed
     wd = args.working_dir
     os.chdir(wd)
 
@@ -100,6 +104,7 @@ if __name__ == '__main__':
         "train_batches": TRAIN_BATCHES,
         "model_hyperparams": model_hyperparams,
         "lr": LR,
+        "seed": seed,
     }
 
     with open(os.path.join(checkpoint_dir, 'training_hyperparams.json'), 'w') as f:
