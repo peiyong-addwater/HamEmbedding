@@ -176,7 +176,8 @@ def classification8x8Image10ClassesSamplerQNN(
         weight_params=params,
         interpret=parity,
         output_shape=10,
-        gradient = SPSASamplerGradient(sampler,spsa_epsilon, batch_size=spsa_batchsize) # epsilon is the "c" in SPSA
+        gradient = SPSASamplerGradient(sampler,spsa_epsilon, batch_size=spsa_batchsize), # epsilon is the "c" in SPSA
+        sampler=sampler
     )
 
     return qnn, num_total_params, 64
@@ -276,7 +277,8 @@ def classification8x8Image10ClassesEstimatorQNN(
         observables=observalbes,
         input_params=inputs,
         weight_params=params,
-        gradient=SPSAEstimatorGradient(estimator, spsa_epsilon, batch_size=spsa_batchsize)  # epsilon is the "c" in SPSA
+        gradient=SPSAEstimatorGradient(estimator, spsa_epsilon, batch_size=spsa_batchsize),  # epsilon is the "c" in SPSA
+        estimator = estimator
     )
 
     return qnn, num_total_params, 64
