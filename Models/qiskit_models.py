@@ -8,8 +8,10 @@ from qiskit.circuit import Qubit
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
 from math import pi
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
-from qiskit_algorithms.gradients import SPSASamplerGradient
-from qiskit.primitives import BaseSampler, SamplerResult, Sampler, BackendSampler
+from qiskit_algorithms.gradients import SPSASamplerGradient, SPSAEstimatorGradient
+from qiskit.primitives import BackendSampler
+from qiskit_aer.primitives import Sampler as AerSampler
+from qiskit_aer.primitives import Estimator as AerEstimator
 from qiskit.utils import algorithm_globals
 from qiskit.quantum_info import SparsePauliOp
 import torch
@@ -142,8 +144,9 @@ def classification8x8Image10ClassesSamplerQNN(
             res = x
         return res
 
-    backend = AerSimulator(method='statevector')
-    sampler = BackendSampler(backend)
+    sampler = AerSampler(
+        backend_options={'method': 'statevector'}
+    )
 
     num_classification_qubits = 4
     num_total_qubits = num_mem_qubits + 3
@@ -217,95 +220,97 @@ def classification8x8Image10ClassesEstimatorQNN(
         spsa_batchsize:int=1,
         spsa_epsilon:float=0.2,
         observalbes:Sequence[SparsePauliOp]=None
-):
+)->(EstimatorQNN, int, int):
     """
     Creates an EstimatorQNN that classifies an 8x8 image into 10 classes.
     The classification is performed via measuring the bitstring at the end of the 4-qubit classification layer,
     the number of bitstrings is 10, corresponding to the 10 classes.
     the bitstring with the highest expectation value is the classification result.
+    The number of operators in each bitstring must match the total number of qubits.
     Args:
-        num_single_patch_reuploading:
-        num_mem_qubits:
-        num_mem_interact_qubits:
-        num_patch_interact_qubits:
-        num_mem_comp_layers:
-        num_classification_layers:
-        spsa_batchsize:
-        spsa_epsilon:
-        observalbes:
+        num_single_patch_reuploading: number of re-uploading repetitions for each patch.
+        num_mem_qubits: number of memory qubits
+        num_mem_interact_qubits: number of interaction qubits in memory
+        num_patch_interact_qubits: number of interaction qubits in patch
+        num_mem_comp_layers: number of memory computation layers
+        num_classification_layers: number of classification layers
+        batchsize: batchsize for the SPSAEstimatorGradient
+        spsa_epsilon: epsilon for the SPSAEstimatorGradient, the "c" in SPSA
+        observalbes: list of ten SparsePauliOp observables for the ten classes. The number of qubits in each observable must match the total number of qubits.
 
     Returns:
-
+        EstimatorQNN, number of trainable parameters, input size
     """
-
-if __name__ == '__main__':
-    import time
-    from data import PatchedDigitsDataset
-    from torch.utils.data import DataLoader
-
-    dataset = PatchedDigitsDataset()
-    dataloader = DataLoader(dataset, batch_size=500,
-                            shuffle=True, num_workers=0)
-
-    flattened_8x8_patch = ParameterVector('x', length=64)
-    num_single_patch_reuploading = 2
-    num_mem_qubits = 2
-    num_mem_interact_qubits = 1
-    num_patch_interact_qubits = 1
-    num_mem_comp_layers = 1
-    num_classification_layers = 1
+    estimator = AerEstimator(
+        backend_options={'method': 'statevector'}
+    )
+    num_classification_qubits = 4
+    num_total_qubits = num_mem_qubits + 3
+    for ob in observalbes:
+        assert ob.num_qubits == num_total_qubits, f"The number of qubits in observable {ob} must match the total number of qubits, got {ob.num_qubits} and {num_total_qubits}"
+    assert num_mem_qubits + 3 >= num_classification_qubits, "The number of memory qubits plus 3 must be greater than or equal to the number of classification qubits (4)"
     num_single_patch_reuploading_params = 18 * num_single_patch_reuploading  # using the fourByFourPatchReupload function
     num_mem_state_init_params = 12 * num_mem_qubits - 9  # using the createMemStateInitCirc function
     num_mem_patch_interact_params = 9 * (
-                num_mem_interact_qubits * num_patch_interact_qubits)  # using the createMemPatchInteract function
+            num_mem_interact_qubits * num_patch_interact_qubits)  # using the createMemPatchInteract function
     num_mem_comp_params = num_mem_comp_layers * (15 * num_mem_qubits - 12)  # using the createMemCompCirc function
-    num_total_params = num_single_patch_reuploading_params + num_mem_state_init_params + num_mem_patch_interact_params + num_mem_comp_params
-    params = ParameterVector('θ', length=num_total_params)
-    backbone_circ = createBackbone8x8Image(flattened_8x8_patch, params, num_single_patch_reuploading, num_mem_qubits, num_mem_interact_qubits, num_patch_interact_qubits, num_mem_comp_layers)
-    backbone_circ.draw('mpl', filename=f'backbone_circ_8x8_image_{num_mem_qubits}q_mem_{num_total_params}_params.png', style='bw')
+    num_classification_params = num_classification_layers * 3 * num_classification_qubits  # using the simplePQC function
+    num_total_params = num_single_patch_reuploading_params + num_mem_state_init_params + num_mem_patch_interact_params + num_mem_comp_params + num_classification_params
 
-    """
-    qnn, num_total_params, input_size = classification8x8Image10ClassesSamplerQNN(
-        num_single_patch_reuploading,
-        num_mem_qubits,
-        num_mem_interact_qubits,
-        num_patch_interact_qubits,
-        num_mem_comp_layers,
-        num_classification_layers,
-        1
+    params = ParameterVector('θ', length=num_total_params)
+    inputs = ParameterVector('x', length=64)
+
+    backbone_params = params[
+                      :num_single_patch_reuploading_params + num_mem_state_init_params + num_mem_patch_interact_params + num_mem_comp_params]
+    classification_params = params[
+                            num_single_patch_reuploading_params + num_mem_state_init_params + num_mem_patch_interact_params + num_mem_comp_params:]
+    circ = QuantumCircuit(num_total_qubits, name='Estimator10ClassQNN')
+    backbone = createBackbone8x8Image(inputs, backbone_params, num_single_patch_reuploading, num_mem_qubits,
+                                      num_mem_interact_qubits, num_patch_interact_qubits, num_mem_comp_layers)
+    circ.append(backbone.to_instruction(), list(range(num_total_qubits)))
+    circ.append(simplePQC(num_classification_qubits, classification_params).to_instruction(),
+                list(range(num_classification_qubits)))
+
+    qnn = EstimatorQNN(
+        circuit=circ,
+        observables=observalbes,
+        input_params=inputs,
+        weight_params=params,
+        gradient=SPSAEstimatorGradient(estimator, spsa_epsilon, batch_size=spsa_batchsize)  # epsilon is the "c" in SPSA
     )
-    print(qnn)
-    start = time.time()
-    params = algorithm_globals.random.random(num_total_params)
-    input = algorithm_globals.random.random((100,input_size))
-    res = qnn.forward(input, params)
-    print("Sampler QNN forward pass result:")
-    #print(res)
-    print(res.shape)
-    sampler_qnn_input_grad, sampler_qnn_weight_grad = qnn.backward(
-        input, params
-    )
-    end = time.time()
-    print("sampler_qnn_input_grad")
-    print(sampler_qnn_input_grad)
-    print("sampler_qnn_weight_grad")
-    #print(sampler_qnn_weight_grad)
-    print(sampler_qnn_weight_grad.shape)
-    print(f"Time taken: {end-start}")
-    # 1673.3945541381836 seconds for SPSA gradient with 100 batch
-    # 20.506850719451904 seconds for SPSA gradient with 1 batch,87.28186655044556 for 5 batchsize, 170 seconds for 10 batch, 839.2028388977051 for 50 batchsize
-    # parameter-shift gradient takes forever
-    """
-    print("Testing the PyTorch model")
-    model = ClassificationSamplerQNN8x8Image()
-    print(model)
-    for batch, (X, y) in enumerate(dataloader):
-        start = time.time()
-        model.train()
-        print(batch, X.shape, y.shape)
-        out = model(X)
-        end = time.time()
-        print(out.shape)
-        print("Single forward pass takes: ", end-start)
-        break
+
+    return qnn, num_total_params, 64
+
+class ClassificationEstimatorQNN8x8Image(nn.Module):
+    def __init__(self,
+                 num_single_patch_reuploading: int = 2,
+                 num_mem_qubits: int = 2,
+                 num_mem_interact_qubits: int = 1,
+                 num_patch_interact_qubits: int = 1,
+                 num_mem_comp_layers: int = 1,
+                 num_classification_layers: int = 1,
+                 spsa_batchsize: int = 1,
+                 spsa_epsilon: float = 0.2,
+                 observables: Sequence[SparsePauliOp] = None
+                 ):
+        super().__init__()
+        self.qnn, _, _ = classification8x8Image10ClassesEstimatorQNN(
+            num_single_patch_reuploading=num_single_patch_reuploading,
+            num_mem_qubits=num_mem_qubits,
+            num_mem_interact_qubits=num_mem_interact_qubits,
+            num_patch_interact_qubits=num_patch_interact_qubits,
+            num_mem_comp_layers=num_mem_comp_layers,
+            num_classification_layers=num_classification_layers,
+            spsa_batchsize=spsa_batchsize,
+            spsa_epsilon=spsa_epsilon,
+            observalbes=observables
+        )
+        self.qnn_torch = TorchConnector(self.qnn)
+
+    def forward(self, x):
+        # x must be of shape (batchsize, 64)
+        # each 16 elements of x is a 4 by 4 patch of the 8x8 image
+        return self.qnn_torch.forward(x)
+
+
 

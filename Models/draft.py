@@ -93,6 +93,8 @@ qc1 = QuantumCircuit(num_qubits, num_qubits-1)
 qc1.compose(feature_map, inplace=True)
 qc1.compose(ansatz, inplace=True)
 observable1 = (SparsePauliOp("XII"), SparsePauliOp("IXI"), SparsePauliOp("IIX"))
+for c in observable1:
+    print(c.num_qubits)
 
 from qiskit_machine_learning.neural_networks import EstimatorQNN
 
