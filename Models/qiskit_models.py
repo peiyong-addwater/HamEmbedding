@@ -246,14 +246,9 @@ def classification8x8Image10ClassesEstimatorQNN(
     Returns:
         EstimatorQNN, number of trainable parameters, input size
     """
-
-    #service = QiskitRuntimeService(channel="ibm_quantum", instance="ibm-q-melbourne/unimelb/hub")
-    #backend = service.backend("ibmq_qasm_simulator")
-
     estimator = AerEstimator(
         backend_options={'method': 'statevector'}
     )
-    #estimator = IBMRuntimeEstimator(backend=backend)
     num_classification_qubits = 4
     num_total_qubits = num_mem_qubits + 3
     for ob in observalbes:
