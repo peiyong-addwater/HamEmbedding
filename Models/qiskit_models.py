@@ -145,7 +145,8 @@ def classification8x8Image10ClassesSamplerQNN(
         return res
 
     sampler = AerSampler(
-        backend_options={'method': 'statevector'}
+        backend_options={'method': 'statevector',
+                         }
     )
 
     num_classification_qubits = 4
