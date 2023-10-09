@@ -207,7 +207,36 @@ class ClassificationSamplerQNN8x8Image(nn.Module):
         # each 16 elements of x is a 4 by 4 patch of the 8x8 image
         return self.qnn_torch.forward(x)
 
+def classification8x8Image10ClassesEstimatorQNN(
+        num_single_patch_reuploading: int=2,
+        num_mem_qubits:int = 2,
+        num_mem_interact_qubits:int = 1,
+        num_patch_interact_qubits:int = 1,
+        num_mem_comp_layers:int=1,
+        num_classification_layers:int=1,
+        spsa_batchsize:int=1,
+        spsa_epsilon:float=0.2,
+        observalbes:Sequence[SparsePauliOp]=None
+):
+    """
+    Creates an EstimatorQNN that classifies an 8x8 image into 10 classes.
+    The classification is performed via measuring the bitstring at the end of the 4-qubit classification layer,
+    the number of bitstrings is 10, corresponding to the 10 classes.
+    the bitstring with the highest expectation value is the classification result.
+    Args:
+        num_single_patch_reuploading:
+        num_mem_qubits:
+        num_mem_interact_qubits:
+        num_patch_interact_qubits:
+        num_mem_comp_layers:
+        num_classification_layers:
+        spsa_batchsize:
+        spsa_epsilon:
+        observalbes:
 
+    Returns:
+
+    """
 
 if __name__ == '__main__':
     import time

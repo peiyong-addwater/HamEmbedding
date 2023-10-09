@@ -119,8 +119,8 @@ print(
 print("="*20)
 
 def parity(x):
-    print("input to parity function")
-    print(x)
+    #print("input to parity function")
+    #print(x)
     #print("{:b}".format(x).count("1"))
     return "{:b}".format(x).count("1")
 
