@@ -34,6 +34,13 @@ if __name__ == '__main__':
     import random
     from qiskit_algorithms.utils import algorithm_globals
     from qiskit.quantum_info import SparsePauliOp
+    from qiskit_ibm_runtime import QiskitRuntimeService
+
+    #QiskitRuntimeService.save_account(channel="ibm_quantum",
+    #                                  token=
+    #                                instance = "ibm-q-melbourne/unimelb/hub",
+     #                                 overwrite=True
+    #                                  )
 
     task_name = 'classification-sklearn-digits-8x8-EstimatorQNN-4x4-patch'
 

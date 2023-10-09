@@ -12,10 +12,13 @@ from qiskit_algorithms.gradients import SPSASamplerGradient, SPSAEstimatorGradie
 from qiskit.primitives import BackendSampler
 from qiskit_aer.primitives import Sampler as AerSampler
 from qiskit_aer.primitives import Estimator as AerEstimator
+from qiskit_ibm_runtime import Estimator as IBMRuntimeEstimator
 from qiskit.utils import algorithm_globals
 from qiskit.quantum_info import SparsePauliOp
 import torch
 from torch import nn
+from qiskit_ibm_runtime import QiskitRuntimeService
+
 
 from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC
 from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading
@@ -243,9 +246,14 @@ def classification8x8Image10ClassesEstimatorQNN(
     Returns:
         EstimatorQNN, number of trainable parameters, input size
     """
-    estimator = AerEstimator(
-        backend_options={'method': 'statevector'}
-    )
+
+    service = QiskitRuntimeService(channel="ibm_quantum", instance="ibm-q-melbourne/unimelb/hub")
+    backend = service.backend("ibmq_qasm_simulator")
+
+    #estimator = AerEstimator(
+    #    backend_options={'method': 'statevector'}
+    #)
+    estimator = IBMRuntimeEstimator(backend=backend)
     num_classification_qubits = 4
     num_total_qubits = num_mem_qubits + 3
     for ob in observalbes:
