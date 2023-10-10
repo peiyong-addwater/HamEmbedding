@@ -67,8 +67,8 @@ def fourByFourPatchReupload(
         circ.rzz(pixels[14], 1, 2)
         circ.rxx(pixels[15], 0, 2)
         circ.barrier()
-        circ.append(createTaillessSU4(encoding_params[0+18*i:9+18*i]).to_instruction(), [0,1])
-        circ.append(createTaillessSU4(encoding_params[9+18*i:18+18*i]).to_instruction(), [1,2])
+        circ.append(createTaillessSU4(encoding_params[0+18*i:9+18*i]).to_instruction(), [1,2])
+        circ.append(createTaillessSU4(encoding_params[9+18*i:18+18*i]).to_instruction(), [0,1])
         circ.barrier()
         circ.barrier()
     return circ
