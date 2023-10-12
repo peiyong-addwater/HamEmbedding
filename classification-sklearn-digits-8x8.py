@@ -37,8 +37,8 @@ if __name__ == '__main__':
     task_name = 'classification-sklearn-digits-8x8-samplerQNN-4x4-patch'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, required=False, default=100)
-    parser.add_argument('--train_batches', type=int, required=False, default=10)
+    parser.add_argument('--batch_size', type=int, required=False, default=200)
+    parser.add_argument('--train_batches', type=int, required=False, default=5)
     parser.add_argument('--epochs', type=int, required=False, default=500*2)
     parser.add_argument('--n_mem_qubits', type=int, required=False, default=3)
     parser.add_argument('--n_mem_interact_qubits', type=int, required=False, default=2)
