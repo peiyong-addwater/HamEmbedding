@@ -41,7 +41,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_batches', type=int, required=False, default=5)
     parser.add_argument('--epochs', type=int, required=False, default=500*2)
     parser.add_argument('--n_mem_qubits', type=int, required=False, default=2)
-    parser.add_argument('--n_mem_interact_qubits', type=int, required=False, default=1)
+    parser.add_argument('--n_mem_interact_qubits', type=int, required=False, default=2)
     parser.add_argument('--n_patch_interact_qubits', type=int, required=False, default=1)
     parser.add_argument('--n_mem_comp_layers', type=int, required=False, default=1)
     parser.add_argument('--n_classification_layers', type=int, required=False, default=1)
