@@ -107,6 +107,7 @@ if __name__ == '__main__':
         "model_hyperparams": model_hyperparams,
         "lr": LR,
         "seed": seed,
+        "prev_checkpoint": prev_checkpoint
     }
 
     with open(os.path.join(checkpoint_dir, 'training_hyperparams.json'), 'w') as f:
