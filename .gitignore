@@ -1,0 +1,15 @@
+/data/cifar-10
+/data/cifar-100
+/data/fashion
+/data/cifar-100-python.tar.gz
+/data/cifar-10-python.tar.gz
+/.idea/*.xml
+/.idea/deployment.xml
+/.idea/QML-ImageClassification.iml
+/draft-code/Old/qiskit/fashion-mnist-single-qubit-conv/qiskit-prototype-pybobyqa.log
+.idea/deployment.xml
+/data/mini-digits/augmented_images/
+.idea/deployment.xml
+*.xml
+*.pyc
+*.iml
