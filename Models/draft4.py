@@ -22,25 +22,13 @@ from qiskit.quantum_info import SparsePauliOp
 # Set seed for random generators
 algorithm_globals.random_seed = 42
 
-# Generate random dataset
-
-# Select dataset dimension (num_inputs) and size (num_samples)
 num_inputs = 2
-num_samples = 20
+num_samples = 200
 
-# Generate random input coordinates (X) and binary labels (y)
-X = 2 * algorithm_globals.random.random([num_samples, num_inputs]) - 1
-y01 = 1 * (np.sum(X, axis=1) >= 0)  # in { 0,  1}, y01 will be used for SamplerQNN example
-y = 2 * y01 - 1  # in {-1, +1}, y will be used for EstimatorQNN example
+input = [0.1, 0.2]
+params = [0.1, -0.5, 0.3, -0.7, 0.4, -0.2, 0.6, -0.8, 0.9]
 
-# Convert to torch Tensors
-X_ = Tensor(X)
-y01_ = Tensor(y01).reshape(len(y)).long()
-y_ = Tensor(y).reshape(len(y), 1)
-
-# Set up a circuit
-input = ParameterVector('x', length=num_inputs)
-params = ParameterVector('θ', length=6+3)
+sampler = Sampler()
 
 qreg = QuantumRegister(num_inputs)
 creg = ClassicalRegister(4)
@@ -56,20 +44,18 @@ qc.measure(qreg[1], creg2[0])
 with qc.if_test((creg2[0],1)):
     qc.u(params[6], params[7], params[8], qreg[0])
 
-qc.measure(qreg[0], creg[0])
-qc.measure(qreg[1], creg[1])
+#qc.measure(qreg[0], creg[0])
+#qc.measure(qreg[1], creg[1])
+"""
+If the measurement to the 4-bit classical register is disabled,
+then the mesurement results will only be 16 and 0.
+It seems that creg2 will be the leading qubit, 
+since creg is always zero
+and creg2 could be one or zero
+making the result either 10000 or 00000,
+which 16 or 0 in decimal.
+"""
 
-observable1 = (SparsePauliOp("XI"), SparsePauliOp("IX"), SparsePauliOp("ZX"))
-def parity(x):
-    print("input to parity function")
-    print(x)
-    #print("{:b}".format(x).count("1"))
-    return "{:b}".format(x).count("1")
-
-#qnn = EstimatorQNN(circuit=qc, input_params=input, weight_params=params,observables=observable1,)
-qnn=SamplerQNN(circuit=qc, input_params=input, weight_params=params,interpret=parity, output_shape=4, sampler=Sampler())
-
-res = qnn.forward(input_data=[0.1, 0.2], weights=[0.1, -0.5, 0.3, -0.7, 0.4, -0.2, 0.6, -0.8, 0.9])
-
-print(res)
-
+job = sampler.run([qc]*num_samples)
+result = job.result()
+print(result)
