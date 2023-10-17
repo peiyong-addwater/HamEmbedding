@@ -156,8 +156,34 @@ def simplePQC(
         circ.barrier()
     return circ
 
+def allInOneAnsatz(
+        num_qubits:int,
+        params: QiskitParameter
+)->QuantumCircuit:
+    """
+    An all-in-one ansatz for the memory and the patch qubits.
+    Starts with a layer of U gates: 3*num_qubits parameters;
+    Then a layer of RXXRYYRZZ gates in a circular fashion: 3*num_qubits parameters
+    Args:
+        num_qubits: number of qubits in the circuit
+        params: 6*num_qubits parameters
+
+    Returns:
+        The circuit that implements the computation.
+    """
+    n_params = len(params)
+    assert n_params == 6*num_qubits, f"The number of parameters must be 6*{num_qubits}"
+    circ = QuantumCircuit(num_qubits, name="AllInOneAnsatz")
+    u3_params = params[:3*num_qubits]
+    rxxryyrzz_params = params[3*num_qubits:]
+    for i in range(num_qubits):
+        circ.u(*u3_params[3*i:3*(i+1)], i)
+    for i in range(num_qubits):
+        circ.append(createRXXRYYRZZCirc(rxxryyrzz_params[3*i:3*(i+1)]).to_instruction(), [i, (i+1)%num_qubits])
+    return circ
+
 if __name__ == '__main__':
-    n_qubits = 5
+    n_qubits = 4
     n_mem_qubits = 2
     n_patch_qubits = n_qubits - n_mem_qubits
     param_mem_init = ParameterVector('$\\theta$', 12*n_qubits-9)
@@ -175,4 +201,8 @@ if __name__ == '__main__':
     pqc_params = ParameterVector('$\\theta$', 3*n_qubits*3)
     circ_pqc = simplePQC(n_qubits, pqc_params)
     circ_pqc.draw('mpl', filename=f'pqc_{n_qubits}q_{len(pqc_params)//(3*n_qubits)}_layers.png', style='bw')
+
+    all_in_one_params = ParameterVector('$\\theta$', 6*n_qubits)
+    circ_all_in_one = allInOneAnsatz(n_qubits, all_in_one_params)
+    circ_all_in_one.draw('mpl', filename=f'all_in_one_{n_qubits}q.png', style='bw')
 
