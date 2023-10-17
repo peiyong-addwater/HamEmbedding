@@ -49,8 +49,9 @@ if __name__ == '__main__':
     parser.add_argument('--working_dir', type=str, required=False, default='/home/peiyongw/Desktop/Research/QML-ImageTask')
     parser.add_argument('--prev_checkpoint', type=str, required=False, default=None)
     parser.add_argument('--load_optimizer', type=bool, required=False, default=False)
+    parser.add_argument('--load_scheduler', type=bool, required=False, default=False)
     parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=1)
-    parser.add_argument('--lr', type=float, required=False, default=0.5)
+    parser.add_argument('--lr', type=float, required=False, default=1)
     parser.add_argument('--c', type=float, required=False, default=0.2)
     parser.add_argument('--seed', type=int, required=False, default=1701)
 
@@ -128,6 +129,14 @@ if __name__ == '__main__':
 
     optimizer = torch.optim.SGD(model.parameters(), lr=LR)
 
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                           'min',
+                                                           patience=50,
+                                                           cooldown=50,
+                                                           factor=0.8,
+                                                           threshold=0.01,
+                                                           verbose=True)
+
     criterion = nn.CrossEntropyLoss()
 
     accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=10, top_k=1)
@@ -138,6 +147,8 @@ if __name__ == '__main__':
         model.load_state_dict(checkpoint['model'])
         if args.load_optimizer:
             optimizer.load_state_dict(checkpoint['optimizer'])
+        if args.load_scheduler:
+            scheduler.load_state_dict(checkpoint['scheduler'])
         print(f"Load from previous checkpoint {prev_checkpoint}")
 
     # data
@@ -186,15 +197,6 @@ if __name__ == '__main__':
             if weight.grad is not None:
                 writer.add_histogram(f'{name}.grad', weight.grad, epoch)
 
-        if (epoch) % 20 == 0 or epoch == EPOCHS - 1:
-            checkpoint = {
-                'epoch': epoch,
-                'model': model.state_dict(),
-                'optimizer': optimizer.state_dict()
-            }
-            torch.save(checkpoint, os.path.join(checkpoint_dir, f'epoch-{str(epoch).zfill(5)}-checkpoint.pth'))
-            print(f"Epoch {epoch} checkpoint saved")
-
         if (epoch) % 1 == 0:
             total_loss = 0
             total_acc = 0
@@ -204,14 +206,26 @@ if __name__ == '__main__':
                 y= y.to(device)
                 y_pred = model(x)
                 loss = criterion(y_pred, y)
+                scheduler.step(loss)
                 acc = accuracy(y_pred, y)
                 total_loss = total_loss + loss.item()
                 total_acc = total_acc + acc.item()
             writer.add_scalar('Loss/val_epoch', total_loss / len(val_loader), epoch)
             writer.add_scalar('Accuracy/val_epoch', total_acc / len(val_loader), epoch)
+            writer.add_scalar('LearningRate', optimizer.param_groups[0]['lr'], epoch)
             model.train()
             print(
                 f"Epoch {epoch} val loss: {total_loss / len(val_loader)}, val acc: {total_acc / len(val_loader)}, train + val time: {time.time() - epoch_start}")
+
+        if (epoch) % 10 == 0 or epoch == EPOCHS - 1:
+            checkpoint = {
+                'epoch': epoch,
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'scheduler': scheduler.state_dict()
+            }
+            torch.save(checkpoint, os.path.join(checkpoint_dir, f'epoch-{str(epoch).zfill(5)}-checkpoint.pth'))
+            print(f"Epoch {epoch} checkpoint saved")
 
         print("=====================================================")
 
