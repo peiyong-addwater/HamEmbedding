@@ -20,8 +20,8 @@ from torch import nn
 from qiskit_ibm_runtime import QiskitRuntimeService
 
 
-from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC
-from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading
+from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC, allInOneAnsatz
+from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading, fourByFourPatchReuploadPooling1Q
 from .torch_connector import TorchConnector
 from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
 
@@ -215,5 +215,63 @@ class ClassificationSamplerRecurrentQNN8x8Image(nn.Module):
         # x must be of shape (batchsize, 64)
         # each 16 elements of x is a 4 by 4 patch of the 8x8 image
         return self.qnn_torch.forward(x)
+
+
+def createSimpleQRNNBackbone8x8Image(
+        pixels: QiskitParameter,
+        params: QiskitParameter,
+        num_single_patch_reuploading: int=2,
+        num_mem_qubits:int = 3,
+        reset_between_reuploading: bool = False,
+        spread_info_between_reuploading: bool = False
+)->QuantumCircuit:
+    """
+    Creates a (num_mem_qubits+3)-qubit circuit that encodes an 8x8 image into num_mem_qubits qubits.
+    The interaction between the memory and the encoded qubit state for the patch is provided
+    by the allInOneAnsatz function.
+    The patch encoding is provided by the fourByFourPatchReuploadPooling1Q function.
+    Args:
+        pixels: flattened 64 pixels of an eight by eight image. first 16 pixels are for the first patch, and so on
+        params: trainable parameters for the backbone qnn.
+        num_single_patch_reuploading: number of re-uploading repetitions for each patch.
+        num_mem_qubits: number of memory qubits
+        reset_between_reuploading: whether to reset the bottom two patch qubits between re-uploading repetitions
+        spread_info_between_reuploading: whether to spread the information from the first patch qubits to the reset two
+            between re-uploading repetitions
+
+    Returns:
+        QuantumCircuit: a (num_mem_qubits+3)-qubit circuit (backbone QNN) that encodes an 8x8 image into num_mem_qubits qubits,
+        with trainable parameters for data re-uploading, and trainable parameters for the memory-related computations.
+    """
+    num_single_patch_reuploading_params = 30*num_single_patch_reuploading # using the fourByFourPatchReuploadPooling1Q function
+    num_mem_params = 6*(num_mem_qubits+1) # using the allInOneAnsatz function
+    num_total_params = num_single_patch_reuploading_params + num_mem_params
+    assert len(params) == num_total_params, f"The number of parameters must be {num_total_params}, got {len(params)}"
+    assert num_mem_qubits > 0, "Too few memory qubits. The number of memory qubits must be positive"
+    assert num_single_patch_reuploading > 0, "Too few re-uploading repetitions. The number of re-uploading repetitions must be positive"
+    assert len(pixels) == 64, f"The number of pixels must be 64, got {len(pixels)}"
+
+    patch_encoding_params = params[:num_single_patch_reuploading_params]
+    mem_params = params[num_single_patch_reuploading_params:]
+
+    mem_qreg = QuantumRegister(num_mem_qubits, name='mem')
+    patch_qreg = QuantumRegister(3, name='patch')
+    patch_creg = ClassicalRegister(3, name='patch_classical')
+    circ = QuantumCircuit(mem_qreg, patch_qreg, patch_creg, name='SimpQRNNBackbone8x8Image')
+    # iterate over the four patches
+    # they all share the same parameters
+    for i in range(4):
+        # first encode the patch into 3 qubits
+        circ.append(fourByFourPatchReuploadPooling1Q(pixels[16*i:16*(i+1)], patch_encoding_params).to_instruction(), patch_qreg, patch_creg)
+        # then interact the patch with the memory
+        circ.append(allInOneAnsatz(num_mem_qubits, mem_params).to_instruction(), mem_qreg+patch_qreg[:1])
+        # reset the patch qubits
+        circ.reset(patch_qreg)
+        circ.barrier(label=f"Patch {i+1} Encoded")
+    return circ
+
+
+
+
 
 
