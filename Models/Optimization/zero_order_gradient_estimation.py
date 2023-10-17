@@ -48,7 +48,7 @@ class RSGFSamplerGradient(BaseSamplerGradient):
             ValueError: If ``epsilon`` is not positive.
         """
         if c <= 0:
-            raise ValueError(f"epsilon ({c}) should be positive.")
+            raise ValueError(f"smoothing factor c = ({c}) should be positive.")
         self._batch_size = batch_size
         self._epsilon = c
         self._seed = np.random.default_rng(seed)
