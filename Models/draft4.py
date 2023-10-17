@@ -54,6 +54,7 @@ since creg is always zero
 and creg2 could be one or zero
 making the result either 10000 or 00000,
 which 16 or 0 in decimal.
+This indicates that the order of registers are reversed.
 """
 
 job = sampler.run([qc]*num_samples)

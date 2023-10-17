@@ -3,7 +3,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit import Parameter, ParameterVector
 from qiskit.circuit.parametervector import ParameterVectorElement
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
-from .su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ
+from su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ
 from math import pi
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
@@ -69,6 +69,65 @@ def fourByFourPatchReupload(
         circ.barrier()
         circ.append(createTaillessSU4(encoding_params[0+18*i:9+18*i]).to_instruction(), [1,2])
         circ.append(createTaillessSU4(encoding_params[9+18*i:18+18*i]).to_instruction(), [0,1])
+        circ.barrier()
+        circ.barrier()
+    return circ
+
+def fourByFourPatchReuploadPooling1Q(
+        pixels: QiskitParameter,
+        encoding_params: QiskitParameter,
+        reset_between_reuploading: bool = False
+)->QuantumCircuit:
+    """
+    Creates a 3-qubit circuit that encodes 16 pixels into 3 qubits, with trainable parameters for data re-uploading.
+    The trainable layer are two TaillessSU4 layers.
+    Args:
+        pixels: the 16 pixels to encode. 16-element list of parameters.
+        encoding_params: (18+3*4)*L=30L-element list of parameters, where L is the number of data-reuploading repetitions
+        reset_between_reuploading: whether to reset the bottom two qubits between re-uploading layers
+
+    Returns:
+        A 3-qubit circuit that encodes 16 pixels into a 1-qubit state.
+    """
+    qreg = QuantumRegister(3)
+    creg = ClassicalRegister(2)
+    circ = QuantumCircuit(qreg, creg, name='FourByFourPatchReuploadPooling')
+    layers = len(encoding_params)//30
+
+    for i in range(layers):
+
+        layer_i_params = encoding_params[30*i:30*(i+1)]
+
+        #print(len(layer_i_params))
+
+        circ.u(pixels[0], pixels[1], pixels[2], qreg[0])
+        circ.u(pixels[3], pixels[4], pixels[5], qreg[1])
+        circ.u(pixels[6], pixels[7], pixels[8], qreg[2])
+        circ.rxx(pixels[9], qreg[0], qreg[1])
+        circ.ryy(pixels[10], qreg[0], qreg[1])
+        circ.rzz(pixels[11], qreg[0], qreg[1])
+        circ.rxx(pixels[12], qreg[1], qreg[2])
+        circ.ryy(pixels[13], qreg[1], qreg[2])
+        circ.rzz(pixels[14], qreg[1], qreg[2])
+        circ.rxx(pixels[15], qreg[0], qreg[2])
+        circ.barrier()
+        circ.append(createTaillessSU4(layer_i_params[0:9]).to_instruction(), [qreg[1], qreg[2]])
+        circ.append(createTaillessSU4(layer_i_params[9:18]).to_instruction(), [qreg[0], qreg[1]])
+        circ.barrier()
+        circ.measure(qreg[1], creg[0])
+        circ.measure(qreg[2], creg[1])
+        if reset_between_reuploading:
+            circ.reset(qreg[1])
+            circ.reset(qreg[2])
+        circ.barrier()
+        with circ.if_test((creg, 0)):
+            circ.u(layer_i_params[18], layer_i_params[19], layer_i_params[20], qreg[0])
+        with circ.if_test((creg, 1)):
+            circ.u(layer_i_params[21], layer_i_params[22], layer_i_params[23], qreg[0])
+        with circ.if_test((creg, 2)):
+            circ.u(layer_i_params[24], layer_i_params[25], layer_i_params[26], qreg[0])
+        with circ.if_test((creg, 3)):
+            circ.u(layer_i_params[27], layer_i_params[28], layer_i_params[29], qreg[0])
         circ.barrier()
         circ.barrier()
     return circ
@@ -196,8 +255,11 @@ if __name__ == '__main__':
 
     pixel2 = ParameterVector('p', 16)
     encoding_param2 = ParameterVector('e', 18*2)
+    encoding_param2_1q = ParameterVector('e', (18+3*4)*2)
     circ2 = fourByFourPatchReupload(pixel2, encoding_param2)
     circ2.draw('mpl', filename='FourByFourPatchReupload.png', style='bw')
+    circ2_1 = fourByFourPatchReuploadPooling1Q(pixel2, encoding_param2_1q)
+    circ2_1.draw('mpl', filename='FourByFourPatchReuploadPooling1Q.png', style='iqx')
 
     params = ParameterVector('$\\theta$', 64)
     circ3 = createPQC64(params)
