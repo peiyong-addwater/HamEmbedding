@@ -116,7 +116,8 @@ def fourByFourPatchReuploadPooling1Q(
         circ.barrier()
         circ.measure(qreg[1], creg[0])
         circ.measure(qreg[2], creg[1])
-        if reset_between_reuploading:
+        if reset_between_reuploading and i < layers-1:
+            circ.barrier()
             circ.reset(qreg[1])
             circ.reset(qreg[2])
         circ.barrier()
@@ -258,8 +259,8 @@ if __name__ == '__main__':
     encoding_param2_1q = ParameterVector('e', (18+3*4)*2)
     circ2 = fourByFourPatchReupload(pixel2, encoding_param2)
     circ2.draw('mpl', filename='FourByFourPatchReupload.png', style='bw')
-    circ2_1 = fourByFourPatchReuploadPooling1Q(pixel2, encoding_param2_1q)
-    circ2_1.draw('mpl', filename='FourByFourPatchReuploadPooling1Q.png', style='iqx')
+    circ2_1 = fourByFourPatchReuploadPooling1Q(pixel2, encoding_param2_1q, reset_between_reuploading=True)
+    circ2_1.draw('mpl', filename='FourByFourPatchReuploadPooling1QResetTrue.png', style='iqx')
 
     params = ParameterVector('$\\theta$', 64)
     circ3 = createPQC64(params)
