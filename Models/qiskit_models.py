@@ -369,6 +369,32 @@ def classification8x8Image10ClassesSamplerSimpleQRNN(
 
     return qnn, num_total_params, 64
 
+class ClassificationSamplerSimpleQRNN8x8Image(nn.Module):
+    def __init__(self,
+                 num_single_patch_reuploading: int = 2,
+                 num_mem_qubits: int = 3,
+                 reset_between_reuploading: bool = False,
+                 spread_info_between_reuploading: bool = True,
+                 num_classification_layers: int = 1,
+                 spsa_batchsize: int = 1,
+                 spsa_epsilon: float = 0.2
+                 ):
+        super().__init__()
+        self.qnn,_,_ = classification8x8Image10ClassesSamplerSimpleQRNN(
+            num_single_patch_reuploading,
+            num_mem_qubits,
+            reset_between_reuploading,
+            spread_info_between_reuploading,
+            num_classification_layers,
+            spsa_batchsize,
+            spsa_epsilon
+        )
+        self.qnn_torch = TorchConnector(self.qnn)
+
+    def forward(self, x):
+        # x must be of shape (batchsize, 64)
+        # each 16 elements of x is a 4 by 4 patch of the 8x8 image
+        return self.qnn_torch.forward(x)
 
 
 

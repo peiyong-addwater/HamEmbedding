@@ -1,5 +1,6 @@
-from Models.qiskit_models import classification8x8Image10ClassesSamplerSimpleQRNN
+from Models.qiskit_models import classification8x8Image10ClassesSamplerSimpleQRNN, ClassificationSamplerSimpleQRNN8x8Image
 import numpy as np
+import torch
 
 n_mem = 3
 n_reuploading = 2
@@ -35,3 +36,17 @@ print("QNN input gradient:")
 print(input_grad)
 print("QNN weight gradient:")
 print(weight_grad)
+
+print("="*20)
+
+qnn_torch = ClassificationSamplerSimpleQRNN8x8Image(
+    num_single_patch_reuploading=num_single_patch_reuploading,
+    num_mem_qubits=num_mem_qubits,
+    num_classification_layers=num_classification_layers
+)
+
+input_data = torch.Tensor(input_data)
+weights = torch.Tensor(weights)
+
+print("QNN torch forward pass result:")
+print(qnn_torch(input_data)) # different than the first forward pass result since the weights are different
