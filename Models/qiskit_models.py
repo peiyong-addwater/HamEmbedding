@@ -223,7 +223,7 @@ def createSimpleQRNNBackbone8x8Image(
         num_single_patch_reuploading: int=2,
         num_mem_qubits:int = 3,
         reset_between_reuploading: bool = False,
-        spread_info_between_reuploading: bool = False
+        spread_info_between_reuploading: bool = True
 )->QuantumCircuit:
     """
     Creates a (num_mem_qubits+3)-qubit circuit that encodes an 8x8 image into num_mem_qubits qubits.
@@ -256,20 +256,46 @@ def createSimpleQRNNBackbone8x8Image(
 
     mem_qreg = QuantumRegister(num_mem_qubits, name='mem')
     patch_qreg = QuantumRegister(3, name='patch')
-    patch_creg = ClassicalRegister(3, name='patch_classical')
+    patch_creg = ClassicalRegister(2, name='patch_classical')
     circ = QuantumCircuit(mem_qreg, patch_qreg, patch_creg, name='SimpQRNNBackbone8x8Image')
     # iterate over the four patches
     # they all share the same parameters
     for i in range(4):
         # first encode the patch into 3 qubits
-        circ.append(fourByFourPatchReuploadPooling1Q(pixels[16*i:16*(i+1)], patch_encoding_params).to_instruction(), patch_qreg, patch_creg)
+        circ.append(fourByFourPatchReuploadPooling1Q(pixels[16*i:16*(i+1)], patch_encoding_params, reset_between_reuploading, spread_info_between_reuploading).to_instruction(), patch_qreg, patch_creg)
         # then interact the patch with the memory
-        circ.append(allInOneAnsatz(num_mem_qubits, mem_params).to_instruction(), mem_qreg+patch_qreg[:1])
+        circ.append(allInOneAnsatz(num_mem_qubits+1, mem_params).to_instruction(), mem_qreg[:]+patch_qreg[:1])
+        circ.barrier()
         # reset the patch qubits
         circ.reset(patch_qreg)
         circ.barrier(label=f"Patch {i+1} Encoded")
     return circ
 
+
+if __name__ == '__main__':
+
+    from qiskit import transpile
+
+    sim = AerSimulator(method="statevector")
+
+    n_mem = 3
+    n_reuploading = 2
+    params_simpleQRNN = ParameterVector('θ', length=30*n_reuploading+6*(n_mem+1))
+    pixels = ParameterVector('x', length=64)
+    circ_simpleQRNN = createSimpleQRNNBackbone8x8Image(pixels, params_simpleQRNN, n_reuploading, n_mem)
+    circ_simpleQRNN.draw(output='mpl', filename='simpleQRNN.png', style='iqx')
+
+    circ_simpleQRNN = circ_simpleQRNN.bind_parameters(
+        {params_simpleQRNN: list(range(30*n_reuploading+6*(n_mem+1))),
+         pixels: list(range(64))
+         }
+    )
+
+    circ = transpile(circ_simpleQRNN, sim)
+    print(circ) # matplotlib draw has problems with this circuit
+    job = sim.run(circ)
+    result = job.result()
+    print(result.get_counts())
 
 
 
