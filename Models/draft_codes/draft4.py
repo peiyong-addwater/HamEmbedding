@@ -13,7 +13,6 @@ from qiskit.circuit import Parameter, ParameterVector
 from qiskit.circuit.library import RealAmplitudes, ZZFeatureMap
 from qiskit_machine_learning.neural_networks import SamplerQNN, EstimatorQNN
 #from qiskit_machine_learning.connectors import TorchConnector
-from torch_connector import TorchConnector
 import copy
 from qiskit.algorithms.gradients import SPSASamplerGradient
 from qiskit_aer.primitives import Sampler, Estimator
@@ -59,4 +58,4 @@ This indicates that the order of registers are reversed.
 
 job = sampler.run([qc]*num_samples)
 result = job.result()
-print(result)
+print(result.quasi_dists)

@@ -281,7 +281,8 @@ def classification8x8Image10ClassesSamplerSimpleQRNN(
         spsa_epsilon:float=0.2
 )->(SamplerQNN, int, int):
     """
-    Creates a SamplerQNN that classifies an 8x8 image into 10 classes,
+    Creates a SamplerQNN that classifies an 8x8 image into 10 classes, using the simple QRNN backbone,
+    which has pooling in the patch encoding part,
     with trainable parameters for data re-uploading,
     and trainable parameters for the memory-related computations,
     and trainable parameters for the 4-qubit classification layer at the end of the circuit.
@@ -292,21 +293,84 @@ def classification8x8Image10ClassesSamplerSimpleQRNN(
     Total number of classification qubits is 6.
     Since the sampler only output an integer for all the cregs,
     if we order the cregs as [patch_classical, classification] when creating the quantum circuit,
-    and convert the output integer to fixed-length (length 2^6) binary,
+    and convert the output integer to fixed-length (length 6) binary,
     then the last two classical bits are for patch encoding, due to the little-endian convention.
     We can remove the last two bits to get the classification result in the parity function.
     Args:
-        num_single_patch_reuploading:
-        num_mem_qubits:
-        reset_between_reuploading:
-        spread_info_between_reuploading:
-        num_classification_layers:
-        spsa_batchsize:
-        spsa_epsilon:
+        num_single_patch_reuploading: number of re-uploading repetitions for each patch.
+        num_mem_qubits: number of memory qubits
+        reset_between_reuploading: whether to reset the bottom two patch qubits between re-uploading repetitions
+        spread_info_between_reuploading: whether to spread the information from the first patch qubits to the reset two
+            between re-uploading repetitions
+        num_classification_layers: number of classification layers
+        spsa_batchsize: batchsize for the stochastic gradient estimator to be averaged over
+        spsa_epsilon: smoothing factor for the stochastic gradient estimator, like the "c" in SPSA
 
     Returns:
+        SamplerQNN, number of trainable parameters, input size
 
     """
+
+    def parity(x):
+        test_bit_string = "{0:06b}".format(x)
+        cls_bit_string = test_bit_string[:-2]
+        cls_int = int(cls_bit_string, 2)
+        if cls_int>=9:
+            res = 9
+        else:
+            res = cls_int
+        return res
+
+    sampler = AerSampler(
+        backend_options={'method': 'statevector',
+                         }
+    )
+
+    num_classification_qubits = 4
+    num_total_qubits = num_mem_qubits + 3
+
+    assert num_mem_qubits + 3 >= num_classification_qubits, "The number of memory qubits plus 3 must be greater than or equal to the number of classification qubits (4)"
+    num_single_patch_reuploading_params = 30 * num_single_patch_reuploading  # using the fourByFourPatchReuploadPooling1Q function
+    num_mem_params = 6 * (num_mem_qubits + 1)  # using the allInOneAnsatz function
+    num_classification_params = num_classification_layers * 3 * num_classification_qubits  # using the simplePQC function
+    num_total_params = num_single_patch_reuploading_params + num_mem_params + num_classification_params
+    num_backbone_params = num_single_patch_reuploading_params + num_mem_params
+
+    params = ParameterVector('θ', length=num_total_params)
+    inputs = ParameterVector('x', length=64)
+
+    backbone_params = params[:num_backbone_params]
+    classification_params = params[num_backbone_params:]
+
+    qreg = QuantumRegister(num_total_qubits, name='q')
+    patch_cre = ClassicalRegister(2, name='patch_classical')
+    cls_creg = ClassicalRegister(num_classification_qubits, name='classification')
+
+    circ = QuantumCircuit(qreg, patch_cre, cls_creg, name='Sampler10ClassQRNN')
+    backbone = createSimpleQRNNBackbone8x8Image(inputs,
+                                                backbone_params,
+                                                num_single_patch_reuploading,
+                                                num_mem_qubits,
+                                                reset_between_reuploading,
+                                                spread_info_between_reuploading)
+    circ.append(backbone.to_instruction(), qargs=qreg, cargs=patch_cre)
+    circ.append(simplePQC(num_classification_qubits, classification_params).to_instruction(), qargs=qreg[:num_classification_qubits])
+    circ.measure(qreg[:num_classification_qubits], cls_creg[:num_classification_qubits])
+
+    qnn = SamplerQNN(
+        circuit=circ,
+        input_params=inputs,
+        weight_params=params,
+        interpret=parity,
+        output_shape=10,
+        gradient=RSGFSamplerGradient(sampler, spsa_epsilon, batch_size=spsa_batchsize),  # epsilon is the "c" in SPSA
+        sampler=sampler
+    )
+
+    return qnn, num_total_params, 64
+
+
+
 
 if __name__ == '__main__':
 
