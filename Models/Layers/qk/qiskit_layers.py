@@ -162,6 +162,7 @@ def allInOneAnsatz(
 )->QuantumCircuit:
     """
     An all-in-one ansatz for the memory and the patch qubits.
+    Following Fig. 6 of https://www.sciencedirect.com/science/article/pii/S089360802300360X
     Starts with a layer of U gates: 3*num_qubits parameters;
     Then a layer of RXXRYYRZZ gates in a circular fashion: 3*num_qubits parameters
     Args:
