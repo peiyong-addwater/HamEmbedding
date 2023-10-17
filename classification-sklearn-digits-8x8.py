@@ -79,7 +79,7 @@ if __name__ == '__main__':
     SPSA_BATCHSIZE = args.spsa_batchsize
     N_SINGLE_PATCH_REUPLOAD = args.n_single_patch_reupload
     LR = args.lr
-    SPSA_EPSILON = args.spsa_epsilon
+    SPSA_EPSILON = args.c
 
     nt = nowtime()
     log_dir = f"logs-{task_name}-{nt}"
@@ -96,7 +96,7 @@ if __name__ == '__main__':
         "n_classification_layers": N_CLASSIFICATION_LAYERS,
         "spsa_batchsize": SPSA_BATCHSIZE,
         "n_single_patch_reupload": N_SINGLE_PATCH_REUPLOAD,
-        "spsa_epsilon": SPSA_EPSILON,
+        "smoothing_factor": SPSA_EPSILON,
     }
 
     training_hyperparams = {
