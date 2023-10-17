@@ -10,7 +10,7 @@ import json
 import os
 
 from Models.data import PatchedDigitsDataset
-from Models.qiskit_models import ClassificationSamplerQNN8x8Image
+from Models.qiskit_models import ClassificationSamplerRecurrentQNN8x8Image
 
 def nowtime():
     return str(time.strftime("%Y%m%d-%H%M%S", time.localtime()))
@@ -115,7 +115,7 @@ if __name__ == '__main__':
 
     device = 'cpu'
 
-    model = ClassificationSamplerQNN8x8Image(
+    model = ClassificationSamplerRecurrentQNN8x8Image(
         num_single_patch_reuploading=N_SINGLE_PATCH_REUPLOAD,
         num_mem_qubits=N_MEM_QUBITS,
         num_mem_interact_qubits=N_MEM_INTERACT_QUBITS,
