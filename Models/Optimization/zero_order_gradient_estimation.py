@@ -16,9 +16,9 @@ from qiskit_algorithms.exceptions import AlgorithmError
 
 class RSGFSamplerGradient(BaseSamplerGradient):
     """
-    Compute the gradients of the sampling probability by the RSGF method mentioned in Eqn. (5) of [1]:
+    Compute the gradients of the sampling probability by a two-sided version of the RSGF method mentioned in Eqn. (5) of [1]:
 
-    g(theta) = u*(f(theta+c*u)-f(theta))/c
+    g(theta) = u*(f(theta+c*u)-f(theta+c*u))/(2c)
 
     [1] Z. Leng, P. Mundada, S. Ghadimi, and A. Houck, “Efficient Algorithms for High-Dimensional Quantum Optimal
     Control of a Transmon Qubit,” Phys. Rev. Appl., vol. 19, no. 4, p. 044034,
