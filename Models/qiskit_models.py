@@ -397,6 +397,45 @@ if __name__ == '__main__':
     result = job.result()
     print(result.get_counts())
 
+    num_mem_qubits = n_mem
+    num_single_patch_reuploading = n_reuploading
+    num_classification_layers = 1
+
+    num_classification_qubits = 4
+    num_total_qubits = num_mem_qubits + 3
+
+    assert num_mem_qubits + 3 >= num_classification_qubits, "The number of memory qubits plus 3 must be greater than or equal to the number of classification qubits (4)"
+    num_single_patch_reuploading_params = 30 * num_single_patch_reuploading  # using the fourByFourPatchReuploadPooling1Q function
+    num_mem_params = 6 * (num_mem_qubits + 1)  # using the allInOneAnsatz function
+    num_classification_params = num_classification_layers * 3 * num_classification_qubits  # using the simplePQC function
+    num_total_params = num_single_patch_reuploading_params + num_mem_params + num_classification_params
+    num_backbone_params = num_single_patch_reuploading_params + num_mem_params
+
+    params = ParameterVector('θ', length=num_total_params)
+    inputs = ParameterVector('x', length=64)
+
+    backbone_params = params[:num_backbone_params]
+    classification_params = params[num_backbone_params:]
+
+    qreg = QuantumRegister(num_total_qubits, name='q')
+    patch_cre = ClassicalRegister(2, name='patch_classical')
+    cls_creg = ClassicalRegister(num_classification_qubits, name='classification')
+
+    circ = QuantumCircuit(qreg, patch_cre, cls_creg, name='Sampler10ClassQRNN')
+    backbone = createSimpleQRNNBackbone8x8Image(inputs,
+                                                backbone_params,
+                                                num_single_patch_reuploading,
+                                                num_mem_qubits,
+                                                False,
+                                                True)
+    circ.append(backbone.to_instruction(), qargs=qreg, cargs=patch_cre)
+    circ.append(simplePQC(num_classification_qubits, classification_params).to_instruction(),
+                qargs=qreg[:num_classification_qubits])
+    circ.measure(qreg[:num_classification_qubits], cls_creg[:num_classification_qubits])
+
+    circ.draw('mpl', style='iqx', filename='simpleQRNNCls.png')
+
+
 
 
 
