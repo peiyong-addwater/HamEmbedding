@@ -132,9 +132,9 @@ if __name__ == '__main__':
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            'min',
                                                            patience=50,
-                                                           cooldown=50,
+                                                           cooldown=20,
                                                            factor=0.8,
-                                                           threshold=0.01,
+                                                           threshold=0.005,
                                                            verbose=True)
 
     criterion = nn.CrossEntropyLoss()

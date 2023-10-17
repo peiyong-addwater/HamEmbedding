@@ -111,7 +111,7 @@ def classification8x8Image10ClassesSamplerRecurrentQNN(
         spsa_epsilon:float=0.2
 )->(SamplerQNN, int, int):
     """
-    Creates an EstimatorQNN that classifies an 8x8 image into 10 classes,
+    Creates a SamplerQNN that classifies an 8x8 image into 10 classes,
     with trainable parameters for data re-uploading,
     and trainable parameters for the memory-related computations,
     and trainable parameters for the 4-qubit classification layer at the end of the circuit.
@@ -271,6 +271,42 @@ def createSimpleQRNNBackbone8x8Image(
         circ.barrier(label=f"Patch {i+1} Encoded")
     return circ
 
+def classification8x8Image10ClassesSamplerSimpleQRNN(
+        num_single_patch_reuploading: int=2,
+        num_mem_qubits:int = 3,
+        reset_between_reuploading: bool = False,
+        spread_info_between_reuploading: bool = True,
+        num_classification_layers:int=1,
+        spsa_batchsize:int=1,
+        spsa_epsilon:float=0.2
+)->(SamplerQNN, int, int):
+    """
+    Creates a SamplerQNN that classifies an 8x8 image into 10 classes,
+    with trainable parameters for data re-uploading,
+    and trainable parameters for the memory-related computations,
+    and trainable parameters for the 4-qubit classification layer at the end of the circuit.
+    The classification is performed via measuring the bitstring of the 4-qubit classification layer,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, corresponding to the 10 classes.
+    Any other bitstring is considered as class 9.
+    However, since there are additional two classical bits for patch encoding,
+    Total number of classification qubits is 6.
+    Since the sampler only output an integer for all the cregs,
+    if we order the cregs as [patch_classical, classification] when creating the quantum circuit,
+    and convert the output integer to fixed-length (length 2^6) binary,
+    then the last two classical bits are for patch encoding, due to the little-endian convention.
+    We can remove the last two bits to get the classification result in the parity function.
+    Args:
+        num_single_patch_reuploading:
+        num_mem_qubits:
+        reset_between_reuploading:
+        spread_info_between_reuploading:
+        num_classification_layers:
+        spsa_batchsize:
+        spsa_epsilon:
+
+    Returns:
+
+    """
 
 if __name__ == '__main__':
 
