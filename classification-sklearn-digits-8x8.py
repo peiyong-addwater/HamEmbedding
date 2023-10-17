@@ -34,7 +34,7 @@ if __name__ == '__main__':
     import random
     from qiskit_algorithms.utils import algorithm_globals
 
-    task_name = 'classification-sklearn-digits-8x8-samplerQNN-4x4-patch'
+    task_name = 'classification-sklearn-digits-8x8-samplerQNN-4x4-patch-RSGF-Grad'
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, required=False, default=100)
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_optimizer', type=bool, required=False, default=False)
     parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=2)
     parser.add_argument('--lr', type=float, required=False, default=0.1)
-    parser.add_argument('--spsa_epsilon', type=float, required=False, default=0.2)
+    parser.add_argument('--c', type=float, required=False, default=0.2)
     parser.add_argument('--seed', type=int, required=False, default=1701)
 
     args = parser.parse_args()

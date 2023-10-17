@@ -23,6 +23,7 @@ from qiskit_ibm_runtime import QiskitRuntimeService
 from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC
 from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading
 from .torch_connector import TorchConnector
+from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 QiskitQubits = Union[List[int], List[Qubit], QuantumRegister]
@@ -180,7 +181,7 @@ def classification8x8Image10ClassesSamplerRecurrentQNN(
         weight_params=params,
         interpret=parity,
         output_shape=10,
-        gradient = SPSASamplerGradient(sampler,spsa_epsilon, batch_size=spsa_batchsize), # epsilon is the "c" in SPSA
+        gradient = RSGFSamplerGradient(sampler,spsa_epsilon, batch_size=spsa_batchsize), # epsilon is the "c" in SPSA
         sampler=sampler
     )
 
