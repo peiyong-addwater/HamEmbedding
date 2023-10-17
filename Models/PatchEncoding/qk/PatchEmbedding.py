@@ -76,7 +76,8 @@ def fourByFourPatchReupload(
 def fourByFourPatchReuploadPooling1Q(
         pixels: QiskitParameter,
         encoding_params: QiskitParameter,
-        reset_between_reuploading: bool = False
+        reset_between_reuploading: bool = False,
+        spread_info: bool = False
 )->QuantumCircuit:
     """
     Creates a 3-qubit circuit that encodes 16 pixels into 3 qubits, with trainable parameters for data re-uploading.
@@ -85,6 +86,8 @@ def fourByFourPatchReuploadPooling1Q(
         pixels: the 16 pixels to encode. 16-element list of parameters.
         encoding_params: (18+3*4)*L=30L-element list of parameters, where L is the number of data-reuploading repetitions
         reset_between_reuploading: whether to reset the bottom two qubits between re-uploading layers
+        spread_info: whether to spread the information on the first qubit to other two qubits between re-uploading layers
+                    with bit-filp QEC style encoding.
 
     Returns:
         A 3-qubit circuit that encodes 16 pixels into a 1-qubit state.
@@ -130,6 +133,10 @@ def fourByFourPatchReuploadPooling1Q(
         with circ.if_test((creg, 3)):
             circ.u(layer_i_params[27], layer_i_params[28], layer_i_params[29], qreg[0])
         circ.barrier()
+        if spread_info and i < layers-1:
+            circ.cx(qreg[0], qreg[1])
+            circ.cx(qreg[1], qreg[2])
+            circ.barrier()
         circ.barrier()
     return circ
 
@@ -259,8 +266,8 @@ if __name__ == '__main__':
     encoding_param2_1q = ParameterVector('e', (18+3*4)*2)
     circ2 = fourByFourPatchReupload(pixel2, encoding_param2)
     circ2.draw('mpl', filename='FourByFourPatchReupload.png', style='bw')
-    circ2_1 = fourByFourPatchReuploadPooling1Q(pixel2, encoding_param2_1q, reset_between_reuploading=True)
-    circ2_1.draw('mpl', filename='FourByFourPatchReuploadPooling1QResetTrue.png', style='iqx')
+    circ2_1 = fourByFourPatchReuploadPooling1Q(pixel2, encoding_param2_1q, reset_between_reuploading=False, spread_info=True)
+    circ2_1.draw('mpl', filename='FourByFourPatchReuploadPooling1QResetFalseSpreadInfoTrue.png', style='iqx')
 
     params = ParameterVector('$\\theta$', 64)
     circ3 = createPQC64(params)
