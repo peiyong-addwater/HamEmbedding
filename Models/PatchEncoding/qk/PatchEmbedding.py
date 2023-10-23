@@ -3,7 +3,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit import Parameter, ParameterVector
 from qiskit.circuit.parametervector import ParameterVectorElement
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
-from su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ
+from .su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ
 from math import pi
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
@@ -170,6 +170,24 @@ def pqcUCU(
             circ.cu(layer_params[3*num_qubits+3*j], layer_params[3*num_qubits+3*j+1], layer_params[3*num_qubits+3*j+2],layer_params[3*num_qubits+3*j+3], num_qubits-1-j, num_qubits-2-j)
         circ.barrier()
     return circ
+
+def fourByFourPatchReuploadResetPooling1Q(
+        pixels: QiskitParameter,
+        encoding_params: QiskitParameter
+)->QuantumCircuit:
+    """
+    Creates a 3-qubit circuit that encodes 16 pixels into 1 qubits, with trainable parameters for data re-uploading.
+    The pooling is achieved through resetting the bottom two qubits between re-uploading layers.
+    After resetting, the information on the first qubit is spread to the other two qubits through bit-flip QEC style encoding.
+    The trainable layer is a single pqcUCU layer for each data re-uploading repetition.
+    Args:
+        pixels: the 16 pixels to encode. 16-element list of parameters.
+        encoding_params: (3*3+4*(3-1))*L = 17-element list of parameters, where L is the number of data-reuploading repetitions
+
+    Returns:
+        A 3-qubit circuit that encodes 16 pixels into a 1-qubit state.
+    """
+
 
 def createPQC64(
         params: QiskitParameter
