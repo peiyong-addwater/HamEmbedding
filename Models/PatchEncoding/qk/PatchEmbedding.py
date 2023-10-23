@@ -3,7 +3,7 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit import Parameter, ParameterVector
 from qiskit.circuit.parametervector import ParameterVectorElement
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
-from .su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ
+from su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ
 from math import pi
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
@@ -148,7 +148,7 @@ def pqcUCU(
     Creates a PQC with U3 gates and CU3 gates. First there are U3 gates on each of the qubits,
     Then there are CU3 gates from bottom to top: 3->2, 2->1, 1->0.
     Args:
-        params: (3*num_qubits + 3*(num_qubits-1))L-element list of parameters, where the number of
+        params: (3*num_qubits + 4*(num_qubits-1))L-element list of parameters, where the number of
                 layers L is inferred from the number of parameters.
         num_qubits: number of qubits in the circuit
 
@@ -156,18 +156,18 @@ def pqcUCU(
         A PQC with U3 gates and CU3 gates.
     """
     num_params = len(params)
-    num_layers = num_params//(3*num_qubits + 3*(num_qubits-1))
-    assert num_params == num_layers*(3*num_qubits + 3*(num_qubits-1)), f"Number of parameters must be a multiple of 3*{num_qubits} + 3*({num_qubits}-1)"
+    num_layers = num_params//(3*num_qubits + 4*(num_qubits-1))
+    assert num_params == num_layers*(3*num_qubits + 4*(num_qubits-1)), f"Number of parameters must be a multiple of 3*{num_qubits} + 3*({num_qubits}-1)"
     assert num_qubits >= 2, f"Number of qubits must be at least 2"
     assert num_layers >= 1, f"Number of layers must be at least 1"
     circ = QuantumCircuit(num_qubits, name='PQCUCU')
     for i in range(num_layers):
-        layer_params = params[(3*num_qubits + 3*(num_qubits-1))*i:(3*num_qubits + 3*(num_qubits-1))*(i+1)]
+        layer_params = params[(3*num_qubits + 4*(num_qubits-1))*i:(3*num_qubits + 4*(num_qubits-1))*(i+1)]
         for j in range(num_qubits):
             circ.u(layer_params[3*j], layer_params[3*j+1], layer_params[3*j+2], j)
         for j in range(num_qubits-1):
             # inverse ordering
-            circ.cu(layer_params[3*num_qubits+3*j], layer_params[3*num_qubits+3*j+1], layer_params[3*num_qubits+3*j+2], num_qubits-1-j, num_qubits-2-j)
+            circ.cu(layer_params[3*num_qubits+3*j], layer_params[3*num_qubits+3*j+1], layer_params[3*num_qubits+3*j+2],layer_params[3*num_qubits+3*j+3], num_qubits-1-j, num_qubits-2-j)
         circ.barrier()
     return circ
 
@@ -318,5 +318,9 @@ if __name__ == '__main__':
     circ6 = create10x10Reuploading(pixel6, encoding_param6)
     circ6.draw('mpl', filename='10x10Reuploading.png', style='bw')
 
-    pqc_params = ParameterVector('\\theta', 64)
+    pqc_qubits = 4
+    pqc_layers = 3
+    pqc_params = ParameterVector('$\\theta$', pqc_layers*(3*pqc_qubits + 4*(pqc_qubits-1)))
+    circ7 = pqcUCU(pqc_params, pqc_qubits)
+    circ7.draw('mpl', filename=f'PQCUCU_{pqc_layers}_layers_{pqc_qubits}_qubits.png', style='bw')
 
