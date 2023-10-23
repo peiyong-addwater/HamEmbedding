@@ -21,15 +21,15 @@ from qiskit_ibm_runtime import QiskitRuntimeService
 import numpy as np
 
 
-from Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC, allInOneAnsatz
-from PatchEncoding.qk.PatchEmbedding import (fourByFourPatchReuploadResetPooling1Q,
+from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC, allInOneAnsatz
+from .PatchEncoding.qk.PatchEmbedding import (fourByFourPatchReuploadResetPooling1Q,
                                              fourByFourPatchReupload,
                                              create8x8ReUploading,
                                              fourByFourPatchReuploadPoolingClassicalCtrl1Q,
                                              pqcUCU
                                              )
-from torch_connector import TorchConnector
-from Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
+from .torch_connector import TorchConnector
+from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 QiskitQubits = Union[List[int], List[Qubit], QuantumRegister]
