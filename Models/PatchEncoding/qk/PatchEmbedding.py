@@ -187,6 +187,41 @@ def fourByFourPatchReuploadResetPooling1Q(
     Returns:
         A 3-qubit circuit that encodes 16 pixels into a 1-qubit state.
     """
+    num_single_layer_encoding_params = 3*3 + 4*(3-1)
+    circ = QuantumCircuit(3, name='FourByFourPatchReuploadResetPooling1Q')
+    layers = len(encoding_params)//num_single_layer_encoding_params
+    assert len(encoding_params) == layers*num_single_layer_encoding_params, f"Number of encoding parameters must be a multiple of {num_single_layer_encoding_params}"
+    assert len(pixels) == 16, f"Number of pixels must be 16"
+    for i in range(layers):
+
+        layer_i_params = encoding_params[num_single_layer_encoding_params*i:num_single_layer_encoding_params*(i+1)]
+        circ.u(pixels[0], pixels[1], pixels[2], 0)
+        circ.u(pixels[3], pixels[4], pixels[5], 1)
+        circ.u(pixels[6], pixels[7], pixels[8], 2)
+        circ.rxx(pixels[9], 0, 1)
+        circ.ryy(pixels[10], 0, 1)
+        circ.rzz(pixels[11], 0, 1)
+        circ.rxx(pixels[12], 1, 2)
+        circ.ryy(pixels[13], 1, 2)
+        circ.rzz(pixels[14], 1, 2)
+        circ.rxx(pixels[15], 0, 2)
+        circ.barrier()
+        circ.append(pqcUCU(layer_i_params, 3).to_instruction(), [0,1,2])
+        circ.barrier()
+        circ.reset(0)
+        circ.reset(1)
+        circ.barrier()
+
+        if i < layers-1:
+            circ.cx(0, 1)
+            circ.cx(1, 2)
+            circ.barrier()
+
+        circ.barrier()
+    return circ
+
+
+
 
 
 def createPQC64(
