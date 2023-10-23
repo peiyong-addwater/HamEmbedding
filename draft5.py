@@ -12,7 +12,7 @@ num_classification_layers = 1
 num_classification_qubits = 4
 num_total_qubits = num_mem_qubits + 3
 
-num_single_patch_reuploading_params = 30 * num_single_patch_reuploading  # using the fourByFourPatchReuploadPooling1Q function
+num_single_patch_reuploading_params = 30 * num_single_patch_reuploading  # using the fourByFourPatchReuploadPoolingClassicalCtrl1Q function
 num_mem_params = 6 * (num_mem_qubits + 1)  # using the allInOneAnsatz function
 num_classification_params = num_classification_layers * 3 * num_classification_qubits  # using the simplePQC function
 num_total_params = num_single_patch_reuploading_params + num_mem_params + num_classification_params

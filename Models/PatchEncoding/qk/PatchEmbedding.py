@@ -73,7 +73,7 @@ def fourByFourPatchReupload(
         circ.barrier()
     return circ
 
-def fourByFourPatchReuploadPooling1Q(
+def fourByFourPatchReuploadPoolingClassicalCtrl1Q(
         pixels: QiskitParameter,
         encoding_params: QiskitParameter,
         reset_between_reuploading: bool = False,
@@ -139,6 +139,9 @@ def fourByFourPatchReuploadPooling1Q(
             circ.barrier()
         circ.barrier()
     return circ
+
+
+
 
 def createPQC64(
         params: QiskitParameter
@@ -266,7 +269,7 @@ if __name__ == '__main__':
     encoding_param2_1q = ParameterVector('e', (18+3*4)*2)
     circ2 = fourByFourPatchReupload(pixel2, encoding_param2)
     circ2.draw('mpl', filename='FourByFourPatchReupload.png', style='bw')
-    circ2_1 = fourByFourPatchReuploadPooling1Q(pixel2, encoding_param2_1q, reset_between_reuploading=False, spread_info_between_reuploading=True)
+    circ2_1 = fourByFourPatchReuploadPoolingClassicalCtrl1Q(pixel2, encoding_param2_1q, reset_between_reuploading=False, spread_info_between_reuploading=True)
     circ2_1.draw('mpl', filename='FourByFourPatchReuploadPooling1QResetFalseSpreadInfoTrue.png', style='iqx')
 
     params = ParameterVector('$\\theta$', 64)

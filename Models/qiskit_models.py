@@ -21,7 +21,7 @@ from qiskit_ibm_runtime import QiskitRuntimeService
 
 
 from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC, allInOneAnsatz
-from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading, fourByFourPatchReuploadPooling1Q
+from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading, fourByFourPatchReuploadPoolingClassicalCtrl1Q
 from .torch_connector import TorchConnector
 from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
 
@@ -229,7 +229,7 @@ def createSimpleQRNNBackbone8x8Image(
     Creates a (num_mem_qubits+3)-qubit circuit that encodes an 8x8 image into num_mem_qubits qubits.
     The interaction between the memory and the encoded qubit state for the patch is provided
     by the allInOneAnsatz function.
-    The patch encoding is provided by the fourByFourPatchReuploadPooling1Q function.
+    The patch encoding is provided by the fourByFourPatchReuploadPoolingClassicalCtrl1Q function.
     Args:
         pixels: flattened 64 pixels of an eight by eight image. first 16 pixels are for the first patch, and so on
         params: trainable parameters for the backbone qnn.
@@ -243,7 +243,7 @@ def createSimpleQRNNBackbone8x8Image(
         QuantumCircuit: a (num_mem_qubits+3)-qubit circuit (backbone QNN) that encodes an 8x8 image into num_mem_qubits qubits,
         with trainable parameters for data re-uploading, and trainable parameters for the memory-related computations.
     """
-    num_single_patch_reuploading_params = 30*num_single_patch_reuploading # using the fourByFourPatchReuploadPooling1Q function
+    num_single_patch_reuploading_params = 30*num_single_patch_reuploading # using the fourByFourPatchReuploadPoolingClassicalCtrl1Q function
     num_mem_params = 6*(num_mem_qubits+1) # using the allInOneAnsatz function
     num_total_params = num_single_patch_reuploading_params + num_mem_params
     assert len(params) == num_total_params, f"The number of parameters must be {num_total_params}, got {len(params)}"
@@ -262,7 +262,7 @@ def createSimpleQRNNBackbone8x8Image(
     # they all share the same parameters
     for i in range(4):
         # first encode the patch into 3 qubits
-        circ.append(fourByFourPatchReuploadPooling1Q(pixels[16*i:16*(i+1)], patch_encoding_params, reset_between_reuploading, spread_info_between_reuploading).to_instruction(), patch_qreg, patch_creg)
+        circ.append(fourByFourPatchReuploadPoolingClassicalCtrl1Q(pixels[16 * i:16 * (i + 1)], patch_encoding_params, reset_between_reuploading, spread_info_between_reuploading).to_instruction(), patch_qreg, patch_creg)
         # then interact the patch with the memory
         circ.append(allInOneAnsatz(num_mem_qubits+1, mem_params).to_instruction(), mem_qreg[:]+patch_qreg[:1])
         circ.barrier()
@@ -330,7 +330,7 @@ def classification8x8Image10ClassesSamplerSimpleQRNN(
     num_total_qubits = num_mem_qubits + 3
 
     assert num_mem_qubits + 3 >= num_classification_qubits, "The number of memory qubits plus 3 must be greater than or equal to the number of classification qubits (4)"
-    num_single_patch_reuploading_params = 30 * num_single_patch_reuploading  # using the fourByFourPatchReuploadPooling1Q function
+    num_single_patch_reuploading_params = 30 * num_single_patch_reuploading  # using the fourByFourPatchReuploadPoolingClassicalCtrl1Q function
     num_mem_params = 6 * (num_mem_qubits + 1)  # using the allInOneAnsatz function
     num_classification_params = num_classification_layers * 3 * num_classification_qubits  # using the simplePQC function
     num_total_params = num_single_patch_reuploading_params + num_mem_params + num_classification_params
@@ -431,7 +431,7 @@ if __name__ == '__main__':
     num_total_qubits = num_mem_qubits + 3
 
     assert num_mem_qubits + 3 >= num_classification_qubits, "The number of memory qubits plus 3 must be greater than or equal to the number of classification qubits (4)"
-    num_single_patch_reuploading_params = 30 * num_single_patch_reuploading  # using the fourByFourPatchReuploadPooling1Q function
+    num_single_patch_reuploading_params = 30 * num_single_patch_reuploading  # using the fourByFourPatchReuploadPoolingClassicalCtrl1Q function
     num_mem_params = 6 * (num_mem_qubits + 1)  # using the allInOneAnsatz function
     num_classification_params = num_classification_layers * 3 * num_classification_qubits  # using the simplePQC function
     num_total_params = num_single_patch_reuploading_params + num_mem_params + num_classification_params
