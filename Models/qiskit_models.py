@@ -21,7 +21,7 @@ from qiskit_ibm_runtime import QiskitRuntimeService
 
 
 from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC, allInOneAnsatz
-from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReupload, create8x8ReUploading, fourByFourPatchReuploadPoolingClassicalCtrl1Q
+from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReuploadResetPooling1Q, fourByFourPatchReupload, create8x8ReUploading, fourByFourPatchReuploadPoolingClassicalCtrl1Q
 from .torch_connector import TorchConnector
 from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
 
@@ -396,7 +396,55 @@ class ClassificationSamplerSimpleQRNN8x8Image(nn.Module):
         # each 16 elements of x is a 4 by 4 patch of the 8x8 image
         return self.qnn_torch.forward(x)
 
+def createSimpleQRNNBackboneResetPooling8x8Image(
+        pixels: QiskitParameter,
+        params: QiskitParameter,
+        num_single_patch_reuploading: int=2,
+        num_mem_qubits:int = 3
+)->QuantumCircuit:
+    """
+    Create a (num_mem_qubits+3)-qubit backbone QNN.
+    3 qubits for patch encoding, each patch is 4 by 4, so 3 qubits are enough.
+    Patch encoding is done by fourByFourPatchReuploadResetPooling1Q function.
+    The interaction between memory and the encoded qubit state for the patch is provided
+    by the allInOneAnsatz function
+    Args:
+        pixels:  flattened 64 pixels of an eight by eight image. first 16 pixels are for the first patch, and so on
+        params: trainable parameters for the backbone qnn.
+        num_single_patch_reuploading: number of re-uploading repetitions for each patch.
+        num_mem_qubits: number of memory qubits
 
+    Returns:
+        QuantumCircuit: a (num_mem_qubits+3)-qubit circuit (backbone QNN) that encodes an 8x8 image into the states of
+         the first num_mem_qubits qubits, which can be used for downstream tasks.
+    """
+    num_encode_params =  num_single_patch_reuploading*(3*3 + 4*(3-1))
+    num_qubits = num_mem_qubits+3
+    num_mem_params = 6*(num_mem_qubits+1) # using the allInOneAnsatz function
+    num_total_params = num_encode_params + num_mem_params
+    assert len(params) == num_total_params, f"The number of parameters must be {num_total_params}, got {len(params)}"
+    assert num_mem_qubits > 0, "Too few memory qubits. The number of memory qubits must be positive"
+    assert num_single_patch_reuploading > 0, "Too few re-uploading repetitions. The number of re-uploading repetitions must be positive"
+    assert len(pixels) == 64, f"The number of pixels must be 64, got {len(pixels)}"
+
+    encode_params = params[:num_encode_params]
+    mem_params = params[num_encode_params:]
+
+    mem_qreg = QuantumRegister(num_mem_qubits, name='mem')
+    patch_qreg = QuantumRegister(3, name='patch')
+    circ = QuantumCircuit(mem_qreg, patch_qreg, name='SimpQRNNBackboneResetPooling8x8Image')
+    # iterate over the four patches
+    # they all share the same parameters
+    for i in range(4):
+        # first append the patch encoding circuit to the patch qubits
+        circ.append(fourByFourPatchReuploadResetPooling1Q(pixels[16 * i:16 * (i + 1)], encode_params).to_instruction(), patch_qreg)
+        # then interact the first patch qubit with the memory
+        circ.append(allInOneAnsatz(num_mem_qubits + 1, mem_params).to_instruction(), mem_qreg[:] + patch_qreg[:1])
+        circ.barrier()
+        # reset the patch qubits
+        circ.reset(patch_qreg)
+        circ.barrier(label=f"Patch {i + 1} Encoded")
+    return circ
 
 if __name__ == '__main__':
 
