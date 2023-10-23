@@ -20,10 +20,10 @@ from torch import nn
 from qiskit_ibm_runtime import QiskitRuntimeService
 
 
-from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC, allInOneAnsatz
-from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReuploadResetPooling1Q, fourByFourPatchReupload, create8x8ReUploading, fourByFourPatchReuploadPoolingClassicalCtrl1Q
-from .torch_connector import TorchConnector
-from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
+from Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC, allInOneAnsatz
+from PatchEncoding.qk.PatchEmbedding import fourByFourPatchReuploadResetPooling1Q, fourByFourPatchReupload, create8x8ReUploading, fourByFourPatchReuploadPoolingClassicalCtrl1Q
+from torch_connector import TorchConnector
+from Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 QiskitQubits = Union[List[int], List[Qubit], QuantumRegister]
@@ -446,6 +446,15 @@ def createSimpleQRNNBackboneResetPooling8x8Image(
         circ.barrier(label=f"Patch {i + 1} Encoded")
     return circ
 
+def classification8x8Image10ClassesResetPoolingSamplerSimpleQRNN(
+        num_single_patch_reuploading: int=3,
+        num_mem_qubits:int = 3,
+        num_classification_layers:int=1,
+        spsa_batchsize:int=1,
+        spsa_epsilon:float=0.2
+)
+
+
 if __name__ == '__main__':
 
     from qiskit import transpile
@@ -508,6 +517,10 @@ if __name__ == '__main__':
     circ.measure(qreg[:num_classification_qubits], cls_creg[:num_classification_qubits])
 
     circ.draw('mpl', style='iqx', filename='simpleQRNNCls.png')
+
+    simple_qrnn_reset_pooling_params = ParameterVector('$\\theta', num_single_patch_reuploading*(3*3 + 4*(3-1))+6*(num_mem_qubits+1))
+    circ = createSimpleQRNNBackboneResetPooling8x8Image(pixels, simple_qrnn_reset_pooling_params, num_single_patch_reuploading, num_mem_qubits)
+    circ.draw('mpl', style='iqx', filename='simpleQRNNRestPooling.png')
 
 
 
