@@ -208,7 +208,7 @@ def fourByFourPatchReuploadResetPooling1Q(
         circ.barrier()
         circ.append(pqcUCU(layer_i_params, 3).to_instruction(), [0,1,2])
         circ.barrier()
-        circ.reset(0)
+        circ.reset(2)
         circ.reset(1)
         circ.barrier()
 
@@ -376,4 +376,11 @@ if __name__ == '__main__':
     pqc_params = ParameterVector('$\\theta$', pqc_layers*(3*pqc_qubits + 4*(pqc_qubits-1)))
     circ7 = pqcUCU(pqc_params, pqc_qubits)
     circ7.draw('mpl', filename=f'PQCUCU_{pqc_layers}_layers_{pqc_qubits}_qubits.png', style='bw')
+
+    pixel7 = ParameterVector('p', 16)
+    encode_qubits = 3
+    encode_reps = 3
+    encode_params = ParameterVector('e', (3*encode_qubits + 4*(encode_qubits-1))*encode_reps)
+    circ7 = fourByFourPatchReuploadResetPooling1Q(pixel7, encode_params)
+    circ7.draw('mpl', filename=f'FourByFourPatchReuploadResetPooling1Q_{encode_reps}_reps.png', style='bw')
 
