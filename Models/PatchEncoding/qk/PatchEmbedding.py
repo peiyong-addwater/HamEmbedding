@@ -3,8 +3,9 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.circuit import Parameter, ParameterVector
 from qiskit.circuit.parametervector import ParameterVectorElement
 from typing import Any, Callable, Optional, Sequence, Tuple, List, Union
-from .su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ
 from math import pi
+
+from .su4 import createTaillessSU4, createHeadlessSU4, createSU4Circ
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 
@@ -167,7 +168,7 @@ def pqcUCU(
             circ.u(layer_params[3*j], layer_params[3*j+1], layer_params[3*j+2], j)
         for j in range(num_qubits-1):
             # inverse ordering
-            circ.cu(layer_params[3*num_qubits+3*j], layer_params[3*num_qubits+3*j+1], layer_params[3*num_qubits+3*j+2],layer_params[3*num_qubits+3*j+3], num_qubits-1-j, num_qubits-2-j)
+            circ.cu(layer_params[3*num_qubits+4*j], layer_params[3*num_qubits+4*j+1], layer_params[3*num_qubits+4*j+2],layer_params[3*num_qubits+4*j+3], num_qubits-1-j, num_qubits-2-j)
         circ.barrier()
     return circ
 
@@ -371,7 +372,7 @@ if __name__ == '__main__':
     circ6 = create10x10Reuploading(pixel6, encoding_param6)
     circ6.draw('mpl', filename='10x10Reuploading.png', style='bw')
 
-    pqc_qubits = 4
+    pqc_qubits = 3
     pqc_layers = 3
     pqc_params = ParameterVector('$\\theta$', pqc_layers*(3*pqc_qubits + 4*(pqc_qubits-1)))
     circ7 = pqcUCU(pqc_params, pqc_qubits)

@@ -18,10 +18,16 @@ from qiskit.quantum_info import SparsePauliOp
 import torch
 from torch import nn
 from qiskit_ibm_runtime import QiskitRuntimeService
+import numpy as np
 
 
 from Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC, allInOneAnsatz
-from PatchEncoding.qk.PatchEmbedding import fourByFourPatchReuploadResetPooling1Q, fourByFourPatchReupload, create8x8ReUploading, fourByFourPatchReuploadPoolingClassicalCtrl1Q
+from PatchEncoding.qk.PatchEmbedding import (fourByFourPatchReuploadResetPooling1Q,
+                                             fourByFourPatchReupload,
+                                             create8x8ReUploading,
+                                             fourByFourPatchReuploadPoolingClassicalCtrl1Q,
+                                             pqcUCU
+                                             )
 from torch_connector import TorchConnector
 from Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
 
@@ -399,8 +405,8 @@ class ClassificationSamplerSimpleQRNN8x8Image(nn.Module):
 def createSimpleQRNNBackboneResetPooling8x8Image(
         pixels: QiskitParameter,
         params: QiskitParameter,
-        num_single_patch_reuploading: int=2,
-        num_mem_qubits:int = 3
+        num_single_patch_reuploading,
+        num_mem_qubits
 )->QuantumCircuit:
     """
     Create a (num_mem_qubits+3)-qubit backbone QNN.
@@ -428,6 +434,7 @@ def createSimpleQRNNBackboneResetPooling8x8Image(
     assert len(pixels) == 64, f"The number of pixels must be 64, got {len(pixels)}"
 
     encode_params = params[:num_encode_params]
+    #print(len(encode_params))
     mem_params = params[num_encode_params:]
 
     mem_qreg = QuantumRegister(num_mem_qubits, name='mem')
@@ -438,6 +445,8 @@ def createSimpleQRNNBackboneResetPooling8x8Image(
     for i in range(4):
         # first append the patch encoding circuit to the patch qubits
         circ.append(fourByFourPatchReuploadResetPooling1Q(pixels[16 * i:16 * (i + 1)], encode_params).to_instruction(), patch_qreg)
+        #print(len(encode_params)+16*(i+1))
+        #print(circ.num_parameters)
         # then interact the first patch qubit with the memory
         circ.append(allInOneAnsatz(num_mem_qubits + 1, mem_params).to_instruction(), mem_qreg[:] + patch_qreg[:1])
         circ.barrier()
@@ -450,77 +459,152 @@ def classification8x8Image10ClassesResetPoolingSamplerSimpleQRNN(
         num_single_patch_reuploading: int=3,
         num_mem_qubits:int = 3,
         num_classification_layers:int=1,
-        spsa_batchsize:int=1,
-        spsa_epsilon:float=0.2
-)
+        gradient_estimator_batchsize:int=1,
+        gradient_estimator_smoothing_factor:float=0.2
+)->(SamplerQNN, int, int, int):
+    """
+    Creates a SamplerQNN that classifies an 8x8 image into 10 classes, using createSimpleQRNNBackboneResetPooling8x8Image
+    to create the backbone,
+    with trainable parameters for data re-uploading, memory, and classification.
+    The classification PQC layer has 4 qubits.
+    The classification is performed via measuring the bitstring of the 4-qubit classification layer,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, corresponding to the 10 classes.
+    Any other bitstring is considered as class 9.
+    Args:
+        num_single_patch_reuploading: number of re-uploading repetitions for each patch.
+        num_mem_qubits: number of memory qubits
+        num_classification_layers: number of classification layers
+        gradient_estimator_batchsize: batchsize to be averaged over for the gradient estimator
+        gradient_estimator_smoothing_factor: smoothing factor for the gradient estimator, like the "c" in SPSA
 
+    Returns:
+        SamplerQNN, number of trainable parameters, total number of layers,  input size
+    """
+
+    def parity(x):
+        if x>=9:
+            res = 9
+        else:
+            res = x
+        return res
+
+    sampler = AerSampler(
+        backend_options={'method': 'statevector',
+                         }
+    )
+    num_classification_qubits = 4
+    num_total_qubits = num_mem_qubits + 3
+    assert num_mem_qubits + 3 >= num_classification_qubits, "The number of memory qubits plus 3 must be greater than or equal to the number of classification qubits (4)"
+    num_single_patch_reuploading_params = (3*3 + 4*(3-1))*num_single_patch_reuploading  # using the fourByFourPatchReuploadResetPooling1Q function
+    num_mem_params = 6 * (num_mem_qubits + 1)  # using the allInOneAnsatz function
+    num_classification_params = num_classification_layers * 3 * num_classification_qubits  # using the simplePQC function
+    num_total_params = num_single_patch_reuploading_params + num_mem_params + num_classification_params
+
+    params = ParameterVector('θ', length=num_total_params)
+    inputs = ParameterVector('x', length=64)
+
+    backbone_params = params[:num_single_patch_reuploading_params+num_mem_params]
+    classification_params = params[num_single_patch_reuploading_params+num_mem_params:]
+    circ = QuantumCircuit(num_total_qubits, num_classification_qubits, name='Sampler10ClassResetPoolingQRNN')
+    #print(circ.num_parameters)
+    backbone = createSimpleQRNNBackboneResetPooling8x8Image(inputs, backbone_params, num_single_patch_reuploading, num_mem_qubits)
+    #print(backbone.num_parameters)
+    circ.append(backbone.to_instruction(), list(range(num_total_qubits)))
+    #print(circ.num_parameters)
+    circ.append(simplePQC(num_classification_qubits, classification_params).to_instruction(), list(range(num_classification_qubits)))
+    #print(circ.num_parameters)
+    circ.measure(list(range(num_classification_qubits)), list(range(num_classification_qubits)))
+
+    #print(circ.num_parameters)
+
+    #print(len(backbone_params)+64)
+
+    total_num_layers = num_single_patch_reuploading*4 + num_classification_layers +4
+
+
+
+    qnn = SamplerQNN(
+        circuit=circ,
+        input_params=inputs,
+        weight_params=params,
+        interpret=parity,
+        output_shape=10,
+        gradient=RSGFSamplerGradient(sampler, gradient_estimator_smoothing_factor, batch_size=gradient_estimator_batchsize),
+        sampler=sampler
+    )
+
+    return qnn, num_total_params, total_num_layers, 64
+
+class ClassificationSamplerSimpleQRNNResetPooling8x8Image(nn.Module):
+    def __init__(self,
+                 num_single_patch_reuploading: int = 3,
+                 num_mem_qubits: int = 3,
+                 num_classification_layers: int = 1,
+                 gradient_estimator_batchsize: int = 1,
+                 gradient_estimator_smoothing_factor: float = 0.2
+                 ):
+        super().__init__()
+        qnn, num_total_params, total_num_layers, input_size =\
+            classification8x8Image10ClassesResetPoolingSamplerSimpleQRNN(
+                num_single_patch_reuploading,
+                num_mem_qubits,
+                num_classification_layers,
+                gradient_estimator_batchsize,
+                gradient_estimator_smoothing_factor
+            )
+
+        init_param_var = 1/total_num_layers
+        init_params = torch.empty(num_total_params).normal_(0, np.sqrt(init_param_var))
+        self.qnn_torch = TorchConnector(qnn, initial_weights=init_params)
+
+    def forward(self, x):
+        # x must be of shape (batchsize, 64)
+        # each 16 elements of x is a 4 by 4 patch of the 8x8 image
+        return self.qnn_torch.forward(x)
 
 if __name__ == '__main__':
 
     from qiskit import transpile
 
-    sim = AerSimulator(method="statevector")
+    # sim = AerSimulator(method="statevector")
+    #
+    # n_mem = 3
+    # n_reuploading = 2
+    # params_simpleQRNN = ParameterVector('θ', length=30*n_reuploading+6*(n_mem+1))
+    # pixels = ParameterVector('x', length=64)
+    # circ_simpleQRNN = createSimpleQRNNBackbone8x8Image(pixels, params_simpleQRNN, n_reuploading, n_mem)
+    # circ_simpleQRNN.draw(output='mpl', filename='simpleQRNN.png', style='iqx')
+    #
+    # circ_simpleQRNN = circ_simpleQRNN.bind_parameters(
+    #     {params_simpleQRNN: list(range(30*n_reuploading+6*(n_mem+1))),
+    #      pixels: list(range(64))
+    #      }
+    # )
 
-    n_mem = 3
-    n_reuploading = 2
-    params_simpleQRNN = ParameterVector('θ', length=30*n_reuploading+6*(n_mem+1))
-    pixels = ParameterVector('x', length=64)
-    circ_simpleQRNN = createSimpleQRNNBackbone8x8Image(pixels, params_simpleQRNN, n_reuploading, n_mem)
-    circ_simpleQRNN.draw(output='mpl', filename='simpleQRNN.png', style='iqx')
+    #circ = transpile(circ_simpleQRNN, sim)
+    #print(circ) # matplotlib draw has problems with this circuit
+    #job = sim.run(circ)
+    #result = job.result()
+    #print(result.get_counts())
 
-    circ_simpleQRNN = circ_simpleQRNN.bind_parameters(
-        {params_simpleQRNN: list(range(30*n_reuploading+6*(n_mem+1))),
-         pixels: list(range(64))
-         }
+    # num_mem_qubits = n_mem
+    # num_single_patch_reuploading = n_reuploading
+    # num_classification_layers = 1
+    #
+    # num_classification_qubits = 4
+    # num_total_qubits = num_mem_qubits + 3
+
+
+    new_qnn = ClassificationSamplerSimpleQRNNResetPooling8x8Image(
+        num_single_patch_reuploading=3,
+        num_mem_qubits=3,
+        num_classification_layers=2,
+        gradient_estimator_batchsize=1,
     )
+    print(new_qnn)
+    test_x = torch.rand(1, 64)
 
-    circ = transpile(circ_simpleQRNN, sim)
-    print(circ) # matplotlib draw has problems with this circuit
-    job = sim.run(circ)
-    result = job.result()
-    print(result.get_counts())
-
-    num_mem_qubits = n_mem
-    num_single_patch_reuploading = n_reuploading
-    num_classification_layers = 1
-
-    num_classification_qubits = 4
-    num_total_qubits = num_mem_qubits + 3
-
-    assert num_mem_qubits + 3 >= num_classification_qubits, "The number of memory qubits plus 3 must be greater than or equal to the number of classification qubits (4)"
-    num_single_patch_reuploading_params = 30 * num_single_patch_reuploading  # using the fourByFourPatchReuploadPoolingClassicalCtrl1Q function
-    num_mem_params = 6 * (num_mem_qubits + 1)  # using the allInOneAnsatz function
-    num_classification_params = num_classification_layers * 3 * num_classification_qubits  # using the simplePQC function
-    num_total_params = num_single_patch_reuploading_params + num_mem_params + num_classification_params
-    num_backbone_params = num_single_patch_reuploading_params + num_mem_params
-
-    params = ParameterVector('θ', length=num_total_params)
-    inputs = ParameterVector('x', length=64)
-
-    backbone_params = params[:num_backbone_params]
-    classification_params = params[num_backbone_params:]
-
-    qreg = QuantumRegister(num_total_qubits, name='q')
-    patch_cre = ClassicalRegister(2, name='patch_classical')
-    cls_creg = ClassicalRegister(num_classification_qubits, name='classification')
-
-    circ = QuantumCircuit(qreg, patch_cre, cls_creg, name='Sampler10ClassQRNN')
-    backbone = createSimpleQRNNBackbone8x8Image(inputs,
-                                                backbone_params,
-                                                num_single_patch_reuploading,
-                                                num_mem_qubits,
-                                                False,
-                                                True)
-    circ.append(backbone.to_instruction(), qargs=qreg, cargs=patch_cre)
-    circ.append(simplePQC(num_classification_qubits, classification_params).to_instruction(),
-                qargs=qreg[:num_classification_qubits])
-    circ.measure(qreg[:num_classification_qubits], cls_creg[:num_classification_qubits])
-
-    circ.draw('mpl', style='iqx', filename='simpleQRNNCls.png')
-
-    simple_qrnn_reset_pooling_params = ParameterVector('$\\theta', num_single_patch_reuploading*(3*3 + 4*(3-1))+6*(num_mem_qubits+1))
-    circ = createSimpleQRNNBackboneResetPooling8x8Image(pixels, simple_qrnn_reset_pooling_params, num_single_patch_reuploading, num_mem_qubits)
-    circ.draw('mpl', style='iqx', filename='simpleQRNNRestPooling.png')
+    print(new_qnn(test_x))
 
 
 
