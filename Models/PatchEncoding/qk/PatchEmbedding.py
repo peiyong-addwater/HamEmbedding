@@ -140,8 +140,36 @@ def fourByFourPatchReuploadPoolingClassicalCtrl1Q(
         circ.barrier()
     return circ
 
+def pqcUCU(
+        params:QiskitParameter,
+        num_qubits: int
+)->QuantumCircuit:
+    """
+    Creates a PQC with U3 gates and CU3 gates. First there are U3 gates on each of the qubits,
+    Then there are CU3 gates from bottom to top: 3->2, 2->1, 1->0.
+    Args:
+        params: (3*num_qubits + 3*(num_qubits-1))L-element list of parameters, where the number of
+                layers L is inferred from the number of parameters.
+        num_qubits: number of qubits in the circuit
 
-
+    Returns:
+        A PQC with U3 gates and CU3 gates.
+    """
+    num_params = len(params)
+    num_layers = num_params//(3*num_qubits + 3*(num_qubits-1))
+    assert num_params == num_layers*(3*num_qubits + 3*(num_qubits-1)), f"Number of parameters must be a multiple of 3*{num_qubits} + 3*({num_qubits}-1)"
+    assert num_qubits >= 2, f"Number of qubits must be at least 2"
+    assert num_layers >= 1, f"Number of layers must be at least 1"
+    circ = QuantumCircuit(num_qubits, name='PQCUCU')
+    for i in range(num_layers):
+        layer_params = params[(3*num_qubits + 3*(num_qubits-1))*i:(3*num_qubits + 3*(num_qubits-1))*(i+1)]
+        for j in range(num_qubits):
+            circ.u(layer_params[3*j], layer_params[3*j+1], layer_params[3*j+2], j)
+        for j in range(num_qubits-1):
+            # inverse ordering
+            circ.cu(layer_params[3*num_qubits+3*j], layer_params[3*num_qubits+3*j+1], layer_params[3*num_qubits+3*j+2], num_qubits-1-j, num_qubits-2-j)
+        circ.barrier()
+    return circ
 
 def createPQC64(
         params: QiskitParameter
@@ -289,4 +317,6 @@ if __name__ == '__main__':
     encoding_param6 = ParameterVector('e', 36*2)
     circ6 = create10x10Reuploading(pixel6, encoding_param6)
     circ6.draw('mpl', filename='10x10Reuploading.png', style='bw')
+
+    pqc_params = ParameterVector('\\theta', 64)
 
