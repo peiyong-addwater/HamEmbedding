@@ -490,7 +490,8 @@ def classification8x8Image10ClassesResetPoolingSamplerSimpleQRNN(
 
     sampler = AerSampler(
         backend_options={'method': 'statevector',
-                         #'device' : 'GPU'
+                         'device' : 'GPU',
+                         'cuStateVec_enable':True
                          }
     )
     num_classification_qubits = 4
