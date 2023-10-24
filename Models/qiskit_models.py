@@ -553,9 +553,9 @@ class ClassificationSamplerSimpleQRNNResetPooling8x8Image(nn.Module):
                 gradient_estimator_smoothing_factor
             )
 
-        init_param_var = 1/total_num_layers
-        init_params = torch.empty(num_total_params).normal_(0, np.sqrt(init_param_var))
-        self.qnn_torch = TorchConnector(qnn, initial_weights=init_params)
+        #init_param_var = 1/total_num_layers
+        #init_params = torch.empty(num_total_params).normal_(0, np.sqrt(init_param_var))
+        self.qnn_torch = TorchConnector(qnn)
 
     def forward(self, x):
         # x must be of shape (batchsize, 64)
