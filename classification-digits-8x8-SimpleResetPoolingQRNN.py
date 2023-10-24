@@ -49,7 +49,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_optimizer', type=bool, required=False, default=False)
     parser.add_argument('--load_scheduler', type=bool, required=False, default=False)
     parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=3)
-    parser.add_argument('--lr', type=float, required=False, default=1)
+    parser.add_argument('--lr', type=float, required=False, default=10)
     parser.add_argument('--gradient_estimator_smoothing', type=float, required=False, default=0.2)
     parser.add_argument('--seed', type=int, required=False, default=1701)
 
@@ -181,6 +181,10 @@ if __name__ == '__main__':
             batch_iters += 1
         writer.add_scalar('Loss/train_epoch', total_loss / len(train_loader), epoch)
         writer.add_scalar('Accuracy/train_epoch', total_acc / len(train_loader), epoch)
+        for name, weight in model.named_parameters():
+            writer.add_histogram(f"{name}_batch", weight, batch_iters)
+            if weight.grad is not None:
+                writer.add_histogram(f'{name}.grad_batch', weight.grad, batch_iters)
         print(f"Epoch {epoch} train loss: {total_loss / len(train_loader)}, train acc: {total_acc / len(train_loader)}, train time: {time.time() - epoch_start}")
         for name, weight in model.named_parameters():
             writer.add_histogram(name, weight, epoch)
