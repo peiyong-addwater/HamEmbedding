@@ -179,12 +179,12 @@ if __name__ == '__main__':
             batch_end = time.time()
             print(f"Epoch {epoch} batch {i + 1}/{n_train_batches} loss: {loss.item()} acc: {acc.item()} time: {batch_end - batch_start}")
             batch_iters += 1
+            for name, weight in model.named_parameters():
+                writer.add_histogram(f"{name}_batch", weight, batch_iters)
+                if weight.grad is not None:
+                    writer.add_histogram(f'{name}.grad_batch', weight.grad, batch_iters)
         writer.add_scalar('Loss/train_epoch', total_loss / len(train_loader), epoch)
         writer.add_scalar('Accuracy/train_epoch', total_acc / len(train_loader), epoch)
-        for name, weight in model.named_parameters():
-            writer.add_histogram(f"{name}_batch", weight, batch_iters)
-            if weight.grad is not None:
-                writer.add_histogram(f'{name}.grad_batch', weight.grad, batch_iters)
         print(f"Epoch {epoch} train loss: {total_loss / len(train_loader)}, train acc: {total_acc / len(train_loader)}, train time: {time.time() - epoch_start}")
         for name, weight in model.named_parameters():
             writer.add_histogram(name, weight, epoch)
