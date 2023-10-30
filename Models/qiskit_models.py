@@ -531,7 +531,8 @@ def classification8x8Image10ClassesResetPoolingSamplerSimpleQRNN(
         weight_params=params,
         interpret=parity,
         output_shape=10,
-        gradient=RSGFSamplerGradient(sampler, gradient_estimator_smoothing_factor, batch_size=gradient_estimator_batchsize),
+        #gradient=RSGFSamplerGradient(sampler, gradient_estimator_smoothing_factor, batch_size=gradient_estimator_batchsize),
+        gradient=SPSASamplerGradient(sampler, epsilon=gradient_estimator_smoothing_factor, batch_size=gradient_estimator_batchsize),
         sampler=sampler
     )
 
