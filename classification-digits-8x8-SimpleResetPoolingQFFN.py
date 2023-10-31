@@ -37,8 +37,8 @@ if __name__ == '__main__':
     task_name = 'classification-sklearn-digits-8x8-samplerResetPooling-QFFN-4x4-patch-RSGF-Grad'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, required=False, default=100)
-    parser.add_argument('--train_batches', type=int, required=False, default=10)
+    parser.add_argument('--batch_size', type=int, required=False, default=200)
+    parser.add_argument('--train_batches', type=int, required=False, default=20)
     parser.add_argument('--epochs', type=int, required=False, default=500 * 2)
     parser.add_argument('--gradient_estimator_batchsize', type=int, required=False, default=2)
     parser.add_argument('--working_dir', type=str, required=False,
