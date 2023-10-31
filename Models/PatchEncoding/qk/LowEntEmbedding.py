@@ -41,7 +41,7 @@ def pqcUCU(
     return circ
 
 def fourByFourPatchReUploadingResetPooling1Q(
-        pixels: QuantumRegister,
+        pixels: QiskitParameter,
         encoding_params: QiskitParameter,
 )->QuantumCircuit:
     """
