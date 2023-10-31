@@ -89,11 +89,6 @@ def fourByFourPatchReUploadingResetPooling1Q(
         circ.reset(2)
         circ.reset(1)
         circ.barrier()
-        if i < layers-1:
-            circ.cx(0, 1)
-            circ.cx(1, 2)
-            circ.cx(2, 3)
-            circ.barrier()
 
         circ.barrier()
 
