@@ -33,9 +33,10 @@ def create8x8ImageBackbone(
         pixels: QiskitParameter,
         params: QiskitParameter,
         num_single_patch_reuploading: int=2,
+        num_classification_layers: int=2,
 )->QuantumCircuit:
     """
-    Create a quantum circuit that encodes an 8x8 image into a four-qubit quantum state.
+    Create a (4+3)-qubit quantum circuit that encodes an 8x8 image into a four-qubit quantum state.
     The encoding is based on the re-uploading method, imnplemented in the fourByFourPatchReUploadingResetPooling1Q function
     from the LowEntEmbedding module.
 
@@ -43,7 +44,15 @@ def create8x8ImageBackbone(
         pixels:
         params:
         num_single_patch_reuploading:
+        num_classification_layers:
 
     Returns:
 
     """
+    num_single_patch_reuploading_params = 24 * num_single_patch_reuploading
+    num_classification_qubits = 4
+    num_qubits = 3 + num_classification_qubits
+    num_classification_params = num_classification_layers * 3 * num_classification_qubits
+    num_params = num_single_patch_reuploading_params + num_classification_params
+
+    params = ParameterVector('θ', length=num_params)
