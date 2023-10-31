@@ -193,6 +193,10 @@ def fourByFourPatchReuploadResetPooling1Q(
     layers = len(encoding_params)//num_single_layer_encoding_params
     assert len(encoding_params) == layers*num_single_layer_encoding_params, f"Number of encoding parameters must be a multiple of {num_single_layer_encoding_params}"
     assert len(pixels) == 16, f"Number of pixels must be 16"
+
+    for i in range(3):
+        circ.x(i)
+
     for i in range(layers):
 
         layer_i_params = encoding_params[num_single_layer_encoding_params*i:num_single_layer_encoding_params*(i+1)]

@@ -34,7 +34,7 @@ if __name__ == '__main__':
     import random
     from qiskit_algorithms.utils import algorithm_globals
 
-    task_name = 'classification-sklearn-digits-8x8-samplerResetPoolingQRNN-4x4-patch-SPSA-Grad'
+    task_name = 'classification-sklearn-digits-8x8-samplerResetPoolingQRNN-EncodeStartWithKet1-4x4-patch-SPSA-Grad'
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, required=False, default=100)
