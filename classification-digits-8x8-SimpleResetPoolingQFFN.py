@@ -37,8 +37,8 @@ if __name__ == '__main__':
     task_name = 'classification-sklearn-digits-8x8-samplerResetPooling-QFFN-4x4-patch-RSGF-Grad'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, required=False, default=200)
-    parser.add_argument('--train_batches', type=int, required=False, default=20)
+    parser.add_argument('--batch_size', type=int, required=False, default=150)
+    parser.add_argument('--train_batches', type=int, required=False, default=10)
     parser.add_argument('--epochs', type=int, required=False, default=500 * 2)
     parser.add_argument('--gradient_estimator_batchsize', type=int, required=False, default=2)
     parser.add_argument('--working_dir', type=str, required=False,
@@ -135,14 +135,14 @@ if __name__ == '__main__':
 
     # data
     dataset = PatchedDigitsDataset()
+    print(len(dataset))
     train_size = int(TRAIN_BATCHES * BATCH_SIZE)  # reduce the train size
-    val_size = int(0.2 * train_size)  # reduce the val size
-    test_size = len(dataset) - train_size - val_size
-    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size, test_size])
-    train_loader, val_loader, test_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True,
+    val_size = len(dataset) - train_size  # reduce the val size
+    #test_size = len(dataset) - train_size - val_size
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+    train_loader, val_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True,
                                                        num_workers=10), \
-        DataLoader(val_dataset, batch_size=len(val_dataset), shuffle=True, num_workers=10), \
-        DataLoader(test_dataset, batch_size=len(val_dataset), shuffle=True, num_workers=10)
+        DataLoader(val_dataset, batch_size=len(val_dataset), shuffle=True, num_workers=10)
 
     batch_iters = 0
     all_start = time.time()
