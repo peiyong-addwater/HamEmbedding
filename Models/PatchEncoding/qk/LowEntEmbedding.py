@@ -90,6 +90,11 @@ def fourByFourPatchReUploadingResetPooling1Q(
         circ.reset(1)
         circ.barrier()
 
+        if i < layers - 1:
+            circ.h(1)
+            circ.h(2)
+            circ.h(3)
+
         circ.barrier()
 
     return circ
