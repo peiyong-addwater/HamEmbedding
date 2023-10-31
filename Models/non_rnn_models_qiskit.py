@@ -163,13 +163,13 @@ class ClassificationSamplerFFQNN8x8Image(nn.Module):
         )
         self.qnn_torch = TorchConnector(self.qnn)
 
-        self.linear = nn.Linear(16, 10)
+        #self.linear = nn.Linear(16, 10)
 
     def forward(self, x):
         # x must be of shape (batchsize, 64)
         # each 16 elements of x is a 4 by 4 patch of the 8x8 image
         prob_16 = self.qnn_torch.forward(x)
-        return self.linear(prob_16)
+        return prob_16[:, :10]
 
 
 if __name__ == '__main__':
@@ -186,4 +186,6 @@ if __name__ == '__main__':
     )
     print(qffnn)
     test_x = torch.rand(4, 64)
-    print(qffnn(test_x))
+    out = qffnn(test_x)
+    print(out)
+    print(out.shape)
