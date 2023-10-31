@@ -29,7 +29,7 @@ from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 QiskitQubits = Union[List[int], List[Qubit], QuantumRegister]
 
-def create8x8ImageBackbone(
+def create8x8ImageBackbone4QubitFeature(
         pixels: QiskitParameter,
         params: QiskitParameter,
         num_single_patch_reuploading: int=2,
@@ -96,4 +96,94 @@ def create8x8ImageBackbone(
 
     return circ
 
+def classification8x8Image16DimProbResetPoolingFeedForwardSamplerQNN(
+        num_single_patch_reuploading: int=3,
+        gradient_estimator_batchsize:int=1,
+        gradient_estimator_smoothing_factor:float=0.2
+)->(SamplerQNN, int, int):
+    """
+    Create a SamplerQNN for classifying 8x8 images into 10 classes.
+    Args:
+        num_single_patch_reuploading:
+        gradient_estimator_batchsize:
+        gradient_estimator_smoothing_factor:
 
+    Returns:
+        SamplerQNN, number of trainable parameters, input size
+    """
+    def parity(x):
+        res = x
+        return res
+
+    sampler = AerSampler(
+        backend_options={'method': 'statevector',
+                         }
+    )
+    num_classification_qubits = 4
+    num_total_qubits = 3 + num_classification_qubits
+    num_single_patch_reuploading_params = 24 * num_single_patch_reuploading
+    num_classification_params = 6 * num_classification_qubits
+    num_params = num_single_patch_reuploading_params + num_classification_params
+    num_inputs = 64
+    params = ParameterVector('θ', length=num_params)
+    inputs = ParameterVector('x', length=64)
+
+    circ = QuantumCircuit(num_total_qubits, num_classification_qubits, name='Sampler10ClassQNN')
+    backbone = create8x8ImageBackbone4QubitFeature(inputs, params, num_single_patch_reuploading=num_single_patch_reuploading)
+    circ.append(backbone.to_instruction(), range(num_total_qubits))
+    circ.barrier()
+    circ.measure(range(num_classification_qubits), range(num_classification_qubits))
+
+    qnn = SamplerQNN(
+        circuit=circ,
+        input_params=inputs,
+        weight_params=params,
+        interpret=parity,
+        output_shape=16,
+        gradient=RSGFSamplerGradient(sampler, gradient_estimator_smoothing_factor, batch_size=gradient_estimator_batchsize),
+        sampler=sampler
+    )
+
+    return qnn, num_params, 64
+
+class ClassificationSamplerFFQNN8x8Image(nn.Module):
+    def __init__(self,
+                 num_single_patch_reuploading: int=3,
+                 gradient_estimator_batchsize: int = 2,
+                 gradient_estimator_smoothing_factor: float = 0.2
+                 ):
+        super().__init__()
+        self.num_single_patch_reuploading = num_single_patch_reuploading
+        self.gradient_estimator_batchsize = gradient_estimator_batchsize
+        self.gradient_estimator_smoothing_factor = gradient_estimator_smoothing_factor
+        self.qnn, self.num_params, self.num_inputs = classification8x8Image16DimProbResetPoolingFeedForwardSamplerQNN(
+            num_single_patch_reuploading=self.num_single_patch_reuploading,
+            gradient_estimator_batchsize=self.gradient_estimator_batchsize,
+            gradient_estimator_smoothing_factor=self.gradient_estimator_smoothing_factor
+        )
+        self.qnn_torch = TorchConnector(self.qnn)
+
+        self.linear = nn.Linear(16, 10)
+
+    def forward(self, x):
+        # x must be of shape (batchsize, 64)
+        # each 16 elements of x is a 4 by 4 patch of the 8x8 image
+        prob_16 = self.qnn_torch.forward(x)
+        return self.linear(prob_16)
+
+
+if __name__ == '__main__':
+    n_reuploading = 2
+    pixels = ParameterVector('x', 64)
+    params = ParameterVector('θ', 24*n_reuploading + 6*4)
+    circ = create8x8ImageBackbone4QubitFeature(pixels, params, num_single_patch_reuploading=n_reuploading)
+    circ.draw('mpl', filename='QFFNN8x8ImageBackbone.png', style='iqx')
+
+    qffnn = ClassificationSamplerFFQNN8x8Image(
+        num_single_patch_reuploading=n_reuploading,
+        gradient_estimator_batchsize=3,
+        gradient_estimator_smoothing_factor=0.2
+    )
+    print(qffnn)
+    test_x = torch.rand(4, 64)
+    print(qffnn(test_x))
