@@ -77,8 +77,7 @@ def fourByFourPatchReupload(
 def fourByFourPatchReuploadPoolingClassicalCtrl1Q(
         pixels: QiskitParameter,
         encoding_params: QiskitParameter,
-        reset_between_reuploading: bool = False,
-        spread_info_between_reuploading: bool = False
+        reset_between_reuploading: bool = False
 )->QuantumCircuit:
     """
     Creates a 3-qubit circuit that encodes 16 pixels into 3 qubits, with trainable parameters for data re-uploading.
@@ -93,6 +92,8 @@ def fourByFourPatchReuploadPoolingClassicalCtrl1Q(
     Returns:
         A 3-qubit circuit that encodes 16 pixels into a 1-qubit state.
     """
+
+
     qreg = QuantumRegister(3)
     creg = ClassicalRegister(2)
     circ = QuantumCircuit(qreg, creg, name='FourByFourPatchReuploadPooling')
@@ -134,10 +135,6 @@ def fourByFourPatchReuploadPoolingClassicalCtrl1Q(
         with circ.if_test((creg, 3)):
             circ.u(layer_i_params[27], layer_i_params[28], layer_i_params[29], qreg[0])
         circ.barrier()
-        if spread_info_between_reuploading and i < layers-1:
-            circ.cx(qreg[0], qreg[1])
-            circ.cx(qreg[1], qreg[2])
-            circ.barrier()
         circ.barrier()
     return circ
 
@@ -216,12 +213,6 @@ def fourByFourPatchReuploadResetPooling1Q(
         circ.reset(2)
         circ.reset(1)
         circ.barrier()
-
-        if i < layers-1:
-            circ.cx(0, 1)
-            circ.cx(1, 2)
-            circ.barrier()
-
         circ.barrier()
     return circ
 
