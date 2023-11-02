@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, required=False, default=150)
     parser.add_argument('--train_batches', type=int, required=False, default=10)
-    parser.add_argument('--epochs', type=int, required=False, default=500 * 2)
+    parser.add_argument('--epochs', type=int, required=False, default=500)
     parser.add_argument('--gradient_estimator_batchsize', type=int, required=False, default=2)
     parser.add_argument('--working_dir', type=str, required=False,
                         default='/home/peiyongw/Desktop/Research/QML-ImageTask')
