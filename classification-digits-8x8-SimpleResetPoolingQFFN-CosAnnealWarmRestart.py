@@ -116,7 +116,7 @@ if __name__ == '__main__':
         T_0=100,
         T_mult=1,
         eta_min=1e-2,
-        verbose=True
+        verbose=False
     )
 
     criterion = nn.CrossEntropyLoss()
