@@ -46,7 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--prev_checkpoint', type=str, required=False, default=None)
     parser.add_argument('--load_optimizer', type=bool, required=False, default=False)
     parser.add_argument('--load_scheduler', type=bool, required=False, default=False)
-    parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=2)
+    parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=3)
     parser.add_argument('--lr', type=float, required=False, default=1)
     parser.add_argument('--gradient_estimator_smoothing', type=float, required=False, default=0.01)
     parser.add_argument('--seed', type=int, required=False, default=1701)
