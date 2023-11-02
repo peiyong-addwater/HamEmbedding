@@ -10,7 +10,7 @@ import json
 import os
 
 from Models.data import PatchedDigitsDataset
-from Models.qiskit_models import ClassificationSamplerSimpleQRNNResetPooling8x8Image
+from Models.rnn_qiskit_models import ClassificationSamplerSimpleQRNNResetPooling8x8Image
 
 def nowtime():
     return str(time.strftime("%Y%m%d-%H%M%S", time.localtime()))
