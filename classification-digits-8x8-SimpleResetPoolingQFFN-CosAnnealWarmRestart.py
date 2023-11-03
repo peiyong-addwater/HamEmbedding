@@ -49,7 +49,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=3)
     parser.add_argument('--lr', type=float, required=False, default=1)
     parser.add_argument('--gradient_estimator_smoothing', type=float, required=False, default=0.01)
-    parser.add_argument('--seed', type=int, required=False, default=1701)
+    parser.add_argument('--seed', type=int, required=False, default=42)
 
     args = parser.parse_args()
     seed = args.seed
@@ -207,7 +207,7 @@ if __name__ == '__main__':
             print(
                 f"Epoch {epoch} val loss: {total_loss / len(val_loader)}, val acc: {total_acc / len(val_loader)}, train + val time: {time.time() - epoch_start}")
 
-        if (epoch) % 10 == 0 or epoch == EPOCHS - 1:
+        if (epoch) % 50 == 0 or epoch == EPOCHS - 1:
             checkpoint = {
                 'epoch': epoch,
                 'model': model.state_dict(),
