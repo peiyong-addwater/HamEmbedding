@@ -37,8 +37,8 @@ if __name__ == '__main__':
     task_name = 'classification-sklearn-digits-8x8-samplerResetPooling-QFFN-4x4-patch-RSGF-Grad-cosannealwarmrestart'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, required=False, default=150)
-    parser.add_argument('--train_batches', type=int, required=False, default=10)
+    parser.add_argument('--batch_size', type=int, required=False, default=100)
+    parser.add_argument('--train_batches', type=int, required=False, default=15)
     parser.add_argument('--epochs', type=int, required=False, default=500)
     parser.add_argument('--gradient_estimator_batchsize', type=int, required=False, default=2)
     parser.add_argument('--working_dir', type=str, required=False,
@@ -111,13 +111,9 @@ if __name__ == '__main__':
 
     optimizer = torch.optim.SGD(model.parameters(), lr=LR)
 
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer,
-        T_0=100,
-        T_mult=1,
-        eta_min=1e-2,
-        verbose=False
-    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                              T_max = EPOCHS, # Maximum number of iterations.
+                             eta_min = 1e-3) # Minimum learning rate.
 
     criterion = nn.CrossEntropyLoss()
 
