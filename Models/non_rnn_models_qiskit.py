@@ -146,6 +146,58 @@ def classification8x8Image16DimProbResetPoolingFeedForwardSamplerQNN(
 
     return qnn, num_params, 64
 
+def classification8x8Image10DimProbResetPoolingFeedForwardSamplerQNN(
+        num_single_patch_reuploading: int=1,
+        gradient_estimator_batchsize:int=2,
+        gradient_estimator_smoothing_factor:float=0.01
+)->(SamplerQNN, int, int):
+    """
+    Create a SamplerQNN for classifying 8x8 images into 10 classes.
+    Args:
+        num_single_patch_reuploading:
+        gradient_estimator_batchsize:
+        gradient_estimator_smoothing_factor:
+
+    Returns:
+        SamplerQNN, number of trainable parameters, input size
+    """
+    def parity(x):
+        res = x%10
+        return res
+
+    sampler = AerSampler(
+        backend_options={'method': 'statevector',
+                         }
+    )
+    num_classification_qubits = 4
+    num_total_qubits = 3 + num_classification_qubits
+    num_single_patch_reuploading_params = 24 * num_single_patch_reuploading
+    num_classification_params = 6 * num_classification_qubits
+    num_params = num_single_patch_reuploading_params + num_classification_params
+    num_inputs = 64
+    params = ParameterVector('θ', length=num_params)
+    inputs = ParameterVector('x', length=64)
+
+    circ = QuantumCircuit(num_total_qubits, num_classification_qubits, name='Sampler10ClassQNN')
+    backbone = create8x8ImageBackbone4QubitFeature(inputs, params, num_single_patch_reuploading=num_single_patch_reuploading)
+    circ.append(backbone.to_instruction(), range(num_total_qubits))
+    circ.barrier()
+    circ.measure(range(num_classification_qubits), range(num_classification_qubits))
+
+    qnn = SamplerQNN(
+        circuit=circ,
+        input_params=inputs,
+        weight_params=params,
+        interpret=parity,
+        output_shape=10,
+        gradient=RSGFSamplerGradient(sampler, gradient_estimator_smoothing_factor, batch_size=gradient_estimator_batchsize),
+        sampler=sampler
+    )
+
+    return qnn, num_params, 64
+
+
+
 class ClassificationSamplerFFQNN8x8Image(nn.Module):
     def __init__(self,
                  num_single_patch_reuploading: int=3,
