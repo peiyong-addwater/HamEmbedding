@@ -16,3 +16,4 @@
 /runs/
 *.pth
 /data/mini-digits/
+/data/
