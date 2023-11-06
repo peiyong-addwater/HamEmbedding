@@ -22,7 +22,8 @@ import numpy as np
 
 
 from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, createMemPatchInteract, simplePQC, allInOneAnsatz
-from .PatchEncoding.qk.LowEntEmbedding import fourByFourPatchReUploadingResetPooling1Q
+from .PatchEncoding.qk.LowEntEmbedding import fourByFourPatchReUploading4QCircResetPooling1Q
+from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReuploadResetPooling1Q
 from .torch_connector import TorchConnector
 from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
 
@@ -36,7 +37,7 @@ def create8x8ImageBackbone4QubitFeature(
 )->QuantumCircuit:
     """
     Create a (4+3)-qubit quantum circuit that encodes an 8x8 image into a four-qubit quantum state.
-    The encoding is based on the re-uploading method, imnplemented in the fourByFourPatchReUploadingResetPooling1Q function
+    The encoding is based on the re-uploading method, imnplemented in the fourByFourPatchReUploading4QCircResetPooling1Q function
     from the LowEntEmbedding module.
     After the encoding, there will be an allInOneAnsatz layer, which has 6*num_qubits parameters
 
@@ -44,10 +45,9 @@ def create8x8ImageBackbone4QubitFeature(
         pixels: flattened 64 pixels of an eight by eight image. first 16 pixels are for the first patch, and so on
         params:
         num_single_patch_reuploading:
-        num_classification_layers:
 
     Returns:
-
+        The backbone quantum circuit.
     """
     num_single_patch_reuploading_params = 24 * num_single_patch_reuploading
     num_fc_qubits = 4
@@ -68,22 +68,22 @@ def create8x8ImageBackbone4QubitFeature(
 
     # encode the image
     circ.append(
-        fourByFourPatchReUploadingResetPooling1Q(pixels[:16], encoding_params).to_instruction(),
+        fourByFourPatchReUploading4QCircResetPooling1Q(pixels[:16], encoding_params).to_instruction(),
         [0,1,2,3]
     )
     circ.barrier(label=f"Patch 1 Encoded")
     circ.append(
-        fourByFourPatchReUploadingResetPooling1Q(pixels[16:32], encoding_params).to_instruction(),
+        fourByFourPatchReUploading4QCircResetPooling1Q(pixels[16:32], encoding_params).to_instruction(),
         [1,2,3,4]
     )
     circ.barrier(label=f"Patch 2 Encoded")
     circ.append(
-        fourByFourPatchReUploadingResetPooling1Q(pixels[32:48], encoding_params).to_instruction(),
+        fourByFourPatchReUploading4QCircResetPooling1Q(pixels[32:48], encoding_params).to_instruction(),
         [2,3,4,5]
     )
     circ.barrier(label=f"Patch 3 Encoded")
     circ.append(
-        fourByFourPatchReUploadingResetPooling1Q(pixels[48:], encoding_params).to_instruction(),
+        fourByFourPatchReUploading4QCircResetPooling1Q(pixels[48:], encoding_params).to_instruction(),
         [3,4,5,6]
     )
     circ.barrier(label=f"Patch 4 Encoded")
@@ -245,6 +245,70 @@ class ClassificationSamplerFFQNN8x8Image(nn.Module):
         prob_16 = self.qnn_torch.forward(x)
         return self.linear(prob_16)
 
+
+def create8x8ImageBackbone4QubitFeature6QCirc(
+        pixels: QiskitParameter,
+        params: QiskitParameter,
+        num_single_patch_reuploading: int=2,
+)->QuantumCircuit:
+    '''
+    Create a (4+2)-qubit quantum circuit that encodes an 8x8 image into a four-qubit quantum state.
+    The encoding is based on the re-uploading method, imnplemented in the fourByFourPatchReuploadResetPooling1Q function
+    from the PatchEmbedding module.
+    This layer has (3*3+4*(3-1))*L = 17-element list of parameters, where L is the number of data-reuploading repetitions.
+
+    After the encoding, there will be an allInOneAnsatz layer, which has 6*num_qubits parameters
+    Args:
+        pixels: flattened 64 pixels of an eight by eight image. first 16 pixels are for the first patch, and so on
+        params:
+        num_single_patch_reuploading:
+
+    Returns:
+        The 6-qubit backbone circuit that encodes an eight by eight image into a four-qubit quantum state.
+    '''
+    num_single_patch_reuploading_params = 17 * num_single_patch_reuploading
+    num_fc_qubits = 4
+    num_qubits = 2 + num_fc_qubits # 3 qubits in fourByFourPatchReuploadResetPooling1Q
+    num_classification_params = 6 * num_fc_qubits
+    num_params = num_single_patch_reuploading_params + num_classification_params
+
+    assert len(pixels) == 64, f"pixels must be a 64-element list of parameters"
+    assert len(params) == num_params, f"params must be a {num_params}-element list of parameters"
+
+    encoding_params = params[:num_single_patch_reuploading_params]
+    fc_params = params[num_single_patch_reuploading_params:]
+
+    circ = QuantumCircuit(num_qubits)
+
+    # encode the image
+    circ.append(
+        fourByFourPatchReuploadResetPooling1Q(pixels[:16], encoding_params).to_instruction(),
+        [0,1,2]
+    )
+    circ.barrier(label=f"Patch 1 Encoded")
+    circ.append(
+        fourByFourPatchReuploadResetPooling1Q(pixels[16:32], encoding_params).to_instruction(),
+        [1,2,3]
+    )
+    circ.barrier(label=f"Patch 2 Encoded")
+    circ.append(
+        fourByFourPatchReuploadResetPooling1Q(pixels[32:48], encoding_params).to_instruction(),
+        [2,3,4]
+    )
+    circ.barrier(label=f"Patch 3 Encoded")
+    circ.append(
+        fourByFourPatchReuploadResetPooling1Q(pixels[48:], encoding_params).to_instruction(),
+        [3,4,5]
+    )
+    circ.barrier(label=f"Patch 4 Encoded")
+
+    # "fully-connected" layers
+    circ.append(
+        allInOneAnsatz(num_fc_qubits, fc_params).to_instruction(),
+        [0,1,2,3]
+    )
+
+    return circ
 
 if __name__ == '__main__':
     n_reuploading = 2

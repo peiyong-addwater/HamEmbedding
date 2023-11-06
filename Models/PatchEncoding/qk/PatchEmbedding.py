@@ -192,7 +192,7 @@ def fourByFourPatchReuploadResetPooling1Q(
     assert len(pixels) == 16, f"Number of pixels must be 16"
 
     for i in range(3):
-        circ.x(i)
+        circ.h(i)
 
     for i in range(layers):
 

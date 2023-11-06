@@ -40,7 +40,7 @@ def pqcUCU(
         circ.barrier()
     return circ
 
-def fourByFourPatchReUploadingResetPooling1Q(
+def fourByFourPatchReUploading4QCircResetPooling1Q(
         pixels: QiskitParameter,
         encoding_params: QiskitParameter,
 )->QuantumCircuit:
@@ -102,5 +102,5 @@ def fourByFourPatchReUploadingResetPooling1Q(
 if __name__ == '__main__':
     pixels = ParameterVector('x', 16)
     encoding_params = ParameterVector('θ', 24*2)
-    circ = fourByFourPatchReUploadingResetPooling1Q(pixels, encoding_params)
+    circ = fourByFourPatchReUploading4QCircResetPooling1Q(pixels, encoding_params)
     circ.draw('mpl', filename='FourByFourPatch4QReuploadResetPooling1Q.png', style='iqx')
