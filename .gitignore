@@ -14,4 +14,4 @@
 *.pyc
 *.iml
 /runs/
-/checkpoint/
+*.pth
