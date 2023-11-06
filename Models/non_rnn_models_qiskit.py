@@ -392,11 +392,11 @@ class ClassificationSamplerHybridFFQNN8x8Image6Q(nn.Module):
 if __name__ == '__main__':
     n_reuploading = 2
     pixels = ParameterVector('x', 64)
-    params = ParameterVector('θ', 24*n_reuploading + 6*4)
-    circ = create8x8ImageBackbone4QubitFeature(pixels, params, num_single_patch_reuploading=n_reuploading)
-    circ.draw('mpl', filename='QFFNN8x8ImageBackbone.png', style='iqx')
+    params = ParameterVector('θ', 17*n_reuploading + 6*4)
+    circ = create8x8ImageBackbone4QubitFeature6QCirc(pixels, params, num_single_patch_reuploading=n_reuploading)
+    circ.draw('mpl', filename='QFFNN8x8ImageBackbone6Q.png', style='iqx')
 
-    qffnn = ClassificationSamplerFFQNN8x8Image(
+    qffnn = ClassificationSamplerHybridFFQNN8x8Image6Q(
         num_single_patch_reuploading=n_reuploading,
         gradient_estimator_batchsize=3,
         gradient_estimator_smoothing_factor=0.2
