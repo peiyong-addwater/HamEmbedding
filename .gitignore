@@ -15,3 +15,4 @@
 *.iml
 /runs/
 *.pth
+/data/mini-digits/
