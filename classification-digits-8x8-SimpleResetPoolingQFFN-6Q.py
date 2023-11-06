@@ -10,7 +10,7 @@ import json
 import os
 
 from Models.data import PatchedDigitsDataset
-from Models.non_rnn_models_qiskit import ClassificationSamplerFFQNN8x8Image
+from Models.non_rnn_models_qiskit import ClassificationSamplerHybridFFQNN8x8Image6Q
 
 def nowtime():
     return str(time.strftime("%Y%m%d-%H%M%S", time.localtime()))
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     import random
     from qiskit_algorithms.utils import algorithm_globals
 
-    task_name = 'classification-sklearn-digits-8x8-samplerResetPooling-QFFN-4x4-patch-RSGF-Grad'
+    task_name = 'classification-sklearn-digits-8x8-samplerResetPooling-QFFN-6Q-4x4-patch-RSGF-Grad'
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, required=False, default=100)
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     parser.add_argument('--prev_checkpoint', type=str, required=False, default=None)
     parser.add_argument('--load_optimizer', type=bool, required=False, default=False)
     parser.add_argument('--load_scheduler', type=bool, required=False, default=False)
-    parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=3)
+    parser.add_argument('--n_single_patch_reupload', type=int, required=False, default=1)
     parser.add_argument('--lr', type=float, required=False, default=1)
     parser.add_argument('--gradient_estimator_smoothing', type=float, required=False, default=0.01)
     parser.add_argument('--seed', type=int, required=False, default=1701)
@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     device = 'cpu'
 
-    model = ClassificationSamplerFFQNN8x8Image(
+    model = ClassificationSamplerHybridFFQNN8x8Image6Q(
         gradient_estimator_batchsize=GRADIENT_ESTIMATOR_BATCHSIZE,
         num_single_patch_reuploading=N_SINGLE_PATCH_REUPLOAD,
         gradient_estimator_smoothing_factor=GRADIENT_ESTIMATOR_SMOOTHING
