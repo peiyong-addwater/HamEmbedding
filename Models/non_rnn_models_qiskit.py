@@ -362,6 +362,31 @@ def classification8x8Image16DimProbResetPoolingFeedForwardSamplerQNN6Q(
 
     return qnn, num_params, 64
 
+class ClassificationSamplerHybridFFQNN8x8Image6Q(nn.Module):
+    def __init__(self,
+        num_single_patch_reuploading: int = 3,
+        gradient_estimator_batchsize: int = 2,
+        gradient_estimator_smoothing_factor: float = 0.2
+        ):
+        super().__init__()
+        self.num_single_patch_reuploading = num_single_patch_reuploading
+        self.gradient_estimator_batchsize = gradient_estimator_batchsize
+        self.gradient_estimator_smoothing_factor = gradient_estimator_smoothing_factor
+        self.qnn, self.num_params, self.num_inputs = classification8x8Image16DimProbResetPoolingFeedForwardSamplerQNN6Q(
+            num_single_patch_reuploading=self.num_single_patch_reuploading,
+            gradient_estimator_batchsize=self.gradient_estimator_batchsize,
+            gradient_estimator_smoothing_factor=self.gradient_estimator_smoothing_factor
+        )
+        self.qnn_torch = TorchConnector(self.qnn)
+
+        self.linear = nn.Linear(16, 10)
+
+    def forward(self, x):
+        # x must be of shape (batchsize, 64)
+        # each 16 elements of x is a 4 by 4 patch of the 8x8 image
+        prob_16 = self.qnn_torch.forward(x)
+        return self.linear(prob_16)
+
 
 
 if __name__ == '__main__':
