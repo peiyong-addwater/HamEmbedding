@@ -13,3 +13,5 @@
 *.xml
 *.pyc
 *.iml
+/runs/
+/checkpoint/
