@@ -17,3 +17,4 @@
 *.pth
 /data/mini-digits/
 /data/
+/legacy_important_runs/
