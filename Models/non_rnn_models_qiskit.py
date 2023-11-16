@@ -25,7 +25,7 @@ from .Layers.qk.qiskit_layers import createMemStateInitCirc, createMemCompCirc, 
 from .PatchEncoding.qk.LowEntEmbedding import fourByFourPatchReUploading4QCircResetPooling1Q
 from .PatchEncoding.qk.PatchEmbedding import fourByFourPatchReuploadResetPooling1Q
 from .torch_connector import TorchConnector
-from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
+from .Optimization.zero_order_gradient_estimation_qiskit import RSGFSamplerGradient
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 QiskitQubits = Union[List[int], List[Qubit], QuantumRegister]

@@ -29,7 +29,7 @@ from .PatchEncoding.qk.PatchEmbedding import (fourByFourPatchReuploadResetPoolin
                                              pqcUCU
                                              )
 from .torch_connector import TorchConnector
-from .Optimization.zero_order_gradient_estimation import RSGFSamplerGradient
+from .Optimization.zero_order_gradient_estimation_qiskit import RSGFSamplerGradient
 
 QiskitParameter = Union[ParameterVector, List[Parameter], List[ParameterVectorElement]]
 QiskitQubits = Union[List[int], List[Qubit], QuantumRegister]
