@@ -1,1 +1,0 @@
-from .recurrent_structure_no_pos_encoding import RecurrentCircV1
