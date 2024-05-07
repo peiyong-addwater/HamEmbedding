@@ -1,8 +1,9 @@
-# Hamiltonian Embedding of Images for Data Reuploading Classifiers
+# Quantum Hamiltonian Embedding of Images for Data Reuploading Classifiers
 
-This repo contains the code and experiment results for the paper *Quantum Hamiltonian Embedding of Images for Data  Reuploading Classifiers*. 
+This repo contains the code and numerical experiment results for the paper 
+[***Quantum Hamiltonian Embedding of Images for Data  Reuploading Classifiers***]() by *Peiyong Wang, Casey R. Myers, Lloyd C. L. Hollenberg and Udaya Parampalli*. 
 
-How to design a quantum machine learning model is the first question we need to answer when trying to apply quantum computing to machine learning tasks. We first lay out six principles for designing quantum machine learning algorithms, based on observations and evidence from the design of classical deep learning algorithms, centering on the heuristics from model structures and properties of the data. We investigate the effectiveness of these simple principles by designing a data re-uploading classifier, where the classical data is encoded as the evolution of quantum Hamiltonians. Such a classifier designed following the principles proposed in this paper has better performance compared to the baseline quantum convolutional neural network model with numerical experiments on common machine learning datasets such as the MNIST and FashionMNIST dataset. 
+How to design a quantum machine learning model is the first question we need to answer when trying to apply quantum computing to machine learning tasks. In this paepr, we first lay out six principles for designing quantum machine learning algorithms, based on observations and evidence from the design of classical deep learning algorithms, centering on the heuristics from model structures and properties of the data. We investigate the effectiveness of these simple principles by designing a data re-uploading classifier, where the classical data is encoded as the evolution of quantum Hamiltonians. Such a classifier designed following the principles proposed in this paper has better performance compared to the baseline quantum convolutional neural network model with numerical experiments on common machine learning datasets such as the MNIST and FashionMNIST dataset. 
 
 
 ![](Picture1.png)
