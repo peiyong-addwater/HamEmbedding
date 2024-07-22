@@ -1,7 +1,7 @@
 # Quantum Hamiltonian Embedding of Images for Data Reuploading Classifiers
 
 This repo contains the code and numerical experiment results for the paper 
-[***Quantum Hamiltonian Embedding of Images for Data  Reuploading Classifiers***]() by *Peiyong Wang, Casey R. Myers, Lloyd C. L. Hollenberg and Udaya Parampalli*. 
+[***Quantum Hamiltonian Embedding of Images for Data  Reuploading Classifiers***](https://arxiv.org/abs/2407.14055) by *Peiyong Wang, Casey R. Myers, Lloyd C. L. Hollenberg and Udaya Parampalli*. 
 
 How to design a quantum machine learning model is the first question we need to answer when trying to apply quantum computing to machine learning tasks. In this paper, we first design a simple quantum neural network model by combining the data reuploading circuit with quantum Hamiltonian embedding. Through numerical experiments, we demonstrate that our model has better performance than the the baseline quantum convolutional neural network model. Based on our numerical results, we lay out six principles for designing quantum machine learning algorithms based on observations and evidence from the design of classical deep learning algorithms, centring on the heuristics from model structures and properties of the data.
 
